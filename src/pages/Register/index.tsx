@@ -71,7 +71,8 @@ function Register() {
         navigate("/verify-otp", { state: { email: values.email } });
       }, 1500);
     } catch (error: any) {
-      const errorMsg = error.response?.data?.message || "Đăng ký thất bại. Vui lòng thử lại!";
+      const errorMsg =
+        error.response?.data?.message || "Đăng ký thất bại. Vui lòng thử lại!";
       messageApi.error(errorMsg);
     } finally {
       setLoading(false);
@@ -79,21 +80,185 @@ function Register() {
   };
 
   return (
-    <div className="register-page">
-      {contextHolder}
-      <div className="register-container">
-        {/* Left Side - Testimonial */}
+    <div className="register-wrapper">
+      <div className="register-page">
+        {contextHolder}
+        {/* Left side - Register Form */}
         <div className="register-left">
-          <div className="left-header">
-            <div className="logo-icon">▲</div>
-            <span className="logo-text">TaskMind AI</span>
-          </div>
+          <div className="register-form-container">
+            <div className="register-header">
+              <h1 className="register-title">Tạo tài khoản mới</h1>
+              <p className="register-subtitle">
+                Bắt đầu hành trình nâng suất của bạn miễn phí.
+              </p>
+            </div>
 
-          <div className="testimonial">
+            <Form
+              form={form}
+              layout="vertical"
+              onFinish={onFinish}
+              autoComplete="off"
+            >
+              <Form.Item
+                label="Họ và tên"
+                name="name"
+                rules={[
+                  { required: true, message: "Vui lòng nhập họ và tên!" },
+                ]}
+              >
+                <Input
+                  prefix={<UserOutlined className="input-icon" />}
+                  placeholder="Nhập họ và tên của bạn"
+                  size="large"
+                />
+              </Form.Item>
+
+              <Form.Item
+                label="Email"
+                name="email"
+                rules={[
+                  { required: true, message: "Vui lòng nhập email!" },
+                  { type: "email", message: "Email không hợp lệ!" },
+                ]}
+              >
+                <Input
+                  prefix={<MailOutlined className="input-icon" />}
+                  placeholder="name@company.com"
+                  size="large"
+                />
+              </Form.Item>
+
+              <Form.Item
+                label="Mật khẩu"
+                name="password"
+                rules={[
+                  { required: true, message: "Vui lòng nhập mật khẩu!" },
+                  { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự!" },
+                ]}
+              >
+                <Input.Password
+                  prefix={<LockOutlined className="input-icon" />}
+                  placeholder="Tạo một mật khẩu mạnh"
+                  size="large"
+                  onChange={onPasswordChange}
+                  iconRender={(visible: boolean) =>
+                    visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />
+                  }
+                />
+              </Form.Item>
+
+              {passwordStrength > 0 && (
+                <div className="password-strength">
+                  <Progress
+                    percent={passwordStrength}
+                    showInfo={false}
+                    strokeColor={getPasswordStrengthColor(passwordStrength)}
+                    size="small"
+                  />
+                  <span
+                    className="strength-text"
+                    style={{
+                      color: getPasswordStrengthColor(passwordStrength),
+                    }}
+                  >
+                    {getPasswordStrengthText(passwordStrength)}
+                  </span>
+                </div>
+              )}
+
+              <Form.Item
+                label="Xác nhận mật khẩu"
+                name="confirmPassword"
+                dependencies={["password"]}
+                rules={[
+                  { required: true, message: "Vui lòng xác nhận mật khẩu!" },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      if (!value || getFieldValue("password") === value) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(new Error("Mật khẩu không khớp!"));
+                    },
+                  }),
+                ]}
+              >
+                <Input.Password
+                  prefix={<LockOutlined className="input-icon" />}
+                  placeholder="Nhập lại mật khẩu"
+                  size="large"
+                  iconRender={(visible: boolean) =>
+                    visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />
+                  }
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="agree"
+                valuePropName="checked"
+                rules={[
+                  {
+                    validator: (_, value) =>
+                      value
+                        ? Promise.resolve()
+                        : Promise.reject(
+                            new Error("Vui lòng đồng ý với điều khoản"),
+                          ),
+                  },
+                ]}
+              >
+                <Checkbox>
+                  Tôi đồng ý với{" "}
+                  <a href="#" className="terms-link">
+                    Điều khoản sử dụng
+                  </a>{" "}
+                  và{" "}
+                  <a href="#" className="terms-link">
+                    Chính sách bảo mật
+                  </a>
+                </Checkbox>
+              </Form.Item>
+
+              <Form.Item>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={loading}
+                  block
+                  size="large"
+                  className="register-button"
+                >
+                  Đăng ký miễn phí
+                </Button>
+              </Form.Item>
+            </Form>
+
+            <div className="divider">
+              <span className="divider-text">Hoặc đăng ký với</span>
+            </div>
+
+            <Button
+              block
+              size="large"
+              className="social-button"
+              icon={<GoogleOutlined />}
+            >
+              Đăng ký bằng Google
+            </Button>
+
+            <p className="login-link">
+              Đã có tài khoản? <Link to="/login">Đăng nhập</Link>
+            </p>
+          </div>
+        </div>
+
+        {/* Right side - Image + Testimonial */}
+        <div className="register-right">
+          <img src="" alt="TaskMind AI" className="illustration-image" />
+          <div className="testimonial-card">
             <div className="stars">★★★★★</div>
-            <p className="quote">
-              "TaskMind AI đã thay đổi hoàn toàn cách tôi học tập. Nó như một người trợ lý thực
-              thụ, giúp tôi tập trung hơn bao giờ hết."
+            <p className="testimonial-text">
+              "TaskMind AI đã thay đổi hoàn toàn cách tôi làm việc. Nó như một
+              người trợ lý thực thụ, giúp tôi tập trung hơn bao giờ hết."
             </p>
             <div className="testimonial-author">
               <div className="author-avatar">N</div>
@@ -103,158 +268,6 @@ function Register() {
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Right Side - Form */}
-        <div className="register-right">
-          <div className="register-header">
-            <h1 className="register-title">Tạo tài khoản mới</h1>
-            <p className="register-subtitle">Bắt đầu hành trình nâng suất của bạn miễn phí.</p>
-          </div>
-
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={onFinish}
-            autoComplete="off"
-          >
-            <Form.Item
-              label="Họ và tên"
-              name="name"
-              rules={[{ required: true, message: "Vui lòng nhập họ và tên!" }]}
-            >
-              <Input
-                prefix={<UserOutlined className="input-icon" />}
-                placeholder="Nhập họ và tên của bạn"
-                size="large"
-              />
-            </Form.Item>
-
-            <Form.Item
-              label="Email"
-              name="email"
-              rules={[
-                { required: true, message: "Vui lòng nhập email!" },
-                { type: "email", message: "Email không hợp lệ!" },
-              ]}
-            >
-              <Input
-                prefix={<MailOutlined className="input-icon" />}
-                placeholder="name@company.com"
-                size="large"
-              />
-            </Form.Item>
-
-            <Form.Item
-              label="Mật khẩu"
-              name="password"
-              rules={[
-                { required: true, message: "Vui lòng nhập mật khẩu!" },
-                { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự!" },
-              ]}
-            >
-              <Input.Password
-                prefix={<LockOutlined className="input-icon" />}
-                placeholder="Tạo một mật khẩu mạnh"
-                size="large"
-                onChange={onPasswordChange}
-                iconRender={(visible: boolean) =>
-                  visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />
-                }
-              />
-            </Form.Item>
-
-            {passwordStrength > 0 && (
-              <div className="password-strength">
-                <Progress
-                  percent={passwordStrength}
-                  showInfo={false}
-                  strokeColor={getPasswordStrengthColor(passwordStrength)}
-                  size="small"
-                />
-                <span
-                  className="strength-text"
-                  style={{ color: getPasswordStrengthColor(passwordStrength) }}
-                >
-                  {getPasswordStrengthText(passwordStrength)}
-                </span>
-              </div>
-            )}
-
-            <Form.Item
-              label="Xác nhận mật khẩu"
-              name="confirmPassword"
-              dependencies={["password"]}
-              rules={[
-                { required: true, message: "Vui lòng xác nhận mật khẩu!" },
-                ({ getFieldValue }) => ({
-                  validator(_, value) {
-                    if (!value || getFieldValue("password") === value) {
-                      return Promise.resolve();
-                    }
-                    return Promise.reject(new Error("Mật khẩu không khớp!"));
-                  },
-                }),
-              ]}
-            >
-              <Input.Password
-                prefix={<LockOutlined className="input-icon" />}
-                placeholder="Nhập lại mật khẩu"
-                size="large"
-                iconRender={(visible: boolean) =>
-                  visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />
-                }
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="agree"
-              valuePropName="checked"
-              rules={[
-                {
-                  validator: (_, value) =>
-                    value
-                      ? Promise.resolve()
-                      : Promise.reject(new Error("Vui lòng đồng ý với điều khoản")),
-                },
-              ]}
-            >
-              <Checkbox>
-                Tôi đồng ý với <a href="#">Điều khoản sử dụng</a> và{" "}
-                <a href="#">Chính sách bảo mật</a>
-              </Checkbox>
-            </Form.Item>
-
-            <Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={loading}
-                block
-                size="large"
-                className="register-button"
-              >
-                Đăng ký miễn phí
-              </Button>
-            </Form.Item>
-          </Form>
-
-          <div className="divider">
-            <span className="divider-text">Hoặc đăng ký với</span>
-          </div>
-
-          <Button
-            block
-            size="large"
-            className="social-button"
-            icon={<GoogleOutlined />}
-          >
-            Đăng ký bằng Google
-          </Button>
-
-          <p className="login-link">
-            Đã có tài khoản? <Link to="/login">Đăng nhập</Link>
-          </p>
         </div>
       </div>
     </div>
