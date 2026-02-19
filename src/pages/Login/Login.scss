@@ -1,0 +1,388 @@
+/* Wrapper with light blue background */
+.login-wrapper {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f7fa;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.login-page {
+  display: flex;
+  width: 75%;
+  height: 75%;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Left Side - Image */
+.login-left {
+  flex: 1.2;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.login-left::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url("../../assets/Bat-mi-8-cach-quan-ly-cong-viec-02-1024x683.jpg")
+    center/cover;
+  opacity: 1;
+}
+
+.illustration-content {
+  display: none;
+}
+
+.logo-section-center {
+  margin-bottom: 60px;
+}
+
+.logo-icon-xl {
+  font-size: 64px;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.logo-text-xl {
+  font-size: 32px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: -0.5px;
+}
+
+.login-image-caption {
+  margin-top: 40px;
+
+  h2 {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: white;
+  }
+
+  p {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.6;
+    max-width: 360px;
+    margin: 0 auto;
+  }
+}
+
+/* Right Side - Login Form */
+.login-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: #f8fbff;
+}
+
+.login-form-container {
+  width: 100%;
+  max-width: 480px;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.login-title {
+  font-size: 32px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 8px;
+}
+
+.login-subtitle {
+  font-size: 15px;
+  color: #6b7280;
+}
+
+.password-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+
+  .forgot-link {
+    font-size: 13px;
+    color: #4a90e2;
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.input-icon {
+  color: #9ca3af;
+  font-size: 18px;
+}
+
+.login-button {
+  background: linear-gradient(135deg, #4a90e2 0%, #5fa5f8 100%);
+  border: none;
+  border-radius: 12px;
+  height: 52px;
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 8px;
+  box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
+
+  &:hover {
+    background: linear-gradient(135deg, #3a7bc8 0%, #4a90e2 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(74, 144, 226, 0.4);
+  }
+}
+
+.divider {
+  margin: 24px 0;
+  color: #9ca3af;
+
+  .divider-text {
+    font-size: 12px;
+    color: #9ca3af;
+    padding: 0 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+}
+
+.social-login {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.social-button {
+  border-radius: 12px;
+  height: 48px;
+  font-size: 15px;
+  font-weight: 500;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    transform: translateY(-1px);
+  }
+
+  .anticon {
+    font-size: 20px;
+  }
+
+  &.google .anticon {
+    color: #ea4335;
+  }
+
+  &.apple .anticon {
+    color: #1a1a2e;
+  }
+}
+
+.register-link {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 14px;
+  color: #6b7280;
+
+  a {
+    color: #4a90e2;
+    text-decoration: none;
+    font-weight: 600;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+:global {
+  html,
+  body,
+  #root {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    height: 100%;
+    width: 100%;
+  }
+
+  .ant-form-item {
+    margin-bottom: 20px;
+  }
+
+  .ant-form-item-label {
+    padding-bottom: 8px;
+
+    > label {
+      font-weight: 500;
+      color: #374151;
+      font-size: 14px;
+    }
+  }
+
+  .ant-input {
+    border-radius: 12px;
+    height: 52px;
+    border-color: #e5e7eb;
+    padding-left: 12px;
+    font-size: 15px;
+
+    &::placeholder {
+      color: #9ca3af;
+      font-size: 15px;
+    }
+
+    &:focus,
+    &:hover {
+      border-color: #4a90e2;
+      box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+    }
+  }
+
+  .ant-input-affix-wrapper {
+    border-radius: 12px;
+    border-color: #e5e7eb;
+    padding-left: 12px;
+
+    .ant-input {
+      height: 48px;
+    }
+
+    &:focus,
+    &:hover {
+      border-color: #4a90e2;
+    }
+
+    &-focused {
+      border-color: #4a90e2;
+      box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+    }
+  }
+
+  .ant-divider-inner-text {
+    font-size: 12px;
+    color: #9ca3af;
+  }
+}
+
+/* Responsive */
+
+/* iPad (768px - 1024px) */
+@media (max-width: 1024px) {
+  .login-wrapper {
+    padding: 20px;
+    align-items: flex-start;
+    overflow-y: auto;
+  }
+
+  .login-page {
+    width: 75%;
+    height: auto;
+    min-height: 80vh;
+    flex-direction: column;
+  }
+
+  .login-left {
+    flex: none;
+    height: 250px;
+    width: 100%;
+  }
+
+  .login-right {
+    flex: 1;
+    padding: 40px 30px;
+  }
+
+  .login-form-container {
+    max-width: 400px;
+    margin: 0 auto;
+  }
+}
+
+/* Mobile (< 768px) */
+@media (max-width: 768px) {
+  .login-wrapper {
+    padding: 0;
+    align-items: flex-start;
+    overflow-y: auto;
+  }
+
+  .login-page {
+    width: 100%;
+    height: auto;
+    min-height: 100vh;
+    border-radius: 0;
+    box-shadow: none;
+    flex-direction: column;
+  }
+
+  .login-left {
+    flex: none;
+    height: 200px;
+    width: 100%;
+  }
+
+  .login-right {
+    flex: 1;
+    padding: 40px 24px;
+    justify-content: flex-start;
+  }
+
+  .login-form-container {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .login-header {
+    margin-bottom: 32px;
+
+    .login-title {
+      font-size: 28px;
+    }
+
+    .login-subtitle {
+      font-size: 14px;
+    }
+  }
+
+  .ant-input {
+    height: 48px;
+  }
+
+  .login-button {
+    height: 48px;
+  }
+
+  .social-button {
+    height: 48px;
+  }
+}
