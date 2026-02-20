@@ -58,3 +58,23 @@ export const refreshToken = async (): Promise<{ accessToken: string }> => {
   setAccessToken(response.accessToken);
   return response;
 };
+
+// Forgot Password APIs
+export const forgotPassword = async (email: string): Promise<void> => {
+  return await post("/auth/forgot-password", { email });
+};
+
+export const verifyForgotPasswordOtp = async (
+  email: string,
+  otp: string,
+): Promise<void> => {
+  return await post("/auth/verify-forgot-password-otp", { email, otp });
+};
+
+export const resetPassword = async (
+  email: string,
+  otp: string,
+  newPassword: string,
+): Promise<void> => {
+  return await post("/auth/reset-password", { email, otp, newPassword });
+};

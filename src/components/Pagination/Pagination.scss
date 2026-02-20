@@ -1,0 +1,77 @@
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 0;
+
+  .custom-pagination {
+    .ant-pagination-item {
+      border-radius: 6px;
+      border-color: #e5e7eb;
+
+      a {
+        color: #374151;
+      }
+
+      &:hover {
+        border-color: #4a90e2;
+
+        a {
+          color: #4a90e2;
+        }
+      }
+    }
+
+    .ant-pagination-item-active {
+      background: linear-gradient(135deg, #4a90e2 0%, #5fa5f8 100%);
+      border-color: #4a90e2;
+
+      a {
+        color: white;
+      }
+
+      &:hover {
+        a {
+          color: white;
+        }
+      }
+    }
+
+    .ant-pagination-prev,
+    .ant-pagination-next {
+      .ant-pagination-item-link {
+        border-radius: 6px;
+        border-color: #e5e7eb;
+        color: #6b7280;
+
+        &:hover {
+          border-color: #4a90e2;
+          color: #4a90e2;
+        }
+      }
+    }
+
+    .ant-pagination-disabled {
+      .ant-pagination-item-link {
+        color: #d1d5db;
+        border-color: #e5e7eb;
+
+        &:hover {
+          color: #d1d5db;
+          border-color: #e5e7eb;
+        }
+      }
+    }
+
+    .ant-pagination-total-text {
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    .ant-select {
+      .ant-select-selector {
+        border-radius: 6px;
+        border-color: #e5e7eb;
+      }
+    }
+  }
+}
