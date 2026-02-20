@@ -24,8 +24,10 @@ import {
   MoreOutlined,
   ArrowRightOutlined,
 } from "@ant-design/icons";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 // import { get } from "../../utils/axios/request";
+import { clearAccessToken } from "../../utils/axios/request";
 import "./Home.scss";
 
 const { Title, Text } = Typography;
@@ -136,6 +138,8 @@ const upcomingDeadlines = [
 ];
 
 function Home() {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
   const [stats] = useState<DashboardStats>({
     total: 3,
     inProgress: 1,
@@ -183,12 +187,28 @@ function Home() {
     fetchDashboard();
   }, []);
 
+  const handleMenuClick = (key: string) => {
+    if (key === "logout") {
+      // Clear token from memory
+      clearAccessToken();
+      // Clear auth state in Redux
+      dispatch({ type: "CHECK_LOGIN", status: false });
+      // Navigate to login
+      navigate("/login");
+    }
+  };
+
   const userMenuItems = [
     { key: "profile", label: "Hồ sơ" },
     { key: "settings", label: "Cài đặt" },
     { type: "divider" as const },
     { key: "logout", label: "Đăng xuất", danger: true },
   ];
+
+  const menuProps = {
+    items: userMenuItems,
+    onClick: (e: { key: string }) => handleMenuClick(e.key),
+  };
 
   return (
     <div className="dashboard-page">
@@ -218,7 +238,7 @@ function Home() {
           </nav>
         </div>
         <div className="header-right">
-          <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+          <Dropdown menu={menuProps} placement="bottomRight">
             <div className="user-menu">
               <Avatar size="small" style={{ backgroundColor: "#4a90e2" }}>
                 N
