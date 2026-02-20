@@ -1,17 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Card,
-  Row,
-  Col,
-  Button,
-  Table,
-  Tag,
-  Badge,
-  Avatar,
-  Dropdown,
-  List,
-  Typography,
-} from "antd";
+import { Card, Row, Col, Button, Table, Tag, List, Typography } from "antd";
 import {
   PlusOutlined,
   RobotOutlined,
@@ -24,10 +12,7 @@ import {
   MoreOutlined,
   ArrowRightOutlined,
 } from "@ant-design/icons";
-import { Link, useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
-// import { get } from "../../utils/axios/request";
-import { clearAccessToken } from "../../utils/axios/request";
+
 import "./Home.scss";
 
 const { Title, Text } = Typography;
@@ -138,8 +123,6 @@ const upcomingDeadlines = [
 ];
 
 function Home() {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
   const [stats] = useState<DashboardStats>({
     total: 3,
     inProgress: 1,
@@ -187,68 +170,8 @@ function Home() {
     fetchDashboard();
   }, []);
 
-  const handleMenuClick = (key: string) => {
-    if (key === "logout") {
-      // Clear token from memory
-      clearAccessToken();
-      // Clear auth state in Redux
-      dispatch({ type: "CHECK_LOGIN", status: false });
-      // Navigate to login
-      navigate("/login");
-    }
-  };
-
-  const userMenuItems = [
-    { key: "profile", label: "Hồ sơ" },
-    { key: "settings", label: "Cài đặt" },
-    { type: "divider" as const },
-    { key: "logout", label: "Đăng xuất", danger: true },
-  ];
-
-  const menuProps = {
-    items: userMenuItems,
-    onClick: (e: { key: string }) => handleMenuClick(e.key),
-  };
-
   return (
     <div className="dashboard-page">
-      <header className="dashboard-header">
-        <div className="header-left">
-          <div className="logo">
-            <span className="logo-icon">▲</span>
-            <span className="logo-text">TaskMind AI</span>
-          </div>
-          <nav className="main-nav">
-            <Link to="/" className="nav-link active">
-              Dashboard
-            </Link>
-            <Link to="/tasks" className="nav-link">
-              Công việc AI
-            </Link>
-            <Link to="/teams" className="nav-link">
-              Nhóm
-            </Link>
-            <Link to="/calendar" className="nav-link">
-              Lịch
-            </Link>
-            <Link to="/notifications" className="nav-link">
-              Thông báo
-              <Badge count={5} size="small" style={{ marginLeft: 4 }} />
-            </Link>
-          </nav>
-        </div>
-        <div className="header-right">
-          <Dropdown menu={menuProps} placement="bottomRight">
-            <div className="user-menu">
-              <Avatar size="small" style={{ backgroundColor: "#4a90e2" }}>
-                N
-              </Avatar>
-              <span className="user-name">Nguyễn Văn A</span>
-            </div>
-          </Dropdown>
-        </div>
-      </header>
-
       <main className="dashboard-main">
         <section className="welcome-section">
           <Title level={2} className="welcome-title">
