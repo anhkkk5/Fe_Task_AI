@@ -48,3 +48,13 @@ export const logoutUser = async (): Promise<void> => {
 export const getMe = async () => {
   return await post("/auth/me", {});
 };
+
+export const refreshToken = async (): Promise<{ accessToken: string }> => {
+  const response = await post<{ accessToken: string }>(
+    "/auth/refresh-token",
+    {},
+  );
+  // Lưu access token mới vào memory
+  setAccessToken(response.accessToken);
+  return response;
+};
