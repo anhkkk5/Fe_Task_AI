@@ -123,7 +123,7 @@ function Register() {
               >
                 <Input
                   prefix={<MailOutlined className="input-icon" />}
-                  placeholder="name@company.com"
+                  placeholder="name@gmail.com"
                   size="large"
                 />
               </Form.Item>
@@ -251,9 +251,8 @@ function Register() {
           </div>
         </div>
 
-        {/* Right side - Image + Testimonial */}
+        {/* Right side - Background Image */}
         <div className="register-right">
-          <img src="" alt="TaskMind AI" className="illustration-image" />
           <div className="testimonial-card">
             <div className="stars">★★★★★</div>
             <p className="testimonial-text">

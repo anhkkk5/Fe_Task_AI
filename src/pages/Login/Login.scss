@@ -38,8 +38,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: url("../../assets/Bat-mi-8-cach-quan-ly-cong-viec-02-1024x683.jpg")
-    center/cover;
+  background: url("../../assets/anh_login.webp") center/cover;
   opacity: 1;
 }
 
@@ -301,7 +300,6 @@
   .login-wrapper {
     padding: 20px;
     align-items: flex-start;
-    overflow-y: auto;
   }
 
   .login-page {
@@ -311,10 +309,9 @@
     flex-direction: column;
   }
 
+  /* Hide image on iPad */
   .login-left {
-    flex: none;
-    height: 250px;
-    width: 100%;
+    display: none;
   }
 
   .login-right {
@@ -333,7 +330,6 @@
   .login-wrapper {
     padding: 0;
     align-items: flex-start;
-    overflow-y: auto;
   }
 
   .login-page {
@@ -345,10 +341,9 @@
     flex-direction: column;
   }
 
+  /* Hide image on mobile */
   .login-left {
-    flex: none;
-    height: 200px;
-    width: 100%;
+    display: none;
   }
 
   .login-right {

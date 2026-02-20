@@ -1,11 +1,11 @@
-/* Wrapper with light gradient background */
+/* Wrapper with white background */
 .register-wrapper {
   min-height: 100vh;
   width: 100vw;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #e8f4fd 0%, #ffe4f0 50%, #f5e6ff 100%);
+  background: #ffffff;
   padding: 20px;
   box-sizing: border-box;
 }
@@ -28,7 +28,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 30px 50px;
+  padding: 10px 30px;
   background: white;
 }
 
@@ -37,34 +37,37 @@
   max-width: 420px;
 }
 
-/* Right Side - Image + Testimonial (4/9 = ~44%) */
+/* Right Side - Background Image */
 .register-right {
   flex: 4;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 40px;
-  background: linear-gradient(135deg, #e8f4fd 0%, #ffe4f0 50%, #f5e6ff 100%);
+  background: url("../../assets/anh_nen_register.jpg") center/cover no-repeat;
+  position: relative;
 }
 
-/* Image on top */
-.illustration-image {
-  width: 200px;
-  height: 200px;
-  border-radius: 16px;
-  object-fit: cover;
-  margin-bottom: 40px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+.register-right::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.1);
 }
 
-/* Testimonial Card */
+/* Testimonial Card positioned over the image */
 .testimonial-card {
-  background: white;
+  position: relative;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   max-width: 320px;
+  backdrop-filter: blur(10px);
 }
 
 .stars {
@@ -139,8 +142,8 @@
   background: linear-gradient(135deg, #4a90e2 0%, #5fa5f8 100%);
   border: none;
   border-radius: 8px;
-  height: 48px;
-  font-size: 16px;
+  height: 44px;
+  font-size: 15px;
   font-weight: 500;
 
   &:hover {
@@ -205,18 +208,18 @@
 }
 
 .register-header {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 
   .register-title {
-    font-size: 28px;
+    font-size: 26px;
     font-weight: 700;
     color: #1a1a2e;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
     text-align: center;
   }
 
   .register-subtitle {
-    font-size: 14px;
+    font-size: 13px;
     color: #6b7280;
     text-align: center;
   }
@@ -242,16 +245,17 @@
   }
 
   .ant-form-item {
-    margin-bottom: 16px;
+    margin-bottom: 8px;
   }
   .ant-form-item-label > label {
     font-weight: 500;
     color: #374151;
+    font-size: 13px;
   }
 
   .ant-input {
     border-radius: 8px;
-    height: 48px;
+    height: 42px;
 
     &:focus {
       border-color: #4a90e2;
@@ -263,12 +267,12 @@
     border-radius: 8px;
 
     .ant-input {
-      height: 38px;
+      height: 32px;
     }
   }
 
   .ant-checkbox-wrapper {
-    font-size: 13px;
+    font-size: 12px;
     color: #6b7280;
 
     a {
@@ -294,13 +298,12 @@
     flex-direction: column;
   }
 
-  .register-left {
-    flex: none;
-    height: 250px;
-    width: 100%;
+  /* Hide image side on iPad */
+  .register-right {
+    display: none;
   }
 
-  .register-right {
+  .register-left {
     flex: 1;
     padding: 40px 30px;
   }
@@ -327,13 +330,12 @@
     flex-direction: column;
   }
 
-  .register-left {
-    flex: none;
-    height: 200px;
-    width: 100%;
+  /* Hide image side on mobile */
+  .register-right {
+    display: none;
   }
 
-  .register-right {
+  .register-left {
     flex: 1;
     padding: 40px 24px;
     justify-content: flex-start;

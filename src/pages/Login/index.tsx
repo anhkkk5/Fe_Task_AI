@@ -9,9 +9,6 @@ import {
   LockOutlined,
   GoogleOutlined,
   AppleOutlined,
-  RobotOutlined,
-  CheckCircleOutlined,
-  ThunderboltOutlined,
 } from "@ant-design/icons";
 import { loginUser } from "../../services/authServices";
 import { checkLogin } from "../../actions/login";
