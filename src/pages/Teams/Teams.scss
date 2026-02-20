@@ -87,7 +87,14 @@
 }
 
 // Main Content (shared)
-.teams-main,
+.teams-main {
+  padding: 88px 30px 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .calendar-main,
 .notifications-main {
   padding: 88px 24px 24px;

@@ -86,9 +86,11 @@
 
 // Main Content
 .notifications-main {
-  padding: 88px 24px 24px;
+  padding: 88px 30px 24px;
   max-width: 1400px;
   margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 // Page Header
