@@ -49,6 +49,13 @@ export const getMe = async () => {
   return await post("/auth/me", {});
 };
 
+export const updateProfile = async (data: {
+  name?: string;
+  avatar?: string;
+}) => {
+  return await post("/auth/update-profile", data);
+};
+
 export const refreshToken = async (): Promise<{ accessToken: string }> => {
   const response = await post<{ accessToken: string }>(
     "/auth/refresh-token",

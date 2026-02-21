@@ -13,6 +13,8 @@ function Header() {
       clearAccessToken();
       dispatch({ type: "CHECK_LOGIN", status: false });
       navigate("/login");
+    } else if (key === "profile") {
+      navigate("/profile");
     }
   };
 

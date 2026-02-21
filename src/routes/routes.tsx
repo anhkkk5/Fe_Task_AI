@@ -5,6 +5,7 @@ import Login from "../pages/Login";
 import Register from "../pages/Register";
 import VerifyOtp from "../pages/VerifyOtp";
 import ForgotPassword from "../pages/ForgotPassword";
+import Profile from "../pages/Profile";
 import Tasks from "../pages/Tasks";
 import Teams from "../pages/Teams";
 import Calendar from "../pages/Calendar";
@@ -40,6 +41,10 @@ export const routes = [
           {
             index: true,
             element: <Home />,
+          },
+          {
+            path: "profile",
+            element: <Profile />,
           },
           {
             path: "tasks",
