@@ -14,7 +14,8 @@ import {
   ProjectOutlined,
 } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
-import { updateProfile } from "../../services/authServices";
+import { updateProfile, uploadAvatar } from "../../services/authServices";
+import ImageUpload from "../../components/ImageUpload";
 import "./Profile.scss";
 
 const { Option } = Select;
@@ -130,21 +131,22 @@ function Profile() {
         <Form form={form} layout="vertical" onFinish={handleSave}>
           {/* Avatar Card */}
           <div className="profile-card avatar-card">
-            <Avatar
+            <ImageUpload
+              value={user?.avatar}
+              onChange={(url) => {
+                dispatch({
+                  type: "UPDATE_USER",
+                  payload: { avatar: url },
+                });
+              }}
+              onUpload={uploadAvatar}
               size={80}
-              src={user?.avatar}
-              icon={<UserOutlined />}
-              className="profile-avatar"
+              shape="circle"
+              placeholder="Tải ảnh lên"
             />
             <div className="avatar-info">
               <h3>{user?.name || "Người dùng"}</h3>
               <p>{user?.email || ""}</p>
-              <div className="avatar-actions">
-                <Button icon={<CameraOutlined />}>Tải ảnh lên</Button>
-                <Button type="link" danger>
-                  Xóa ảnh
-                </Button>
-              </div>
             </div>
           </div>
 

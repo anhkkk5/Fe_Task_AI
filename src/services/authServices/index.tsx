@@ -1,4 +1,9 @@
-import { post, setAccessToken } from "../../utils/axios/request";
+import {
+  post,
+  postForm,
+  setAccessToken,
+  clearAccessToken,
+} from "../../utils/axios/request";
 
 interface LoginData {
   email: string;
@@ -54,6 +59,17 @@ export const updateProfile = async (data: {
   avatar?: string;
 }) => {
   return await post("/auth/update-profile", data);
+};
+
+export const uploadAvatar = async (file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append("avatar", file);
+
+  const response = await postForm<{ url: string }>(
+    "/auth/upload-avatar",
+    formData,
+  );
+  return response.url;
 };
 
 export const refreshToken = async (): Promise<{ accessToken: string }> => {

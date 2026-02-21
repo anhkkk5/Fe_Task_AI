@@ -1,0 +1,93 @@
+.image-upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+
+  .avatar-uploader {
+    .ant-upload {
+      width: auto;
+      height: auto;
+      border: none;
+      background: transparent;
+      padding: 0;
+
+      &:hover {
+        border: none;
+      }
+    }
+  }
+
+  .avatar-wrapper {
+    position: relative;
+    cursor: pointer;
+    border-radius: 50%;
+    overflow: hidden;
+
+    .upload-avatar {
+      border: 3px solid #f3f4f6;
+      transition: all 0.3s;
+
+      &:hover {
+        border-color: #4a90e2;
+      }
+    }
+
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+    }
+
+    .upload-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 1;
+
+      .anticon {
+        color: white;
+        font-size: 24px;
+      }
+    }
+
+    &:hover .upload-overlay {
+      opacity: 1;
+    }
+  }
+
+  .upload-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+
+    .ant-btn {
+      height: 36px;
+      border-radius: 8px;
+      font-weight: 500;
+
+      &:first-child {
+        background: #f3f4f6;
+        border: none;
+        color: #4b5563;
+
+        &:hover {
+          background: #e5e7eb;
+        }
+      }
+    }
+  }
+}
