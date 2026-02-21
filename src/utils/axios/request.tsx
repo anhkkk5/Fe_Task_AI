@@ -124,6 +124,9 @@ export const edit = async <T = any,>(path: string, data: any): Promise<T> => {
   return response.data;
 };
 
+// Alias for edit (PATCH method)
+export const patch = edit;
+
 export const editForm = async <T = any,>(
   path: string,
   formData: FormData,

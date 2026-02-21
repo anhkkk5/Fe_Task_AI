@@ -1,12 +1,20 @@
 import { useState, useEffect } from "react";
-import { Form, Input, Button, Avatar, Switch, message, Select } from "antd";
+import {
+  Form,
+  Input,
+  Button,
+  Avatar,
+  Switch,
+  message,
+  Select,
+  Spin,
+} from "antd";
 import {
   UserOutlined,
   BellOutlined,
   LockOutlined,
   CreditCardOutlined,
   LogoutOutlined,
-  CameraOutlined,
   GlobalOutlined,
   StarOutlined,
   MailOutlined,
@@ -14,7 +22,11 @@ import {
   ProjectOutlined,
 } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
-import { updateProfile, uploadAvatar } from "../../services/authServices";
+import {
+  updateProfile,
+  uploadAvatar,
+  getMe,
+} from "../../services/authServices";
 import ImageUpload from "../../components/ImageUpload";
 import "./Profile.scss";
 
@@ -25,10 +37,33 @@ function Profile() {
   const { user } = useSelector((state: any) => state.loginReducer);
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [aiSuggestions, setAiSuggestions] = useState(true);
   const [autoSchedule, setAutoSchedule] = useState(false);
   const [activeMenu, setActiveMenu] = useState("profile");
 
+  // Fetch user data on mount and set form values
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await getMe();
+        // Backend returns { accessToken, user }, extract user only
+        const userData = response.user || response;
+        dispatch({
+          type: "UPDATE_USER",
+          payload: userData,
+        });
+      } catch (error) {
+        console.error("Failed to fetch user data:", error);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [dispatch]);
+
+  // Set form values when user data changes
   useEffect(() => {
     if (user) {
       form.setFieldsValue({
@@ -67,6 +102,14 @@ function Profile() {
     { key: "security", icon: <LockOutlined />, label: "Bảo mật" },
     { key: "subscription", icon: <CreditCardOutlined />, label: "Đăng ký" },
   ];
+
+  if (initialLoading) {
+    return (
+      <div className="profile-page loading">
+        <Spin size="large" tip="Đang tải..." />
+      </div>
+    );
+  }
 
   return (
     <div className="profile-page">
@@ -128,7 +171,19 @@ function Profile() {
           </div>
         </div>
 
-        <Form form={form} layout="vertical" onFinish={handleSave}>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSave}
+          initialValues={{
+            name: user?.name || "",
+            email: user?.email || "",
+            phone: user?.phone || "",
+            position: user?.position || "",
+            language: "vi",
+            timezone: "GMT+07:00",
+          }}
+        >
           {/* Avatar Card */}
           <div className="profile-card avatar-card">
             <ImageUpload

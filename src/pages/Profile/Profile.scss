@@ -3,6 +3,11 @@
   min-height: calc(100vh - 64px);
   background: #f8fafc;
   padding-top: 64px; // Space for fixed header
+
+  &.loading {
+    justify-content: center;
+    align-items: center;
+  }
 }
 
 // Sidebar

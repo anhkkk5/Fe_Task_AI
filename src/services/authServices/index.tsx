@@ -1,6 +1,8 @@
 import {
+  get,
   post,
   postForm,
+  patch,
   setAccessToken,
   clearAccessToken,
 } from "../../utils/axios/request";
@@ -51,14 +53,14 @@ export const logoutUser = async (): Promise<void> => {
 };
 
 export const getMe = async () => {
-  return await post("/auth/me", {});
+  return await get("/auth/me");
 };
 
 export const updateProfile = async (data: {
   name?: string;
   avatar?: string;
 }) => {
-  return await post("/auth/update-profile", data);
+  return await patch("/auth/update-profile", data);
 };
 
 export const uploadAvatar = async (file: File): Promise<string> => {
