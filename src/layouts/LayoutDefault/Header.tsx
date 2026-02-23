@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Avatar, Badge, Dropdown } from "antd";
 import { clearAccessToken } from "../../utils/axios/request";
 
@@ -7,6 +7,7 @@ function Header() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const location = useLocation();
+  const { user } = useSelector((state: any) => state.loginReducer);
 
   const handleMenuClick = (key: string) => {
     if (key === "logout") {
@@ -78,10 +79,14 @@ function Header() {
       <div className="header-right">
         <Dropdown menu={menuProps} placement="bottomRight">
           <div className="user-menu">
-            <Avatar size="small" style={{ backgroundColor: "#4a90e2" }}>
-              N
+            <Avatar
+              size="small"
+              src={user?.avatar}
+              style={{ backgroundColor: user?.avatar ? undefined : "#4a90e2" }}
+            >
+              {!user?.avatar && (user?.name?.charAt(0)?.toUpperCase() || "N")}
             </Avatar>
-            <span className="user-name">Nguyễn Văn A</span>
+            <span className="user-name">{user?.name || "Người dùng"}</span>
           </div>
         </Dropdown>
       </div>
