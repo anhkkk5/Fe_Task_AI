@@ -14,6 +14,7 @@ import {
   Badge,
   Avatar,
   Tooltip,
+  message,
 } from "antd";
 import {
   PlusOutlined,
@@ -27,8 +28,10 @@ import {
   ClockCircleOutlined,
   CalendarOutlined,
   ArrowLeftOutlined,
+  ScheduleOutlined,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
+import AITaskScheduler from "../../components/AITaskScheduler";
 import "./Tasks.scss";
 
 const { Title, Text } = Typography;
@@ -240,6 +243,7 @@ function Tasks() {
   const [loading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [schedulerVisible, setSchedulerVisible] = useState(false);
 
   const filteredTasks = tasks.filter((task) => {
     const matchesSearch =
@@ -299,6 +303,13 @@ function Tasks() {
                     <Option value="done">Hoàn thành</Option>
                     <Option value="overdue">Quá hạn</Option>
                   </Select>
+                  <Button
+                    type="primary"
+                    icon={<ScheduleOutlined />}
+                    onClick={() => setSchedulerVisible(true)}
+                  >
+                    AI Tối Ưu Lịch
+                  </Button>
                   <Button type="primary" icon={<PlusOutlined />}>
                     Thêm công việc
                   </Button>
@@ -375,6 +386,15 @@ function Tasks() {
             </Card>
           </Col>
         </Row>
+        <AITaskScheduler
+          visible={schedulerVisible}
+          onClose={() => setSchedulerVisible(false)}
+          tasks={tasks}
+          onScheduleCreate={(schedule) => {
+            console.log("Schedule created:", schedule);
+            message.success("Đã tạo lịch trình thành công!");
+          }}
+        />
       </main>
     </div>
   );

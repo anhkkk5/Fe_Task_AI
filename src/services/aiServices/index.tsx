@@ -12,6 +12,27 @@ export interface AIBreakdownResponse {
   estimatedTime?: string;
 }
 
+export interface AIScheduleRequest {
+  taskIds: string[];
+  startDate?: string;
+}
+
+export interface AIScheduleResponse {
+  schedule: {
+    day: string;
+    date: string;
+    tasks: {
+      taskId: string;
+      title: string;
+      priority: string;
+      suggestedTime: string;
+      reason: string;
+    }[];
+  }[];
+  totalTasks: number;
+  suggestedOrder: string[];
+}
+
 // AI task breakdown
 export const aiTaskBreakdown = async (data: AIBreakdownRequest) => {
   if (data.taskId) {
@@ -26,4 +47,11 @@ export const aiTaskBreakdown = async (data: AIBreakdownRequest) => {
 // AI chat/assistant
 export const aiChat = async (message: string, context?: string[]) => {
   return await post("/ai/chat", { message, context });
+};
+
+// AI schedule plan - tối ưu lịch làm việc
+export const aiSchedulePlan = async (
+  data: AIScheduleRequest,
+): Promise<AIScheduleResponse> => {
+  return await post("/ai/schedule-plan", data);
 };
