@@ -29,6 +29,7 @@ import {
 } from "../../services/authServices";
 import ImageUpload from "../../components/ImageUpload";
 import { ChangePasswordModal } from "../../components/ChangePasswordModal";
+import UserHabitsSettings from "../../components/UserHabitsSettings";
 import "./Profile.scss";
 
 const { Option } = Select;
@@ -310,6 +311,11 @@ function Profile() {
                 />
               </div>
             </div>
+          </div>
+
+          {/* User Habits Settings */}
+          <div className="profile-card">
+            <UserHabitsSettings userId={user?._id} />
           </div>
         </Form>
       </div>

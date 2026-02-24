@@ -262,11 +262,10 @@ function Home() {
               extra={
                 <div className="card-actions">
                   <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
+                    type="link"
                     onClick={() => setIsCreateModalOpen(true)}
                   >
-                    Thêm
+                    <PlusOutlined /> Thêm nhanh
                   </Button>
                   <Button type="link">
                     Xem tất cả <ArrowRightOutlined />
@@ -322,6 +321,7 @@ function Home() {
                   block
                   size="large"
                   icon={<PlusOutlined />}
+                  onClick={() => setIsCreateModalOpen(true)}
                 >
                   Thêm công việc
                 </Button>

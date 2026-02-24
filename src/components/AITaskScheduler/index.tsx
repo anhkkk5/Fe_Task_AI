@@ -56,6 +56,7 @@ interface ScheduleResult {
   schedule: ScheduleDay[];
   totalTasks: number;
   suggestedOrder: string[];
+  personalizationNote?: string;
 }
 
 interface AITaskSchedulerProps {
@@ -193,7 +194,9 @@ export default function AITaskScheduler({
               placeholder="Chọn ngày bắt đầu"
               style={{ width: "100%" }}
               suffixIcon={<CalendarOutlined />}
-              disabledDate={(current) => current && current < dayjs().startOf("day")}
+              disabledDate={(current) =>
+                current && current < dayjs().startOf("day")
+              }
             />
           </Card>
 
@@ -262,6 +265,7 @@ export default function AITaskScheduler({
             <>
               <Alert
                 message={`Lịch trình đã sẵn sàng! ${schedule.totalTasks} công việc được sắp xếp trong ${schedule.schedule.length} ngày`}
+                description={schedule.personalizationNote}
                 type="success"
                 showIcon
                 icon={<CheckCircleOutlined />}
@@ -288,9 +292,7 @@ export default function AITaskScheduler({
                       {day.tasks.map((task, taskIndex) => (
                         <Timeline.Item
                           key={taskIndex}
-                          label={
-                            <Tag color="blue">{task.suggestedTime}</Tag>
-                          }
+                          label={<Tag color="blue">{task.suggestedTime}</Tag>}
                         >
                           <div className="schedule-task">
                             <Text strong>{task.title}</Text>
