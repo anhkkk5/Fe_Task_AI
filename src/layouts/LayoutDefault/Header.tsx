@@ -74,6 +74,12 @@ function Header() {
             Thông báo
             <Badge count={5} size="small" style={{ marginLeft: 4 }} />
           </Link>
+          <Link
+            to="/chat"
+            className={`nav-link ${isActive("/chat") ? "active" : ""}`}
+          >
+            Chat AI
+          </Link>
         </nav>
       </div>
       <div className="header-right">

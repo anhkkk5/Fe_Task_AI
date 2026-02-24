@@ -28,6 +28,7 @@ import {
   getMe,
 } from "../../services/authServices";
 import ImageUpload from "../../components/ImageUpload";
+import { ChangePasswordModal } from "../../components/ChangePasswordModal";
 import "./Profile.scss";
 
 const { Option } = Select;
@@ -41,6 +42,7 @@ function Profile() {
   const [aiSuggestions, setAiSuggestions] = useState(true);
   const [autoSchedule, setAutoSchedule] = useState(false);
   const [activeMenu, setActiveMenu] = useState("profile");
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   // Fetch user data on mount and set form values
   useEffect(() => {
@@ -160,6 +162,9 @@ function Profile() {
             <p>Quản lý thông tin cá nhân và tùy chọn AI của bạn.</p>
           </div>
           <div className="header-actions">
+            <Button onClick={() => setChangePasswordOpen(true)}>
+              Đổi mật khẩu
+            </Button>
             <Button onClick={() => form.resetFields()}>Hủy</Button>
             <Button
               type="primary"
@@ -308,6 +313,11 @@ function Profile() {
           </div>
         </Form>
       </div>
+
+      <ChangePasswordModal
+        open={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
+      />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import Tasks from "../pages/Tasks";
 import Teams from "../pages/Teams";
 import Calendar from "../pages/Calendar";
 import Notifications from "../pages/Notifications";
+import Chat from "../pages/Chat";
 
 export const routes = [
   // Auth routes - Full screen, no LayoutDefault
@@ -61,6 +62,10 @@ export const routes = [
           {
             path: "notifications",
             element: <Notifications />,
+          },
+          {
+            path: "chat",
+            element: <Chat />,
           },
         ],
       },

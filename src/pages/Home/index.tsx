@@ -1,5 +1,21 @@
 import { useEffect, useState } from "react";
-import { Card, Row, Col, Button, Table, Tag, List, Typography } from "antd";
+import {
+  Card,
+  Row,
+  Col,
+  Button,
+  Table,
+  Tag,
+  List,
+  Typography,
+  Modal,
+  Form,
+  Input,
+  Select,
+  Popconfirm,
+  Space,
+  DatePicker,
+} from "antd";
 import {
   PlusOutlined,
   RobotOutlined,
@@ -9,173 +25,185 @@ import {
   ClockCircleOutlined,
   ExclamationCircleOutlined,
   FolderOutlined,
-  MoreOutlined,
   ArrowRightOutlined,
+  EditOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
-
+import { useTasks } from "../../hooks/useTasks";
+import { getMe } from "../../services/authServices";
+import { useDispatch, useSelector } from "react-redux";
 import "./Home.scss";
 
 const { Title, Text } = Typography;
 
-interface Task {
-  id: string;
-  title: string;
-  status: "todo" | "in_progress" | "done" | "overdue";
-  priority: "low" | "medium" | "high";
-  dueDate: string;
-}
-
-interface DashboardStats {
-  total: number;
-  inProgress: number;
-  completed: number;
-  overdue: number;
-}
-
-const taskColumns = [
-  {
-    title: "Công việc",
-    dataIndex: "title",
-    key: "title",
-    render: (text: string, record: Task) => (
-      <div className="task-title-cell">
-        <Text strong>{text}</Text>
-        <br />
-        <Text type="secondary" className="task-id">
-          #{record.id}
-        </Text>
-      </div>
-    ),
-  },
-  {
-    title: "Trạng thái",
-    dataIndex: "status",
-    key: "status",
-    render: (status: string) => {
-      const statusMap: Record<string, { color: string; text: string }> = {
-        todo: { color: "default", text: "Chờ xử lý" },
-        in_progress: { color: "processing", text: "Đang thực hiện" },
-        done: { color: "success", text: "Hoàn thành" },
-        overdue: { color: "error", text: "Quá hạn" },
-      };
-      const { color, text } = statusMap[status] || statusMap.todo;
-      return <Tag color={color}>{text}</Tag>;
-    },
-  },
-  {
-    title: "Ưu tiên",
-    dataIndex: "priority",
-    key: "priority",
-    render: (priority: string) => {
-      const priorityMap: Record<string, { color: string; text: string }> = {
-        low: { color: "default", text: "Thấp" },
-        medium: { color: "warning", text: "Trung bình" },
-        high: { color: "error", text: "Cao" },
-      };
-      const { color, text } = priorityMap[priority] || priorityMap.low;
-      return <Tag color={color}>{text}</Tag>;
-    },
-  },
-  {
-    title: "Hạn chót",
-    dataIndex: "dueDate",
-    key: "dueDate",
-    render: (date: string) => (
-      <Text>
-        <ClockCircleOutlined style={{ marginRight: 4 }} />
-        {new Date(date).toLocaleDateString("vi-VN")}
-      </Text>
-    ),
-  },
-  {
-    title: "",
-    key: "action",
-    render: () => <Button type="text" icon={<MoreOutlined />} />,
-  },
-];
-
-const aiSuggestions = [
-  {
-    id: 1,
-    title: "Phân tích hiệu suất",
-    description:
-      "Dựa trên dữ liệu của bạn, bạn nên tập trung vào các task quan trọng trước 10h sáng.",
-    type: "tip",
-  },
-  {
-    id: 2,
-    title: "Gợi ý lịch trình",
-    description:
-      "Có 2 task đang gần deadline. Bạn có muốn tôi giúp tạo lịch trình phù hợp?",
-    type: "action",
-  },
-];
-
-const upcomingDeadlines = [
-  { id: 1, title: "Hoàn thiện báo cáo Q1", dueDate: "2026-02-20", daysLeft: 1 },
-  { id: 2, title: "Review code PR #42", dueDate: "2026-02-21", daysLeft: 2 },
-  {
-    id: 3,
-    title: "Meeting với khách hàng",
-    dueDate: "2026-02-22",
-    daysLeft: 3,
-  },
-];
+const aiSuggestions: any[] = [];
+const upcomingDeadlines: any[] = [];
 
 function Home() {
-  const [stats] = useState<DashboardStats>({
-    total: 3,
-    inProgress: 1,
-    completed: 1,
-    overdue: 1,
-  });
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
+  const { user } = useSelector((state: any) => state.loginReducer);
+  const { tasks, loading, handleCreate, handleUpdate, handleDelete } =
+    useTasks();
 
+  console.log("Home: tasks count:", tasks.length, "loading:", loading);
+
+  const [stats] = useState({
+    total: 0,
+    inProgress: 0,
+    completed: 0,
+    overdue: 0,
+  });
+
+  // Create modal state
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createForm] = Form.useForm();
+  const [createLoading, setCreateLoading] = useState(false);
+
+  // Edit modal state
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<any>(null);
+  const [editForm] = Form.useForm();
+  const [editLoading, setEditLoading] = useState(false);
+
+  // Fetch user on mount
   useEffect(() => {
-    const fetchDashboard = async () => {
-      try {
-        // const data = await get("/tasks/dashboard");
-        // setStats(data.stats);
-        // setTasks(data.tasks);
-        setTasks([
-          {
-            id: "TASK-001",
-            title: "Thiết kế giao diện mới",
-            status: "in_progress",
-            priority: "high",
-            dueDate: "2026-02-20",
-          },
-          {
-            id: "TASK-002",
-            title: "Viết tài liệu API",
-            status: "done",
-            priority: "medium",
-            dueDate: "2026-02-18",
-          },
-          {
-            id: "TASK-003",
-            title: "Fix bug đăng nhập",
-            status: "overdue",
-            priority: "high",
-            dueDate: "2026-02-15",
-          },
-        ]);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching dashboard:", error);
-        setLoading(false);
+    const fetchUser = async () => {
+      if (!user?.name) {
+        try {
+          const response = await getMe();
+          const userData = response.user || response;
+          dispatch({ type: "UPDATE_USER", payload: userData });
+        } catch (error) {
+          console.error("Failed to fetch user:", error);
+        }
       }
     };
-    fetchDashboard();
-  }, []);
+    fetchUser();
+  }, [dispatch, user]);
+
+  // Handle create
+  const onCreateSubmit = async (values: any) => {
+    setCreateLoading(true);
+    const success = await handleCreate(values);
+    setCreateLoading(false);
+    if (success) {
+      setIsCreateModalOpen(false);
+      createForm.resetFields();
+    }
+  };
+
+  // Handle edit click
+  const onEditClick = (task: any) => {
+    setEditingTask(task);
+    editForm.setFieldsValue({
+      title: task.title,
+      status: task.status,
+      priority: task.priority,
+    });
+    setIsEditModalOpen(true);
+  };
+
+  // Handle update
+  const onUpdateSubmit = async (values: any) => {
+    if (!editingTask) return;
+    setEditLoading(true);
+    const success = await handleUpdate(editingTask._id, values);
+    setEditLoading(false);
+    if (success) {
+      setIsEditModalOpen(false);
+    }
+  };
+
+  // Table columns
+  const columns = [
+    {
+      title: "Công việc",
+      dataIndex: "title",
+      key: "title",
+      render: (text: string, record: any) => (
+        <div className="task-title-cell">
+          <Text strong>{text}</Text>
+          <br />
+          <Text type="secondary" className="task-id">
+            #{record._id?.slice(-6)}
+          </Text>
+        </div>
+      ),
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      render: (status: string) => {
+        const map: Record<string, { color: string; text: string }> = {
+          pending: { color: "default", text: "Chờ xử lý" },
+          in_progress: { color: "processing", text: "Đang thực hiện" },
+          completed: { color: "success", text: "Hoàn thành" },
+          cancelled: { color: "error", text: "Đã hủy" },
+        };
+        const { color, text } = map[status] || map.pending;
+        return <Tag color={color}>{text}</Tag>;
+      },
+    },
+    {
+      title: "Ưu tiên",
+      dataIndex: "priority",
+      key: "priority",
+      render: (priority: string) => {
+        const map: Record<string, { color: string; text: string }> = {
+          low: { color: "default", text: "Thấp" },
+          medium: { color: "warning", text: "Trung bình" },
+          high: { color: "error", text: "Cao" },
+        };
+        const { color, text } = map[priority] || map.low;
+        return <Tag color={color}>{text}</Tag>;
+      },
+    },
+    {
+      title: "Hạn chót",
+      dataIndex: "deadline",
+      key: "deadline",
+      render: (date: string) =>
+        date ? (
+          <Text>
+            <ClockCircleOutlined style={{ marginRight: 4 }} />
+            {new Date(date).toLocaleDateString("vi-VN")}
+          </Text>
+        ) : (
+          "—"
+        ),
+    },
+    {
+      title: "",
+      key: "action",
+      render: (_: any, record: any) => (
+        <Space>
+          <Button
+            type="text"
+            icon={<EditOutlined />}
+            onClick={() => onEditClick(record)}
+          />
+          <Popconfirm
+            title="Xóa công việc"
+            description="Bạn có chắc muốn xóa công việc này?"
+            onConfirm={() => handleDelete(record._id || record.id)}
+            okText="Xóa"
+            cancelText="Hủy"
+          >
+            <Button type="text" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
 
   return (
     <div className="dashboard-page">
       <main className="dashboard-main">
         <section className="welcome-section">
-          <Title level={2} className="welcome-title">
-            Chào mừng Nguyễn Văn A, quản lý công việc của bạn hôm nay thế nào?
+          <Title level={3} className="welcome-title">
+            Chào mừng {user?.name || "bạn"}, quản lý công việc của bạn hôm nay
+            thế nào?
           </Title>
         </section>
 
@@ -233,7 +261,11 @@ function Home() {
               title={<Title level={4}>Công việc của tôi</Title>}
               extra={
                 <div className="card-actions">
-                  <Button type="primary" icon={<PlusOutlined />}>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => setIsCreateModalOpen(true)}
+                  >
                     Thêm
                   </Button>
                   <Button type="link">
@@ -243,11 +275,11 @@ function Home() {
               }
             >
               <Table
-                columns={taskColumns}
+                columns={columns}
                 dataSource={tasks}
                 loading={loading}
                 pagination={false}
-                rowKey="id"
+                rowKey="_id"
                 size="small"
               />
             </Card>
@@ -333,6 +365,98 @@ function Home() {
           </Col>
         </Row>
       </main>
+
+      {/* Create Task Modal */}
+      <Modal
+        title="Thêm công việc mới"
+        open={isCreateModalOpen}
+        onCancel={() => setIsCreateModalOpen(false)}
+        onOk={() => createForm.submit()}
+        confirmLoading={createLoading}
+        okText="Tạo"
+        cancelText="Hủy"
+      >
+        <Form form={createForm} layout="vertical" onFinish={onCreateSubmit}>
+          <Form.Item
+            name="title"
+            label="Tên công việc"
+            rules={[{ required: true, message: "Vui lòng nhập tên công việc" }]}
+          >
+            <Input placeholder="Nhập tên công việc" />
+          </Form.Item>
+          <Form.Item name="description" label="Mô tả">
+            <Input.TextArea rows={3} placeholder="Nhập mô tả công việc" />
+          </Form.Item>
+          <Form.Item name="status" label="Trạng thái" initialValue="pending">
+            <Select placeholder="Chọn trạng thái">
+              <Select.Option value="pending">Chờ xử lý</Select.Option>
+              <Select.Option value="in_progress">Đang thực hiện</Select.Option>
+              <Select.Option value="completed">Hoàn thành</Select.Option>
+              <Select.Option value="cancelled">Đã hủy</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item name="priority" label="Ưu tiên" initialValue="medium">
+            <Select placeholder="Chọn mức độ ưu tiên">
+              <Select.Option value="low">Thấp</Select.Option>
+              <Select.Option value="medium">Trung bình</Select.Option>
+              <Select.Option value="high">Cao</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item name="deadline" label="Hạn chót">
+            <DatePicker
+              style={{ width: "100%" }}
+              format="DD/MM/YYYY"
+              placeholder="Chọn ngày hạn chót"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Edit Task Modal */}
+      <Modal
+        title="Chỉnh sửa công việc"
+        open={isEditModalOpen}
+        onCancel={() => setIsEditModalOpen(false)}
+        onOk={() => editForm.submit()}
+        confirmLoading={editLoading}
+        okText="Lưu"
+        cancelText="Hủy"
+      >
+        <Form form={editForm} layout="vertical" onFinish={onUpdateSubmit}>
+          <Form.Item
+            name="title"
+            label="Tên công việc"
+            rules={[{ required: true, message: "Vui lòng nhập tên công việc" }]}
+          >
+            <Input placeholder="Nhập tên công việc" />
+          </Form.Item>
+          <Form.Item
+            name="status"
+            label="Trạng thái"
+            rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
+          >
+            <Select placeholder="Chọn trạng thái">
+              <Select.Option value="pending">Chờ xử lý</Select.Option>
+              <Select.Option value="in_progress">Đang thực hiện</Select.Option>
+              <Select.Option value="completed">Hoàn thành</Select.Option>
+              <Select.Option value="cancelled">Đã hủy</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item
+            name="priority"
+            label="Ưu tiên"
+            rules={[
+              { required: true, message: "Vui lòng chọn mức độ ưu tiên" },
+            ]}
+          >
+            <Select placeholder="Chọn mức độ ưu tiên">
+              <Select.Option value="low">Thấp</Select.Option>
+              <Select.Option value="medium">Trung bình</Select.Option>
+              <Select.Option value="high">Cao</Select.Option>
+            </Select>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }
