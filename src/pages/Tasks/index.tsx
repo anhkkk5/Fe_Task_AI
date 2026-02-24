@@ -32,6 +32,7 @@ import {
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import AITaskScheduler from "../../components/AITaskScheduler";
+import { useTasks } from "../../hooks/useTasks";
 import "./Tasks.scss";
 
 const { Title, Text } = Typography;
@@ -42,7 +43,7 @@ interface Task {
   title: string;
   description: string;
   status: "todo" | "in_progress" | "done" | "overdue";
-  priority: "low" | "medium" | "high";
+  priority: "low" | "medium" | "high" | "urgent";
   dueDate: string;
   assignee?: string;
   aiAssisted: boolean;
@@ -174,53 +175,6 @@ const taskColumns = [
   },
 ];
 
-const mockTasks: Task[] = [
-  {
-    id: "TASK-001",
-    title: "Thiết kế giao diện mới",
-    description: "Tạo mockup cho trang dashboard",
-    status: "in_progress",
-    priority: "high",
-    dueDate: "2026-02-20",
-    assignee: "Nguyễn Văn A",
-    aiAssisted: true,
-    tags: ["UI/UX", "Design"],
-  },
-  {
-    id: "TASK-002",
-    title: "Viết tài liệu API",
-    description: "Document các endpoint mới",
-    status: "done",
-    priority: "medium",
-    dueDate: "2026-02-18",
-    assignee: "Trần Văn B",
-    aiAssisted: false,
-    tags: ["Docs"],
-  },
-  {
-    id: "TASK-003",
-    title: "Fix bug đăng nhập",
-    description: "Lỗi không thể đăng nhập với Google",
-    status: "overdue",
-    priority: "high",
-    dueDate: "2026-02-15",
-    assignee: "Nguyễn Văn A",
-    aiAssisted: true,
-    tags: ["Bug", "Priority"],
-  },
-  {
-    id: "TASK-004",
-    title: "Tích hợp AI chat",
-    description: "Thêm tính năng chat với AI assistant",
-    status: "todo",
-    priority: "medium",
-    dueDate: "2026-02-25",
-    assignee: "Lê Văn C",
-    aiAssisted: true,
-    tags: ["AI", "Feature"],
-  },
-];
-
 const aiSuggestions = [
   {
     id: 1,
@@ -238,12 +192,51 @@ const aiSuggestions = [
   },
 ];
 
+interface TaskItem {
+  id: string;
+  _id?: string;
+  title: string;
+  description: string;
+  status: "todo" | "in_progress" | "done" | "overdue";
+  priority: "low" | "medium" | "high" | "urgent";
+  dueDate: string;
+  deadline?: string;
+  assignee?: string;
+  userId?: string;
+  aiBreakdown?: any[];
+  aiAssisted: boolean;
+  tags: string[];
+}
+
 function Tasks() {
-  const [tasks] = useState<Task[]>(mockTasks);
-  const [loading] = useState(false);
+  const { tasks: apiTasks, loading } = useTasks();
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [schedulerVisible, setSchedulerVisible] = useState(false);
+
+  // Map API tasks to component format
+  const tasks: TaskItem[] = apiTasks.map((t: any) => ({
+    id: t._id || t.id,
+    _id: t._id,
+    title: t.title,
+    description: t.description || "",
+    status:
+      t.status === "completed"
+        ? "done"
+        : t.status === "in_progress"
+          ? "in_progress"
+          : t.status === "cancelled"
+            ? "done"
+            : "todo",
+    priority: (t.priority || "medium") as "low" | "medium" | "high" | "urgent",
+    dueDate: t.deadline || t.dueDate || new Date().toISOString(),
+    deadline: t.deadline,
+    assignee: t.userId?.name || "Bạn",
+    userId: t.userId,
+    aiBreakdown: t.aiBreakdown,
+    aiAssisted: !!(t.aiBreakdown && t.aiBreakdown.length > 0),
+    tags: t.tags || [],
+  }));
 
   const filteredTasks = tasks.filter((task) => {
     const matchesSearch =

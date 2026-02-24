@@ -312,12 +312,12 @@ function Profile() {
               </div>
             </div>
           </div>
-
-          {/* User Habits Settings */}
-          <div className="profile-card">
-            <UserHabitsSettings userId={user?._id} />
-          </div>
         </Form>
+
+        {/* User Habits Settings - Outside of Form */}
+        <div className="profile-card">
+          <UserHabitsSettings userId={user?._id} />
+        </div>
       </div>
 
       <ChangePasswordModal
