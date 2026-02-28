@@ -10,6 +10,12 @@ export interface Task {
   deadline?: string;
   tags?: string[];
   reminderAt?: string;
+  estimatedDuration?: number;
+  aiBreakdown?: {
+    title: string;
+    status?: string;
+    estimatedDuration?: number;
+  }[];
   createdAt: string;
   updatedAt: string;
 }

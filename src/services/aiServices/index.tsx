@@ -55,3 +55,15 @@ export const aiSchedulePlan = async (
 ): Promise<AIScheduleResponse> => {
   return await post("/ai/schedule-plan", data);
 };
+
+// Save AI schedule to tasks
+export const saveAISchedule = async (
+  schedule: {
+    taskId: string;
+    date: string;
+    suggestedTime: string;
+    reason: string;
+  }[],
+): Promise<{ message: string; updated: number }> => {
+  return await post("/tasks/save-ai-schedule", { schedule });
+};

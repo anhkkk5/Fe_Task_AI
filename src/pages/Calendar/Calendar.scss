@@ -1,150 +1,378 @@
 .calendar-page {
   min-height: 100vh;
-  background: #f8fafc;
+  background: #f5f5f5;
+
+  .calendar-main {
+    padding: 24px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
 }
 
-// Header styles (shared with Teams)
-.dashboard-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 64px;
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
+.calendar-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
-  z-index: 100;
-}
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
 
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 32px;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  .logo-icon {
-    font-size: 20px;
-    color: #4a90e2;
-  }
-
-  .logo-text {
-    font-size: 18px;
-    font-weight: 600;
-    color: #1a1a2e;
-  }
-}
-
-.main-nav {
-  display: flex;
-  gap: 24px;
-
-  .nav-link {
-    color: #6b7280;
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 500;
-    padding: 8px 0;
-    border-bottom: 2px solid transparent;
-    transition: all 0.2s;
-
-    &:hover,
-    &.active {
-      color: #4a90e2;
-      border-bottom-color: #4a90e2;
-    }
-  }
-}
-
-.header-right {
-  .user-menu {
+  .header-left {
     display: flex;
     align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 8px;
-    transition: background 0.2s;
+    gap: 16px;
 
-    &:hover {
-      background: #f3f4f6;
-    }
-
-    .user-name {
+    .back-link {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: #666;
+      text-decoration: none;
       font-size: 14px;
-      color: #374151;
+
+      &:hover {
+        color: #1890ff;
+      }
+    }
+
+    h3 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
     }
   }
-}
 
-// Main Content
-.calendar-main {
-  padding: 88px 30px 24px;
-  max-width: 1400px;
-  margin: 0 auto;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-// Page Header
-.page-header {
-  margin-bottom: 24px;
-
-  .back-link {
+  .header-center {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #6b7280;
-    text-decoration: none;
-    font-size: 14px;
-    margin-bottom: 12px;
-
-    &:hover {
-      color: #4a90e2;
-    }
   }
 
-  h2 {
-    margin: 0 0 8px 0 !important;
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 }
 
-// Coming Soon Card
-.coming-soon-card {
-  max-width: 600px;
-  margin: 0 auto;
-  text-align: center;
+.calendar-stats {
+  margin-bottom: 16px;
+
+  .ant-card {
+    border-radius: 8px;
+
+    .ant-statistic-title {
+      font-size: 12px;
+      color: #666;
+    }
+
+    .ant-statistic-content {
+      font-size: 24px;
+      font-weight: 600;
+    }
+  }
+}
+
+.calendar-card {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 
   .ant-card-body {
-    padding: 48px;
+    padding: 0;
+  }
+}
+
+.calendar-days-header {
+  display: flex;
+  border-bottom: 1px solid #e8e8e8;
+  background: #fafafa;
+
+  .time-column-header {
+    width: 60px;
+    min-width: 60px;
+    border-right: 1px solid #e8e8e8;
+    padding: 12px 8px;
+    text-align: center;
+    font-size: 12px;
+    color: #999;
+    font-weight: 500;
   }
 
-  .coming-soon-icon {
-    font-size: 64px;
-    color: #4a90e2;
-    margin-bottom: 24px;
+  .day-header {
+    flex: 1;
+    padding: 12px;
+    text-align: center;
+    border-right: 1px solid #e8e8e8;
+    min-width: 120px;
+
+    &:last-child {
+      border-right: none;
+    }
+
+    &.today {
+      background: #e6f7ff;
+
+      .day-number {
+        background: #1890ff;
+        color: white;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 4px auto 0;
+      }
+    }
+
+    .day-name {
+      font-size: 12px;
+      color: #666;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    .day-number {
+      font-size: 20px;
+      font-weight: 600;
+      color: #333;
+      margin-top: 4px;
+    }
+  }
+}
+
+.calendar-time-grid {
+  display: flex;
+  height: 720px;
+  overflow-y: auto;
+  position: relative;
+
+  .time-labels {
+    width: 60px;
+    min-width: 60px;
+    border-right: 1px solid #e8e8e8;
+    position: relative;
+    background: #fafafa;
+
+    .time-label {
+      position: absolute;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 11px;
+      color: #999;
+      transform: translateY(-50%);
+      padding: 0 4px;
+    }
   }
 
-  h4 {
-    margin-bottom: 16px !important;
+  .day-column {
+    flex: 1;
+    min-width: 120px;
+    position: relative;
+    border-right: 1px solid #e8e8e8;
+    background: white;
+
+    &:last-child {
+      border-right: none;
+    }
+
+    &.today {
+      background: #fafcff;
+    }
+
+    .hour-cell {
+      height: 60px;
+      border-bottom: 1px solid #f0f0f0;
+      cursor: pointer;
+
+      &:hover {
+        background: #f5f5f5;
+      }
+    }
+
+    .calendar-event {
+      position: absolute;
+      left: 4px;
+      right: 4px;
+      border-radius: 6px;
+      padding: 4px 8px;
+      color: white;
+      font-size: 12px;
+      cursor: pointer;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      transition: all 0.2s;
+      z-index: 10;
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        z-index: 20;
+      }
+
+      .event-title {
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .event-time {
+        font-size: 10px;
+        opacity: 0.9;
+        margin-top: 2px;
+      }
+
+      .event-ai-icon {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        font-size: 10px;
+        opacity: 0.8;
+      }
+
+      &.priority-urgent {
+        border-left: 3px solid #722ed1;
+      }
+
+      &.priority-high {
+        border-left: 3px solid #f5222d;
+      }
+
+      &.priority-medium {
+        border-left: 3px solid #faad14;
+      }
+
+      &.priority-low {
+        border-left: 3px solid #52c41a;
+      }
+    }
+
+    .current-time-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: #f5222d;
+      z-index: 100;
+      pointer-events: none;
+
+      &::before {
+        content: "";
+        position: absolute;
+        left: -4px;
+        top: -3px;
+        width: 8px;
+        height: 8px;
+        background: #f5222d;
+        border-radius: 50%;
+      }
+    }
+  }
+}
+
+.ai-suggestions-panel {
+  margin-top: 16px;
+  border-radius: 12px;
+
+  .ai-schedule-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+
+    .ai-day-preview {
+      padding: 12px;
+      background: #f6ffed;
+      border-radius: 8px;
+      border-left: 3px solid #52c41a;
+
+      .ai-tasks-preview {
+        margin-top: 8px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+    }
+  }
+}
+
+.ai-schedule-modal-content {
+  .ai-day-card {
+    margin-bottom: 16px;
+    padding: 12px;
+    background: #fafafa;
+    border-radius: 8px;
+
+    .ai-tasks-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+
+      .ai-task-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: white;
+        border-radius: 6px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+
+        .ant-typography {
+          flex: 1;
+        }
+      }
+    }
+  }
+}
+
+// Responsive
+@media (max-width: 1200px) {
+  .calendar-header {
+    flex-direction: column;
+    align-items: stretch;
+
+    .header-left,
+    .header-center,
+    .header-right {
+      justify-content: center;
+    }
   }
 
-  .feature-list {
-    text-align: left;
-    max-width: 400px;
-    margin: 24px auto 0;
-    padding-left: 20px;
+  .calendar-time-grid {
+    overflow-x: auto;
 
-    li {
-      padding: 8px 0;
-      color: #6b7280;
+    .day-column {
+      min-width: 100px;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .calendar-page .calendar-main {
+    padding: 12px;
+  }
+
+  .calendar-stats {
+    .ant-col {
+      flex: 0 0 50%;
+      max-width: 50%;
+      margin-bottom: 8px;
+    }
+  }
+
+  .calendar-days-header {
+    .day-header {
+      min-width: 80px;
+      padding: 8px 4px;
+
+      .day-number {
+        font-size: 16px;
+      }
     }
   }
 }

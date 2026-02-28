@@ -78,6 +78,8 @@ export default function AITaskScheduler({
   const [schedule, setSchedule] = useState<ScheduleResult | null>(null);
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
 
+  const [applying, setApplying] = useState(false);
+
   const handleTaskSelect = (taskId: string, checked: boolean) => {
     if (checked) {
       if (selectedTasks.length >= 10) {
@@ -120,11 +122,46 @@ export default function AITaskScheduler({
     }
   };
 
-  const handleApplySchedule = () => {
-    if (schedule && onScheduleCreate) {
-      onScheduleCreate(schedule);
+  const handleApplySchedule = async () => {
+    if (!schedule) return;
+
+    setApplying(true);
+    try {
+      // Prepare schedule data to save
+      const scheduleData: {
+        taskId: string;
+        date: string;
+        suggestedTime: string;
+        reason: string;
+      }[] = [];
+
+      schedule.schedule.forEach((day) => {
+        day.tasks.forEach((task) => {
+          scheduleData.push({
+            taskId: task.taskId,
+            date: day.date,
+            suggestedTime: task.suggestedTime,
+            reason: task.reason,
+          });
+        });
+      });
+
+      const { saveAISchedule } = await import("../../services/aiServices");
+      const result = await saveAISchedule(scheduleData);
+
+      message.success(
+        result.message || `Đã cập nhật lịch cho ${result.updated} công việc`,
+      );
+
+      if (onScheduleCreate) {
+        onScheduleCreate(schedule);
+      }
+      handleClose();
+    } catch (error: any) {
+      message.error(error?.message || "Lỗi lưu lịch trình. Vui lòng thử lại!");
+    } finally {
+      setApplying(false);
     }
-    handleClose();
   };
 
   const handleClose = () => {
@@ -314,7 +351,11 @@ export default function AITaskScheduler({
 
               <div className="modal-footer">
                 <Button onClick={() => setCurrentStep(1)}>Quay lại</Button>
-                <Button type="primary" onClick={handleApplySchedule}>
+                <Button
+                  type="primary"
+                  onClick={handleApplySchedule}
+                  loading={applying}
+                >
                   Áp dụng lịch trình
                 </Button>
               </div>

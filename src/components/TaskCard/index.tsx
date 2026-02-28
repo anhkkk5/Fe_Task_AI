@@ -1,8 +1,22 @@
-import { Card, Tag, Typography, Space, Button, Popconfirm } from "antd";
-import { EditOutlined, DeleteOutlined, CalendarOutlined } from "@ant-design/icons";
+import {
+  Card,
+  Tag,
+  Typography,
+  Space,
+  Button,
+  Popconfirm,
+  Collapse,
+} from "antd";
+import {
+  EditOutlined,
+  DeleteOutlined,
+  CalendarOutlined,
+  ClockCircleOutlined,
+} from "@ant-design/icons";
 import type { Task } from "../../services/taskServices";
 
 const { Text } = Typography;
+const { Panel } = Collapse;
 
 interface TaskCardProps {
   task: Task;
@@ -67,11 +81,9 @@ export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
           {task.description}
         </Text>
       )}
-      
+
       <Space className="task-tags" wrap>
-        <Tag color={statusColors[task.status]}>
-          {statusLabels[task.status]}
-        </Tag>
+        <Tag color={statusColors[task.status]}>{statusLabels[task.status]}</Tag>
         <Tag color={priorityColors[task.priority]}>
           {priorityLabels[task.priority]}
         </Tag>
@@ -84,6 +96,39 @@ export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
             {new Date(task.deadline).toLocaleDateString("vi-VN")}
           </Text>
         </div>
+      )}
+
+      {task.estimatedDuration && (
+        <div className="task-duration">
+          <ClockCircleOutlined />
+          <Text type="secondary">
+            {task.estimatedDuration >= 60
+              ? `${Math.floor(task.estimatedDuration / 60)}h ${task.estimatedDuration % 60}p`
+              : `${task.estimatedDuration} phút`}
+          </Text>
+        </div>
+      )}
+
+      {task.aiBreakdown && task.aiBreakdown.length > 0 && (
+        <Collapse ghost className="task-breakdown">
+          <Panel
+            header={`AI Breakdown (${task.aiBreakdown.length} bước)`}
+            key="1"
+          >
+            <Space direction="vertical" size="small" style={{ width: "100%" }}>
+              {task.aiBreakdown.map((step, index) => (
+                <div key={index} className="breakdown-step">
+                  <Text>
+                    {index + 1}. {step.title}
+                  </Text>
+                  {step.estimatedDuration && (
+                    <Tag color="blue">{step.estimatedDuration}p</Tag>
+                  )}
+                </div>
+              ))}
+            </Space>
+          </Panel>
+        </Collapse>
       )}
     </Card>
   );
