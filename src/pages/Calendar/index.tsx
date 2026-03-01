@@ -143,6 +143,56 @@ function Calendar() {
     );
   };
 
+  // Calculate overlapping events and their horizontal positions
+  const getOverlappingEvents = (events: CalendarEvent[], day: dayjs.Dayjs) => {
+    const dayEvents = events.filter((e) => isEventInDay(e, day));
+
+    // Sort by start time
+    dayEvents.sort((a, b) => a.start.valueOf() - b.start.valueOf());
+
+    // Group overlapping events
+    const groups: CalendarEvent[][] = [];
+
+    dayEvents.forEach((event) => {
+      let added = false;
+
+      // Try to add to existing group
+      for (const group of groups) {
+        const overlaps = group.some(
+          (e) => event.start.isBefore(e.end) && event.end.isAfter(e.start),
+        );
+
+        if (overlaps) {
+          group.push(event);
+          added = true;
+          break;
+        }
+      }
+
+      // Create new group if not added
+      if (!added) {
+        groups.push([event]);
+      }
+    });
+
+    // Calculate position for each event
+    const eventPositions = new Map<string, { width: number; left: number }>();
+
+    groups.forEach((group) => {
+      const count = group.length;
+      const width = 100 / count;
+
+      group.forEach((event, index) => {
+        eventPositions.set(event.id, {
+          width: width - 2, // 2% gap
+          left: index * width + 1, // 1% margin
+        });
+      });
+    });
+
+    return eventPositions;
+  };
+
   const getPriorityColor = (priority: string) => {
     const map: Record<string, string> = {
       low: "#52c41a",
@@ -290,57 +340,66 @@ function Calendar() {
                   <div key={hour} className="hour-cell" />
                 ))}
 
-                {events
-                  .filter((e) => isEventInDay(e, day))
-                  .map((event) => {
-                    const { top, height } = getEventPosition(event);
-                    return (
-                      <Tooltip
-                        key={event.id}
-                        title={
-                          <div>
-                            <strong>{event.title}</strong>
-                            <br />
-                            {event.start.format("HH:mm")} -{" "}
-                            {event.end.format("HH:mm")}
-                            {event.reason && (
-                              <>
-                                <br />
-                                <em>{event.reason}</em>
-                              </>
+                {(() => {
+                  const positions = getOverlappingEvents(events, day);
+                  return events
+                    .filter((e) => isEventInDay(e, day))
+                    .map((event) => {
+                      const { top, height } = getEventPosition(event);
+                      const pos = positions.get(event.id) || {
+                        width: 98,
+                        left: 1,
+                      };
+                      return (
+                        <Tooltip
+                          key={event.id}
+                          title={
+                            <div>
+                              <strong>{event.title}</strong>
+                              <br />
+                              {event.start.format("HH:mm")} -{" "}
+                              {event.end.format("HH:mm")}
+                              {event.reason && (
+                                <>
+                                  <br />
+                                  <em>{event.reason}</em>
+                                </>
+                              )}
+                            </div>
+                          }
+                        >
+                          <div
+                            className={`calendar-event priority-${event.priority}`}
+                            style={{
+                              top: `${top}px`,
+                              height: `${Math.min(height, 120)}px`,
+                              width: `${pos.width}%`,
+                              left: `${pos.left}%`,
+                              backgroundColor: getPriorityColor(event.priority),
+                              opacity:
+                                event.status === "completed" ||
+                                event.status === "done"
+                                  ? 0.6
+                                  : 1,
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/tasks?task=${event.id}`);
+                            }}
+                          >
+                            <div className="event-title">{event.title}</div>
+                            <div className="event-time">
+                              {event.start.format("HH:mm")} -{" "}
+                              {event.end.format("HH:mm")}
+                            </div>
+                            {event.aiScheduled && (
+                              <RobotOutlined className="event-ai-icon" />
                             )}
                           </div>
-                        }
-                      >
-                        <div
-                          className={`calendar-event priority-${event.priority}`}
-                          style={{
-                            top: `${top}px`,
-                            height: `${Math.min(height, 120)}px`,
-                            backgroundColor: getPriorityColor(event.priority),
-                            opacity:
-                              event.status === "completed" ||
-                              event.status === "done"
-                                ? 0.6
-                                : 1,
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/tasks?task=${event.id}`);
-                          }}
-                        >
-                          <div className="event-title">{event.title}</div>
-                          <div className="event-time">
-                            {event.start.format("HH:mm")} -{" "}
-                            {event.end.format("HH:mm")}
-                          </div>
-                          {event.aiScheduled && (
-                            <RobotOutlined className="event-ai-icon" />
-                          )}
-                        </div>
-                      </Tooltip>
-                    );
-                  })}
+                        </Tooltip>
+                      );
+                    });
+                })()}
 
                 {day.isSame(dayjs(), "day") && (
                   <div

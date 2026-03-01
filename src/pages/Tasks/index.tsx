@@ -15,6 +15,9 @@ import {
   Avatar,
   Tooltip,
   message,
+  Modal,
+  Form,
+  DatePicker,
 } from "antd";
 import {
   PlusOutlined,
@@ -209,10 +212,13 @@ interface TaskItem {
 }
 
 function Tasks() {
-  const { tasks: apiTasks, loading } = useTasks();
+  const { tasks: apiTasks, loading, fetchTasks, handleCreate } = useTasks();
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [schedulerVisible, setSchedulerVisible] = useState(false);
+  const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [form] = Form.useForm();
 
   // Map API tasks to component format
   const tasks: TaskItem[] = apiTasks.map((t: any) => ({
@@ -303,7 +309,11 @@ function Tasks() {
                   >
                     AI Tối Ưu Lịch
                   </Button>
-                  <Button type="primary" icon={<PlusOutlined />}>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => setCreateModalVisible(true)}
+                  >
                     Thêm công việc
                   </Button>
                 </Space>
@@ -388,6 +398,78 @@ function Tasks() {
             message.success("Đã tạo lịch trình thành công!");
           }}
         />
+
+        {/* Create Task Modal */}
+        <Modal
+          title="Thêm công việc mới"
+          open={createModalVisible}
+          onCancel={() => setCreateModalVisible(false)}
+          onOk={async () => {
+            try {
+              const values = await form.validateFields();
+              setCreating(true);
+              const success = await handleCreate({
+                title: values.title,
+                description: values.description,
+                priority: values.priority,
+                deadline: values.deadline?.toISOString(),
+                tags:
+                  values.tags
+                    ?.split(",")
+                    .map((t: string) => t.trim())
+                    .filter(Boolean) || [],
+              });
+              if (success) {
+                form.resetFields();
+                setCreateModalVisible(false);
+              }
+            } catch (error) {
+              console.error("Create task error:", error);
+            } finally {
+              setCreating(false);
+            }
+          }}
+          confirmLoading={creating}
+          okText="Tạo công việc"
+          cancelText="Hủy"
+        >
+          <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+            <Form.Item
+              name="title"
+              label="Tiêu đề"
+              rules={[{ required: true, message: "Vui lòng nhập tiêu đề" }]}
+            >
+              <Input placeholder="VD: Phân tích database hệ thống" />
+            </Form.Item>
+            <Form.Item name="description" label="Mô tả">
+              <Input.TextArea
+                rows={3}
+                placeholder="Mô tả chi tiết công việc..."
+              />
+            </Form.Item>
+            <Form.Item
+              name="priority"
+              label="Mức độ ưu tiên"
+              initialValue="medium"
+            >
+              <Select>
+                <Option value="low">Thấp</Option>
+                <Option value="medium">Trung bình</Option>
+                <Option value="high">Cao</Option>
+              </Select>
+            </Form.Item>
+            <Form.Item name="deadline" label="Hạn chót">
+              <DatePicker
+                style={{ width: "100%" }}
+                showTime
+                format="DD/MM/YYYY HH:mm"
+              />
+            </Form.Item>
+            <Form.Item name="tags" label="Tags (phân cách bằng dấu phẩy)">
+              <Input placeholder="VD: backend, database, urgent" />
+            </Form.Item>
+          </Form>
+        </Modal>
       </main>
     </div>
   );
