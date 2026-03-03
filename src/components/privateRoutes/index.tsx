@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Navigate, Outlet } from "react-router-dom";
 import { getAccessToken } from "../../utils/axios/request";
-import { refreshToken } from "../../services/authServices";
+import { refreshToken, getMe } from "../../services/authServices";
 
 const PrivateRoutes = () => {
-  const isLoggedIn = useSelector((state: any) => state.loginReducer);
+  const { isLogin, user } = useSelector((state: any) => state.loginReducer);
   const dispatch = useDispatch();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuth, setIsAuth] = useState(false);
@@ -14,8 +14,8 @@ const PrivateRoutes = () => {
     const checkAuth = async () => {
       const token = getAccessToken();
 
-      // Nếu đã có token trong memory, dùng luôn
-      if (token && isLoggedIn) {
+      // Nếu đã có token và user data, dùng luôn
+      if (token && isLogin && user) {
         setIsAuth(true);
         setIsLoading(false);
         return;
@@ -24,7 +24,10 @@ const PrivateRoutes = () => {
       // Thử refresh token từ cookie
       try {
         await refreshToken();
-        dispatch({ type: "CHECK_LOGIN", status: true });
+        // Fetch user data sau khi refresh token thành công
+        const userResponse = await getMe();
+        const userData = userResponse.user || userResponse;
+        dispatch({ type: "CHECK_LOGIN", status: true, payload: userData });
         setIsAuth(true);
       } catch (error) {
         console.log("Session expired or invalid");
@@ -35,7 +38,7 @@ const PrivateRoutes = () => {
     };
 
     checkAuth();
-  }, [dispatch, isLoggedIn]);
+  }, [dispatch, isLogin, user]);
 
   if (isLoading) {
     return (

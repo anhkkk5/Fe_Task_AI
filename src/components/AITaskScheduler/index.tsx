@@ -44,11 +44,13 @@ interface ScheduleDay {
   day: string;
   date: string;
   tasks: {
+    sessionId?: string;
     taskId: string;
     title: string;
     priority: string;
     suggestedTime: string;
     reason: string;
+    createSubtask?: boolean;
   }[];
 }
 
@@ -127,30 +129,12 @@ export default function AITaskScheduler({
 
     setApplying(true);
     try {
-      // Prepare schedule data to save
-      const scheduleData: {
-        taskId: string;
-        date: string;
-        suggestedTime: string;
-        reason: string;
-      }[] = [];
-
-      schedule.schedule.forEach((day) => {
-        day.tasks.forEach((task) => {
-          scheduleData.push({
-            taskId: task.taskId,
-            date: day.date,
-            suggestedTime: task.suggestedTime,
-            reason: task.reason,
-          });
-        });
-      });
-
       const { saveAISchedule } = await import("../../services/aiServices");
-      const result = await saveAISchedule(scheduleData);
+      const result = await saveAISchedule(schedule.schedule);
 
       message.success(
-        result.message || `Đã cập nhật lịch cho ${result.updated} công việc`,
+        result.message ||
+          `Đã tạo ${result.created} phiên và cập nhật ${result.updated} công việc`,
       );
 
       if (onScheduleCreate) {

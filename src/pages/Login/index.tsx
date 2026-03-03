@@ -10,7 +10,7 @@ import {
   GoogleOutlined,
   AppleOutlined,
 } from "@ant-design/icons";
-import { loginUser } from "../../services/authServices";
+import { loginUser, getMe } from "../../services/authServices";
 import { checkLogin } from "../../actions/login";
 import "./Login.scss";
 
@@ -29,14 +29,17 @@ function Login() {
   const onFinish = async (values: LoginFormData) => {
     setLoading(true);
     try {
-      await loginUser({
+      const loginResponse = await loginUser({
         email: values.email,
         password: values.password,
       });
 
-      dispatch(checkLogin(true));
-      messageApi.success("Đăng nhập thành công!");
+      // Fetch user data ngay sau khi login
+      const userData =
+        loginResponse.user || (await getMe().then((r) => r.user || r));
+      dispatch(checkLogin(true, userData));
 
+      messageApi.success("Đăng nhập thành công!");
       setTimeout(() => {
         navigate("/");
       }, 1000);

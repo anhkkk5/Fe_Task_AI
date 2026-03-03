@@ -22,11 +22,15 @@ import {
   ProjectOutlined,
 } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import {
   updateProfile,
   uploadAvatar,
   getMe,
+  logoutUser,
 } from "../../services/authServices";
+import { logout } from "../../actions/login";
+import { clearAccessToken } from "../../utils/axios/request";
 import ImageUpload from "../../components/ImageUpload";
 import { ChangePasswordModal } from "../../components/ChangePasswordModal";
 import UserHabitsSettings from "../../components/UserHabitsSettings";
@@ -36,6 +40,7 @@ const { Option } = Select;
 
 function Profile() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { user } = useSelector((state: any) => state.loginReducer);
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -44,6 +49,18 @@ function Profile() {
   const [autoSchedule, setAutoSchedule] = useState(false);
   const [activeMenu, setActiveMenu] = useState("profile");
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      clearAccessToken();
+      dispatch(logout());
+      navigate("/login");
+    }
+  };
 
   // Fetch user data on mount and set form values
   useEffect(() => {
@@ -147,7 +164,7 @@ function Profile() {
         </div>
 
         <div className="sidebar-footer">
-          <div className="menu-item logout">
+          <div className="menu-item logout" onClick={handleLogout}>
             <LogoutOutlined />
             <span>Đăng xuất</span>
           </div>

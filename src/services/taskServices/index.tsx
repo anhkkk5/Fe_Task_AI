@@ -10,6 +10,12 @@ export interface Task {
   deadline?: string;
   tags?: string[];
   reminderAt?: string;
+  scheduledTime?: {
+    start: string;
+    end: string;
+    aiPlanned?: boolean;
+    reason?: string;
+  };
   estimatedDuration?: number;
   aiBreakdown?: {
     title: string;
@@ -33,6 +39,12 @@ export interface UpdateTaskData {
   deadline?: string;
   tags?: string[];
   reminderAt?: string;
+  scheduledTime?: {
+    start: string;
+    end: string;
+    aiPlanned?: boolean;
+    reason?: string;
+  };
 }
 
 // Get task list

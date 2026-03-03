@@ -22,15 +22,22 @@ export interface AIScheduleResponse {
     day: string;
     date: string;
     tasks: {
+      sessionId?: string;
       taskId: string;
       title: string;
       priority: string;
       suggestedTime: string;
       reason: string;
+      createSubtask?: boolean;
     }[];
+    note?: string;
   }[];
   totalTasks: number;
   suggestedOrder: string[];
+  personalizationNote?: string;
+  totalEstimatedTime?: string;
+  splitStrategy?: string;
+  confidenceScore?: number;
 }
 
 // Schedule Template interfaces
@@ -86,13 +93,8 @@ export const aiSchedulePlan = async (
 
 // Save AI schedule to tasks
 export const saveAISchedule = async (
-  schedule: {
-    taskId: string;
-    date: string;
-    suggestedTime: string;
-    reason: string;
-  }[],
-): Promise<{ message: string; updated: number }> => {
+  schedule: AIScheduleResponse["schedule"],
+): Promise<{ message: string; updated: number; created: number }> => {
   return await post("/tasks/save-ai-schedule", { schedule });
 };
 

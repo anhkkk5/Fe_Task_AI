@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo, type DragEvent } from "react";
 import {
   Card,
   Typography,
@@ -9,6 +9,7 @@ import {
   Modal,
   Space,
   Select,
+  List,
   Empty,
   Spin,
   Alert,
@@ -36,6 +37,7 @@ import "dayjs/locale/vi";
 import { useTasks } from "../../hooks/useTasks";
 import {
   aiSchedulePlan,
+  saveAISchedule,
   type AIScheduleResponse,
 } from "../../services/aiServices";
 import "./Calendar.scss";
@@ -64,17 +66,22 @@ const HOURS = Array.from({ length: 24 }, (_, i) => {
   ];
 }).flat();
 
-const WEEK_DAYS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+const WEEK_DAYS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
 function Calendar() {
   const navigate = useNavigate();
-  const { tasks, loading: tasksLoading } = useTasks();
+  const { tasks, loading: tasksLoading, handleUpdate, fetchTasks } = useTasks();
   const [currentWeek, setCurrentWeek] = useState(dayjs());
-  const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSchedule, setAiSchedule] = useState<AIScheduleResponse | null>(null);
-  const [viewMode, setViewMode] = useState<"week" | "day">("week");
+  const [aiApplying, setAiApplying] = useState(false);
+  const [viewMode, setViewMode] = useState<"week" | "day" | "month">("week");
+  const [draggingTask, setDraggingTask] = useState<{
+    id: string;
+    title: string;
+    estimatedDuration?: number;
+  } | null>(null);
 
   const weekDays = useMemo(() => {
     const startOfWeek = currentWeek.startOf("week");
@@ -85,21 +92,125 @@ function Calendar() {
     if (!tasks.length) return [];
 
     return tasks
-      .filter((t: any) => t.deadline || t.dueDate)
+      .filter((t: any) => t?.scheduledTime?.start && t?.scheduledTime?.end)
       .map((t: any) => {
-        const deadline = dayjs(t.deadline || t.dueDate);
-        const start = deadline.subtract(2, "hour");
+        const start = dayjs(t.scheduledTime.start);
+        const end = dayjs(t.scheduledTime.end);
         return {
           id: t._id || t.id,
           title: t.title,
           start,
-          end: deadline,
+          end,
           priority: t.priority || "medium",
           status: t.status,
-          aiScheduled: !!(t.aiBreakdown && t.aiBreakdown.length > 0),
+          aiScheduled: !!t?.scheduledTime?.aiPlanned,
+          reason: t?.scheduledTime?.reason,
         };
       });
   }, [tasks]);
+
+  const applyAiSchedule = async () => {
+    if (!aiSchedule) return;
+    setAiApplying(true);
+    try {
+      const result = await saveAISchedule(aiSchedule.schedule);
+      message.success(
+        result.message ||
+          `Đã tạo ${result.created} phiên và cập nhật ${result.updated} công việc`,
+      );
+      await fetchTasks();
+      setScheduleModalOpen(false);
+    } catch (error: any) {
+      message.error(
+        error?.message || "Không thể áp dụng lịch trình. Vui lòng thử lại!",
+      );
+    } finally {
+      setAiApplying(false);
+    }
+  };
+
+  const unscheduledTasks = useMemo(() => {
+    return tasks.filter(
+      (t: any) => !(t?.scheduledTime?.start && t?.scheduledTime?.end),
+    );
+  }, [tasks]);
+
+  const snapMinutes = (minutes: number, step: number) => {
+    return Math.round(minutes / step) * step;
+  };
+
+  const clamp = (value: number, min: number, max: number) => {
+    return Math.max(min, Math.min(max, value));
+  };
+
+  const getDefaultDurationMinutes = (
+    task: { estimatedDuration?: number } | null,
+  ) => {
+    const minutes = task?.estimatedDuration ?? 60;
+    if (minutes <= 0) return 60;
+    return Math.min(minutes, 240);
+  };
+
+  const handleDropOnDayColumn = async (
+    e: DragEvent<HTMLDivElement>,
+    day: dayjs.Dayjs,
+  ) => {
+    e.preventDefault();
+    const rawId = e.dataTransfer.getData("text/task-id");
+    const taskId = rawId || draggingTask?.id;
+    if (!taskId) return;
+
+    const container = e.currentTarget;
+    const rect = container.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+
+    // Week view: 1px = 1 minute (because top = hour*60 + minute)
+    const minutesFromStart = snapMinutes(y, 15);
+
+    const workStart = 8 * 60;
+    const lunchStart = 12 * 60;
+    const lunchEnd = 13 * 60;
+    const workEnd = 17 * 60;
+
+    let startMinutes = clamp(minutesFromStart, workStart, workEnd - 15);
+
+    // Avoid lunch break
+    if (startMinutes >= lunchStart && startMinutes < lunchEnd) {
+      startMinutes = lunchEnd;
+    }
+
+    const duration = getDefaultDurationMinutes(draggingTask);
+    let endMinutes = startMinutes + duration;
+
+    // Clamp to workEnd
+    if (endMinutes > workEnd) {
+      endMinutes = workEnd;
+      startMinutes = Math.max(workStart, endMinutes - duration);
+      // Re-avoid lunch if pushed back
+      if (startMinutes >= lunchStart && startMinutes < lunchEnd) {
+        startMinutes = lunchEnd;
+      }
+    }
+
+    const start = day.startOf("day").add(startMinutes, "minute");
+    const end = day.startOf("day").add(endMinutes, "minute");
+
+    try {
+      const ok = await handleUpdate(taskId, {
+        scheduledTime: {
+          start: start.toISOString(),
+          end: end.toISOString(),
+          aiPlanned: false,
+          reason: "Người dùng kéo-thả để lên lịch",
+        },
+      });
+      if (ok) {
+        message.success("Đã lên lịch cho công việc");
+      }
+    } finally {
+      setDraggingTask(null);
+    }
+  };
 
   const analyzeSchedule = async () => {
     const pendingTasks = tasks.filter(
@@ -203,9 +314,26 @@ function Calendar() {
     return map[priority] || "#1890ff";
   };
 
-  const goToPreviousWeek = () =>
-    setCurrentWeek(currentWeek.subtract(1, "week"));
-  const goToNextWeek = () => setCurrentWeek(currentWeek.add(1, "week"));
+  const goToPrevious = () => {
+    if (viewMode === "month") {
+      setCurrentWeek(currentWeek.subtract(1, "month"));
+    } else if (viewMode === "week") {
+      setCurrentWeek(currentWeek.subtract(1, "week"));
+    } else {
+      setCurrentWeek(currentWeek.subtract(1, "day"));
+    }
+  };
+
+  const goToNext = () => {
+    if (viewMode === "month") {
+      setCurrentWeek(currentWeek.add(1, "month"));
+    } else if (viewMode === "week") {
+      setCurrentWeek(currentWeek.add(1, "week"));
+    } else {
+      setCurrentWeek(currentWeek.add(1, "day"));
+    }
+  };
+
   const goToToday = () => setCurrentWeek(dayjs());
 
   const weekTasks = events.filter(
@@ -218,6 +346,125 @@ function Calendar() {
     (e) => e.priority === "high" || e.priority === "urgent",
   ).length;
   const aiAssistedTasks = weekTasks.filter((e) => e.aiScheduled).length;
+
+  // Render month view
+  const renderMonthView = () => {
+    const startOfMonth = currentWeek.startOf("month");
+    const endOfMonth = currentWeek.endOf("month");
+    const startDay = startOfMonth.day();
+    const daysInMonth = endOfMonth.date();
+
+    const calendarDays: dayjs.Dayjs[] = [];
+    const prevMonthDays = startDay;
+    for (let i = prevMonthDays; i > 0; i--) {
+      calendarDays.push(startOfMonth.subtract(i, "day"));
+    }
+    for (let i = 0; i < daysInMonth; i++) {
+      calendarDays.push(startOfMonth.add(i, "day"));
+    }
+    const remainingDays = 42 - calendarDays.length;
+    for (let i = 1; i <= remainingDays; i++) {
+      calendarDays.push(endOfMonth.add(i, "day"));
+    }
+
+    return (
+      <div className="calendar-month-view">
+        <div className="month-header">
+          {WEEK_DAYS.map((day, index) => (
+            <div key={index} className="month-day-header">
+              {day}
+            </div>
+          ))}
+        </div>
+        <div className="month-grid">
+          {calendarDays.map((day, index) => {
+            const dayEvents = events.filter((e) => isEventInDay(e, day));
+            const isCurrentMonth = day.month() === currentWeek.month();
+            const isToday = day.isSame(dayjs(), "day");
+
+            return (
+              <div
+                key={index}
+                className={`month-day-cell ${isCurrentMonth ? "current-month" : "other-month"} ${isToday ? "today" : ""}`}
+                onClick={() => {
+                  setCurrentWeek(day);
+                  setViewMode("day");
+                }}
+              >
+                <div className="month-day-number">{day.format("D")}</div>
+                <div className="month-day-events">
+                  {dayEvents.slice(0, 4).map((event, idx) => (
+                    <div
+                      key={idx}
+                      className="month-event-bar"
+                      style={{
+                        backgroundColor: getPriorityColor(event.priority),
+                      }}
+                      title={event.title}
+                    />
+                  ))}
+                  {dayEvents.length > 4 && (
+                    <div className="month-event-more">
+                      +{dayEvents.length - 4}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  // Render day view
+  const renderDayView = () => {
+    const day = currentWeek;
+    const dayEvents = events.filter((e) => isEventInDay(e, day));
+
+    return (
+      <div className="calendar-day-view">
+        <div className="day-view-header">
+          <Text strong style={{ fontSize: 18 }}>
+            {day.format("dddd, DD/MM/YYYY")}
+          </Text>
+        </div>
+        <div className="day-view-timeline">
+          {Array.from({ length: 24 }).map((_, hour) => {
+            const hourEvents = dayEvents.filter(
+              (e) =>
+                e.start.hour() === hour ||
+                (e.start.hour() < hour && e.end.hour() > hour),
+            );
+            return (
+              <div key={hour} className="day-view-hour">
+                <div className="day-view-hour-label">
+                  {hour.toString().padStart(2, "0")}:00
+                </div>
+                <div className="day-view-hour-content">
+                  {hourEvents.map((event) => (
+                    <div
+                      key={event.id}
+                      className="day-view-event"
+                      style={{
+                        backgroundColor: getPriorityColor(event.priority),
+                      }}
+                      onClick={() => navigate(`/tasks?task=${event.id}`)}
+                    >
+                      <span className="event-time">
+                        {event.start.format("HH:mm")}
+                      </span>
+                      <span className="event-title">{event.title}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="calendar-page">
@@ -233,11 +480,15 @@ function Calendar() {
           </div>
 
           <div className="header-center">
-            <Button icon={<LeftOutlined />} onClick={goToPreviousWeek} />
-            <Button onClick={goToToday}>Hom nay</Button>
-            <Button icon={<RightOutlined />} onClick={goToNextWeek} />
+            <Button icon={<LeftOutlined />} onClick={goToPrevious} />
+            <Button onClick={goToToday}>Hôm nay</Button>
+            <Button icon={<RightOutlined />} onClick={goToNext} />
             <Text strong style={{ fontSize: 16, marginLeft: 16 }}>
-              {weekDays[0].format("DD/MM")} - {weekDays[6].format("DD/MM/YYYY")}
+              {viewMode === "month"
+                ? currentWeek.format("MM/YYYY")
+                : viewMode === "day"
+                  ? currentWeek.format("DD/MM/YYYY")
+                  : `${weekDays[0].format("DD/MM")} - ${weekDays[6].format("DD/MM/YYYY")}`}
             </Text>
           </div>
 
@@ -245,10 +496,11 @@ function Calendar() {
             <Select
               value={viewMode}
               onChange={setViewMode}
-              style={{ width: 100 }}
+              style={{ width: 120 }}
             >
-              <Option value="week">Tuan</Option>
-              <Option value="day">Ngay</Option>
+              <Option value="month">Tháng</Option>
+              <Option value="week">Tuần</Option>
+              <Option value="day">Ngày</Option>
             </Select>
             <Button
               type="primary"
@@ -261,158 +513,252 @@ function Calendar() {
           </div>
         </div>
 
-        <Row gutter={16} className="calendar-stats">
-          <Col span={6}>
-            <Card size="small">
-              <Statistic
-                title="Cong viec tuan nay"
-                value={totalTasks}
-                prefix={<CalendarOutlined />}
-              />
+        <div className="calendar-layout">
+          <aside className="calendar-sidebar">
+            <Card
+              size="small"
+              className="sidebar-card"
+              title={currentWeek.format("MMMM YYYY")}
+              extra={
+                <Button type="link" size="small" onClick={goToToday}>
+                  Hôm nay
+                </Button>
+              }
+            >
+              {renderMonthView()}
             </Card>
-          </Col>
-          <Col span={6}>
-            <Card size="small">
-              <Statistic
-                title="Uu tien cao"
-                value={highPriorityTasks}
-                valueStyle={{ color: "#f5222d" }}
-                prefix={<ClockCircleOutlined />}
-              />
+
+            <Card
+              size="small"
+              className="sidebar-card"
+              title={`Chưa lên lịch (${unscheduledTasks.length})`}
+              style={{ marginTop: 12 }}
+            >
+              {unscheduledTasks.length === 0 ? (
+                <Text type="secondary">Tất cả công việc đã có lịch.</Text>
+              ) : (
+                <List
+                  size="small"
+                  dataSource={unscheduledTasks.slice(0, 8)}
+                  renderItem={(t: any) => (
+                    <List.Item
+                      className="unscheduled-item"
+                      draggable
+                      onDragStart={(e) => {
+                        const id = String(t._id || t.id || "");
+                        e.dataTransfer.setData("text/task-id", id);
+                        e.dataTransfer.effectAllowed = "move";
+                        setDraggingTask({
+                          id,
+                          title: String(t.title || ""),
+                          estimatedDuration: t.estimatedDuration,
+                        });
+                      }}
+                      onDragEnd={() => setDraggingTask(null)}
+                      onClick={() => navigate(`/tasks?task=${t._id || t.id}`)}
+                    >
+                      <Space
+                        direction="vertical"
+                        size={0}
+                        style={{ width: "100%" }}
+                      >
+                        <Text strong className="unscheduled-title">
+                          {t.title}
+                        </Text>
+                        <Space size={6}>
+                          <Tag color={getPriorityColor(t.priority || "medium")}>
+                            {t.priority || "medium"}
+                          </Tag>
+                          {t.deadline && (
+                            <Text
+                              type="secondary"
+                              className="unscheduled-deadline"
+                            >
+                              {dayjs(t.deadline).format("DD/MM")}
+                            </Text>
+                          )}
+                        </Space>
+                      </Space>
+                    </List.Item>
+                  )}
+                />
+              )}
             </Card>
-          </Col>
-          <Col span={6}>
-            <Card size="small">
-              <Statistic
-                title="Duoc AI ho tro"
-                value={aiAssistedTasks}
-                valueStyle={{ color: "#722ed1" }}
-                prefix={<RobotOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card size="small">
-              <Statistic
-                title="Da hoan thanh"
-                value={
-                  weekTasks.filter(
-                    (e) => e.status === "completed" || e.status === "done",
-                  ).length
-                }
-                valueStyle={{ color: "#52c41a" }}
-                prefix={<CheckCircleOutlined />}
-              />
-            </Card>
-          </Col>
-        </Row>
+          </aside>
 
-        <Card className="calendar-card" loading={tasksLoading}>
-          <div className="calendar-days-header">
-            <div className="time-column-header">Gio</div>
-            {weekDays.map((day, index) => (
-              <div
-                key={index}
-                className={`day-header ${day.isSame(dayjs(), "day") ? "today" : ""}`}
-              >
-                <div className="day-name">{WEEK_DAYS[index]}</div>
-                <div className="day-number">{day.format("DD")}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="calendar-time-grid">
-            <div className="time-labels">
-              {HOURS.filter((_, i) => i % 2 === 0).map((slot, i) => (
-                <div key={i} className="time-label" style={{ top: i * 60 }}>
-                  {slot.label}
-                </div>
-              ))}
-            </div>
-
-            {weekDays.map((day, dayIndex) => (
-              <div
-                key={dayIndex}
-                className={`day-column ${day.isSame(dayjs(), "day") ? "today" : ""}`}
-                onClick={() => setSelectedDate(day)}
-              >
-                {Array.from({ length: 24 }).map((_, hour) => (
-                  <div key={hour} className="hour-cell" />
-                ))}
-
-                {(() => {
-                  const positions = getOverlappingEvents(events, day);
-                  return events
-                    .filter((e) => isEventInDay(e, day))
-                    .map((event) => {
-                      const { top, height } = getEventPosition(event);
-                      const pos = positions.get(event.id) || {
-                        width: 98,
-                        left: 1,
-                      };
-                      return (
-                        <Tooltip
-                          key={event.id}
-                          title={
-                            <div>
-                              <strong>{event.title}</strong>
-                              <br />
-                              {event.start.format("HH:mm")} -{" "}
-                              {event.end.format("HH:mm")}
-                              {event.reason && (
-                                <>
-                                  <br />
-                                  <em>{event.reason}</em>
-                                </>
-                              )}
-                            </div>
-                          }
-                        >
-                          <div
-                            className={`calendar-event priority-${event.priority}`}
-                            style={{
-                              top: `${top}px`,
-                              height: `${Math.min(height, 120)}px`,
-                              width: `${pos.width}%`,
-                              left: `${pos.left}%`,
-                              backgroundColor: getPriorityColor(event.priority),
-                              opacity:
-                                event.status === "completed" ||
-                                event.status === "done"
-                                  ? 0.6
-                                  : 1,
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/tasks?task=${event.id}`);
-                            }}
-                          >
-                            <div className="event-title">{event.title}</div>
-                            <div className="event-time">
-                              {event.start.format("HH:mm")} -{" "}
-                              {event.end.format("HH:mm")}
-                            </div>
-                            {event.aiScheduled && (
-                              <RobotOutlined className="event-ai-icon" />
-                            )}
-                          </div>
-                        </Tooltip>
-                      );
-                    });
-                })()}
-
-                {day.isSame(dayjs(), "day") && (
-                  <div
-                    className="current-time-line"
-                    style={{
-                      top: `${dayjs().hour() * 60 + dayjs().minute()}px`,
-                    }}
+          <section className="calendar-content">
+            <Row gutter={16} className="calendar-stats">
+              <Col span={6}>
+                <Card size="small">
+                  <Statistic
+                    title="Cong viec"
+                    value={totalTasks}
+                    prefix={<CalendarOutlined />}
                   />
-                )}
-              </div>
-            ))}
-          </div>
-        </Card>
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small">
+                  <Statistic
+                    title="Uu tien cao"
+                    value={highPriorityTasks}
+                    valueStyle={{ color: "#f5222d" }}
+                    prefix={<ClockCircleOutlined />}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small">
+                  <Statistic
+                    title="AI"
+                    value={aiAssistedTasks}
+                    valueStyle={{ color: "#722ed1" }}
+                    prefix={<RobotOutlined />}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small">
+                  <Statistic
+                    title="Da hoan thanh"
+                    value={
+                      weekTasks.filter(
+                        (e) => e.status === "completed" || e.status === "done",
+                      ).length
+                    }
+                    valueStyle={{ color: "#52c41a" }}
+                    prefix={<CheckCircleOutlined />}
+                  />
+                </Card>
+              </Col>
+            </Row>
+
+            <Card className="calendar-card" loading={tasksLoading}>
+              {viewMode === "month" && renderMonthView()}
+              {viewMode === "day" && renderDayView()}
+
+              {viewMode === "week" && (
+                <>
+                  <div className="calendar-days-header">
+                    <div className="time-column-header">Gio</div>
+                    {weekDays.map((day, index) => (
+                      <div
+                        key={index}
+                        className={`day-header ${day.isSame(dayjs(), "day") ? "today" : ""}`}
+                      >
+                        <div className="day-name">{WEEK_DAYS[index]}</div>
+                        <div className="day-number">{day.format("DD")}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="calendar-time-grid">
+                    <div className="time-labels">
+                      {HOURS.filter((_, i) => i % 2 === 0).map((slot, i) => (
+                        <div
+                          key={i}
+                          className="time-label"
+                          style={{ top: i * 60 }}
+                        >
+                          {slot.label}
+                        </div>
+                      ))}
+                    </div>
+
+                    {weekDays.map((day, dayIndex) => (
+                      <div
+                        key={dayIndex}
+                        className={`day-column ${day.isSame(dayjs(), "day") ? "today" : ""}`}
+                        onDragOver={(e) => {
+                          if (draggingTask) e.preventDefault();
+                        }}
+                        onDrop={(e) => handleDropOnDayColumn(e, day)}
+                      >
+                        {Array.from({ length: 24 }).map((_, hour) => (
+                          <div key={hour} className="hour-cell" />
+                        ))}
+
+                        {(() => {
+                          const positions = getOverlappingEvents(events, day);
+                          return events
+                            .filter((e) => isEventInDay(e, day))
+                            .map((event) => {
+                              const { top, height } = getEventPosition(event);
+                              const pos = positions.get(event.id) || {
+                                width: 98,
+                                left: 1,
+                              };
+                              return (
+                                <Tooltip
+                                  key={event.id}
+                                  title={
+                                    <div>
+                                      <strong>{event.title}</strong>
+                                      <br />
+                                      {event.start.format("HH:mm")} -{" "}
+                                      {event.end.format("HH:mm")}
+                                      {event.reason && (
+                                        <>
+                                          <br />
+                                          <em>{event.reason}</em>
+                                        </>
+                                      )}
+                                    </div>
+                                  }
+                                >
+                                  <div
+                                    className={`calendar-event priority-${event.priority}`}
+                                    style={{
+                                      top: `${top}px`,
+                                      height: `${Math.min(height, 120)}px`,
+                                      width: `${pos.width}%`,
+                                      left: `${pos.left}%`,
+                                      backgroundColor: getPriorityColor(
+                                        event.priority,
+                                      ),
+                                      opacity:
+                                        event.status === "completed" ||
+                                        event.status === "done"
+                                          ? 0.6
+                                          : 1,
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/tasks?task=${event.id}`);
+                                    }}
+                                  >
+                                    <div className="event-title">
+                                      {event.title}
+                                    </div>
+                                    <div className="event-time">
+                                      {event.start.format("HH:mm")} -{" "}
+                                      {event.end.format("HH:mm")}
+                                    </div>
+                                    {event.aiScheduled && (
+                                      <RobotOutlined className="event-ai-icon" />
+                                    )}
+                                  </div>
+                                </Tooltip>
+                              );
+                            });
+                        })()}
+
+                        {day.isSame(dayjs(), "day") && (
+                          <div
+                            className="current-time-line"
+                            style={{
+                              top: `${dayjs().hour() * 60 + dayjs().minute()}px`,
+                            }}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </Card>
+          </section>
+        </div>
 
         {aiSchedule && (
           <Card
@@ -491,7 +837,13 @@ function Calendar() {
           <Button key="close" onClick={() => setScheduleModalOpen(false)}>
             Dong
           </Button>,
-          <Button key="apply" type="primary" icon={<CheckCircleOutlined />}>
+          <Button
+            key="apply"
+            type="primary"
+            icon={<CheckCircleOutlined />}
+            loading={aiApplying}
+            onClick={applyAiSchedule}
+          >
             Ap dung lich trinh
           </Button>,
         ]}
