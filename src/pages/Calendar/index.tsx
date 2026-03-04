@@ -1,11 +1,4 @@
-import {
-  useState,
-  useMemo,
-  useCallback,
-  type DragEvent,
-  useRef,
-  useEffect,
-} from "react";
+import { useState, useMemo, type DragEvent, useEffect } from "react";
 import {
   Card,
   Typography,
@@ -85,7 +78,7 @@ const WEEK_DAYS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
 function Calendar() {
   const navigate = useNavigate();
-  const { tasks, loading: tasksLoading, handleUpdate, fetchTasks } = useTasks();
+  const { tasks, handleUpdate, loading: tasksLoading } = useTasks();
   const { aiSchedule: activeSchedule, fetchAISchedule } = useAISchedule();
   const [currentWeek, setCurrentWeek] = useState(dayjs());
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
@@ -112,11 +105,35 @@ function Calendar() {
   const [tempEvents, setTempEvents] = useState<
     Map<string, { start: dayjs.Dayjs; end: dayjs.Dayjs }>
   >(new Map());
+  const [miniCalendarMonth, setMiniCalendarMonth] = useState(dayjs());
 
   const weekDays = useMemo(() => {
     const startOfWeek = currentWeek.startOf("week");
     return Array.from({ length: 7 }, (_, i) => startOfWeek.add(i, "day"));
   }, [currentWeek]);
+
+  const miniCalendarDays = useMemo(() => {
+    const startOfMonth = miniCalendarMonth.startOf("month");
+    const endOfMonth = miniCalendarMonth.endOf("month");
+    const startDay = startOfMonth.day();
+    const daysInMonth = endOfMonth.date();
+
+    const days: dayjs.Dayjs[] = [];
+    // Previous month days
+    for (let i = startDay; i > 0; i--) {
+      days.push(startOfMonth.subtract(i, "day"));
+    }
+    // Current month days
+    for (let i = 0; i < daysInMonth; i++) {
+      days.push(startOfMonth.add(i, "day"));
+    }
+    // Next month days to fill 6 rows (42 cells)
+    const remainingDays = 42 - days.length;
+    for (let i = 1; i <= remainingDays; i++) {
+      days.push(endOfMonth.add(i, "day"));
+    }
+    return days;
+  }, [miniCalendarMonth]);
 
   const events = useMemo<CalendarEvent[]>(() => {
     const taskEvents = tasks
@@ -476,9 +493,9 @@ function Calendar() {
   const getEventPosition = (event: CalendarEvent) => {
     const startHour = event.start.hour();
     const startMinute = event.start.minute();
-    const top = startHour * 60 + startMinute;
+    const top = startHour * 48 + Math.round(startMinute * 0.8); // 48px per hour
     const duration = event.end.diff(event.start, "minute");
-    const height = Math.max(duration, 30);
+    const height = Math.max(duration * 0.8, 24); // scale minutes to pixels
     return { top, height };
   };
 
@@ -582,16 +599,16 @@ function Calendar() {
   ).length;
   const aiAssistedTasks = weekTasks.filter((e) => e.aiScheduled).length;
 
-  // Render month view
-  const renderMonthView = () => {
+  // Mini Calendar component - Google Calendar style
+  const renderMiniCalendar = () => {
     const startOfMonth = currentWeek.startOf("month");
     const endOfMonth = currentWeek.endOf("month");
     const startDay = startOfMonth.day();
     const daysInMonth = endOfMonth.date();
+    const WEEKDAY_LABELS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
     const calendarDays: dayjs.Dayjs[] = [];
-    const prevMonthDays = startDay;
-    for (let i = prevMonthDays; i > 0; i--) {
+    for (let i = startDay; i > 0; i--) {
       calendarDays.push(startOfMonth.subtract(i, "day"));
     }
     for (let i = 0; i < daysInMonth; i++) {
@@ -603,96 +620,50 @@ function Calendar() {
     }
 
     return (
-      <div className="calendar-month-view">
-        <div className="month-header">
-          {WEEK_DAYS.map((day, index) => (
-            <div key={index} className="month-day-header">
-              {day}
+      <div className="mini-calendar">
+        <div className="mini-calendar-header">
+          <span className="mini-calendar-month">
+            {currentWeek.format("MMMM YYYY")}
+          </span>
+          <div className="mini-calendar-nav">
+            <button
+              onClick={() => setCurrentWeek(currentWeek.subtract(1, "month"))}
+            >
+              <LeftOutlined style={{ fontSize: 12 }} />
+            </button>
+            <button onClick={() => setCurrentWeek(currentWeek.add(1, "month"))}>
+              <RightOutlined style={{ fontSize: 12 }} />
+            </button>
+          </div>
+        </div>
+        <div className="mini-calendar-weekdays">
+          {WEEKDAY_LABELS.map((label) => (
+            <div key={label} className="weekday-label">
+              {label}
             </div>
           ))}
         </div>
-        <div className="month-grid">
+        <div className="mini-calendar-grid">
           {calendarDays.map((day, index) => {
-            const dayEvents = events.filter((e) => isEventInDay(e, day));
             const isCurrentMonth = day.month() === currentWeek.month();
             const isToday = day.isSame(dayjs(), "day");
+            const isSelected = day.isSame(currentWeek, "day");
+            const dayEvents = events.filter((e) => e.start.isSame(day, "day"));
+            const hasEvents = dayEvents.length > 0;
 
             return (
               <div
                 key={index}
-                className={`month-day-cell ${isCurrentMonth ? "current-month" : "other-month"} ${isToday ? "today" : ""}`}
+                className={`mini-calendar-day ${
+                  !isCurrentMonth ? "other-month" : ""
+                } ${isToday ? "today" : ""} ${isSelected ? "selected" : ""} ${
+                  hasEvents ? "has-events" : ""
+                }`}
                 onClick={() => {
                   setCurrentWeek(day);
-                  setViewMode("day");
                 }}
               >
-                <div className="month-day-number">{day.format("D")}</div>
-                <div className="month-day-events">
-                  {dayEvents.slice(0, 4).map((event, idx) => (
-                    <div
-                      key={idx}
-                      className="month-event-bar"
-                      style={{
-                        backgroundColor: getPriorityColor(event.priority),
-                      }}
-                      title={event.title}
-                    />
-                  ))}
-                  {dayEvents.length > 4 && (
-                    <div className="month-event-more">
-                      +{dayEvents.length - 4}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
-  // Render day view
-  const renderDayView = () => {
-    const day = currentWeek;
-    const dayEvents = events.filter((e) => isEventInDay(e, day));
-
-    return (
-      <div className="calendar-day-view">
-        <div className="day-view-header">
-          <Text strong style={{ fontSize: 18 }}>
-            {day.format("dddd, DD/MM/YYYY")}
-          </Text>
-        </div>
-        <div className="day-view-timeline">
-          {Array.from({ length: 24 }).map((_, hour) => {
-            const hourEvents = dayEvents.filter(
-              (e) =>
-                e.start.hour() === hour ||
-                (e.start.hour() < hour && e.end.hour() > hour),
-            );
-            return (
-              <div key={hour} className="day-view-hour">
-                <div className="day-view-hour-label">
-                  {hour.toString().padStart(2, "0")}:00
-                </div>
-                <div className="day-view-hour-content">
-                  {hourEvents.map((event) => (
-                    <div
-                      key={event.id}
-                      className="day-view-event"
-                      style={{
-                        backgroundColor: getPriorityColor(event.priority),
-                      }}
-                      onClick={() => navigate(`/tasks?task=${event.id}`)}
-                    >
-                      <span className="event-time">
-                        {event.start.format("HH:mm")}
-                      </span>
-                      <span className="event-title">{event.title}</span>
-                    </div>
-                  ))}
-                </div>
+                {day.date()}
               </div>
             );
           })}
@@ -760,18 +731,67 @@ function Calendar() {
 
         <div className="calendar-layout">
           <aside className="calendar-sidebar">
-            <Card
-              size="small"
-              className="sidebar-card"
-              title={currentWeek.format("MMMM YYYY")}
-              extra={
-                <Button type="link" size="small" onClick={goToToday}>
-                  Hôm nay
-                </Button>
-              }
+            {/* Nút Tạo giống Google Calendar */}
+            <button
+              className="sidebar-create-btn"
+              onClick={() => navigate("/tasks")}
             >
-              {renderMonthView()}
-            </Card>
+              <PlusOutlined /> Tạo
+            </button>
+
+            {/* Mini Calendar */}
+            <div className="mini-calendar">
+              <div className="mini-calendar-header">
+                <span className="mini-calendar-month">
+                  {miniCalendarMonth.format("MMMM YYYY")}
+                </span>
+                <div className="mini-calendar-nav">
+                  <button
+                    onClick={() =>
+                      setMiniCalendarMonth((m) => m.subtract(1, "month"))
+                    }
+                  >
+                    <LeftOutlined />
+                  </button>
+                  <button
+                    onClick={() =>
+                      setMiniCalendarMonth((m) => m.add(1, "month"))
+                    }
+                  >
+                    <RightOutlined />
+                  </button>
+                </div>
+              </div>
+              <div className="mini-calendar-weekdays">
+                {["CN", "T2", "T3", "T4", "T5", "T6", "T7"].map((d) => (
+                  <div key={d} className="weekday-label">
+                    {d}
+                  </div>
+                ))}
+              </div>
+              <div className="mini-calendar-grid">
+                {miniCalendarDays.map((day, idx) => {
+                  const isCurrentMonth =
+                    day.month() === miniCalendarMonth.month();
+                  const isToday = day.isSame(dayjs(), "day");
+                  const isSelected =
+                    day.isSame(currentWeek, "week") && day.day() === 0;
+                  const hasEvent = events.some((e) =>
+                    e.start.isSame(day, "day"),
+                  );
+
+                  return (
+                    <div
+                      key={idx}
+                      className={`mini-calendar-day ${!isCurrentMonth ? "other-month" : ""} ${isToday ? "today" : ""} ${isSelected ? "selected" : ""} ${hasEvent ? "has-events" : ""}`}
+                      onClick={() => setCurrentWeek(day.startOf("week"))}
+                    >
+                      {day.date()}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
             <Card
               size="small"
@@ -829,6 +849,54 @@ function Calendar() {
                 />
               )}
             </Card>
+
+            {/* Lịch của tôi - My Calendars section like Google Calendar */}
+            <div className="sidebar-section" style={{ marginTop: 16 }}>
+              <div className="sidebar-section-header">
+                <span className="section-title">Lịch của tôi</span>
+                <span className="section-toggle">▾</span>
+              </div>
+              <div className="sidebar-section-content">
+                <div className="calendar-list-item">
+                  <div
+                    className="calendar-checkbox checked"
+                    style={{ backgroundColor: "#1a73e8" }}
+                  />
+                  <span className="calendar-name">Công việc</span>
+                </div>
+                <div className="calendar-list-item">
+                  <div
+                    className="calendar-checkbox checked"
+                    style={{ backgroundColor: "#fbbc04" }}
+                  />
+                  <span className="calendar-name">Tasks</span>
+                </div>
+                <div className="calendar-list-item">
+                  <div
+                    className="calendar-checkbox checked"
+                    style={{ backgroundColor: "#34a853" }}
+                  />
+                  <span className="calendar-name">Sinh nhật</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Lịch khác - Other Calendars section */}
+            <div className="sidebar-section" style={{ marginTop: 8 }}>
+              <div className="sidebar-section-header">
+                <span className="section-title">Lịch khác</span>
+                <span className="section-toggle">▾</span>
+              </div>
+              <div className="sidebar-section-content">
+                <div className="calendar-list-item">
+                  <div
+                    className="calendar-checkbox checked"
+                    style={{ backgroundColor: "#9aa0a6" }}
+                  />
+                  <span className="calendar-name">Ngày lễ ở Việt Nam</span>
+                </div>
+              </div>
+            </div>
           </aside>
 
           <section className="calendar-content">
@@ -879,176 +947,169 @@ function Calendar() {
             </Row>
 
             <Card className="calendar-card" loading={tasksLoading}>
-              {viewMode === "month" && renderMonthView()}
-              {viewMode === "day" && renderDayView()}
+              <>
+                <div className="calendar-days-header">
+                  <div className="time-column-header">GMT+07</div>
+                  {weekDays.map((day, index) => (
+                    <div
+                      key={index}
+                      className={`day-header ${day.isSame(dayjs(), "day") ? "today" : ""}`}
+                    >
+                      <div className="day-name">{WEEK_DAYS[index]}</div>
+                      <div className="day-number">{day.format("DD")}</div>
+                    </div>
+                  ))}
+                </div>
 
-              {viewMode === "week" && (
-                <>
-                  <div className="calendar-days-header">
-                    <div className="time-column-header">Gio</div>
-                    {weekDays.map((day, index) => (
+                <div className="calendar-time-grid">
+                  <div className="time-labels">
+                    {HOURS.filter((_, i) => i % 2 === 0).map((slot, i) => (
                       <div
-                        key={index}
-                        className={`day-header ${day.isSame(dayjs(), "day") ? "today" : ""}`}
+                        key={i}
+                        className="time-label"
+                        style={{ top: i * 48 }}
                       >
-                        <div className="day-name">{WEEK_DAYS[index]}</div>
-                        <div className="day-number">{day.format("DD")}</div>
+                        {slot.label}
                       </div>
                     ))}
                   </div>
 
-                  <div className="calendar-time-grid">
-                    <div className="time-labels">
-                      {HOURS.filter((_, i) => i % 2 === 0).map((slot, i) => (
-                        <div
-                          key={i}
-                          className="time-label"
-                          style={{ top: i * 60 }}
-                        >
-                          {slot.label}
-                        </div>
+                  {weekDays.map((day, dayIndex) => (
+                    <div
+                      key={dayIndex}
+                      className={`day-column ${day.isSame(dayjs(), "day") ? "today" : ""}`}
+                      onDragOver={(e) => {
+                        if (draggingTask) e.preventDefault();
+                      }}
+                      onDrop={(e) => handleDropOnDayColumn(e, day)}
+                    >
+                      {Array.from({ length: 24 }).map((_, hour) => (
+                        <div key={hour} className="hour-cell" />
                       ))}
-                    </div>
 
-                    {weekDays.map((day, dayIndex) => (
-                      <div
-                        key={dayIndex}
-                        className={`day-column ${day.isSame(dayjs(), "day") ? "today" : ""}`}
-                        onDragOver={(e) => {
-                          if (draggingTask) e.preventDefault();
-                        }}
-                        onDrop={(e) => handleDropOnDayColumn(e, day)}
-                      >
-                        {Array.from({ length: 24 }).map((_, hour) => (
-                          <div key={hour} className="hour-cell" />
-                        ))}
-
-                        {(() => {
-                          const positions = getOverlappingEvents(events, day);
-                          return events
-                            .filter((e) => isEventInDay(e, day))
-                            .map((event) => {
-                              const { top, height } = getEventPosition(event);
-                              const pos = positions.get(event.id) || {
-                                width: 98,
-                                left: 1,
-                              };
-                              return (
-                                <Tooltip
-                                  key={event.id}
-                                  title={
-                                    <div>
-                                      <strong>{event.title}</strong>
-                                      <br />
-                                      {event.start.format("HH:mm")} -{" "}
-                                      {event.end.format("HH:mm")}
-                                      {event.reason && (
-                                        <>
-                                          <br />
-                                          <em>{event.reason}</em>
-                                        </>
-                                      )}
-                                    </div>
-                                  }
-                                >
-                                  <div
-                                    className={`calendar-event priority-${event.priority} ${event.aiScheduled ? "ai-event" : ""}`}
-                                    style={{
-                                      top: `${top}px`,
-                                      height: `${Math.max(height, 30)}px`,
-                                      width: `${pos.width}%`,
-                                      left: `${pos.left}%`,
-                                      backgroundColor: getPriorityColor(
-                                        event.priority,
-                                      ),
-                                      opacity:
-                                        event.status === "completed" ||
-                                        event.status === "done"
-                                          ? 0.6
-                                          : 1,
-                                      cursor: event.aiScheduled
-                                        ? "move"
-                                        : "pointer",
-                                    }}
-                                    draggable={event.aiScheduled}
-                                    onDragStart={(e) => {
-                                      if (
-                                        event.aiScheduled &&
-                                        activeSchedule?.id
-                                      ) {
-                                        e.dataTransfer.setData(
-                                          "text/task-id",
-                                          event.id,
-                                        );
-                                        e.dataTransfer.effectAllowed = "move";
-                                        setDraggingTask({
-                                          id: event.id,
-                                          title: event.title,
-                                          estimatedDuration: event.end.diff(
-                                            event.start,
-                                            "minute",
-                                          ),
-                                          isAISession: true,
-                                          scheduleId:
-                                            event.scheduleId ||
-                                            activeSchedule.id,
-                                          sessionId:
-                                            event.sessionId || event.id,
-                                        });
-                                      }
-                                    }}
-                                    onDragEnd={() => setDraggingTask(null)}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigate(`/tasks?task=${event.id}`);
-                                    }}
-                                  >
-                                    <div className="event-title">
-                                      {event.title}
-                                    </div>
-                                    <div className="event-time">
-                                      {event.start.format("HH:mm")} -{" "}
-                                      {event.end.format("HH:mm")}
-                                    </div>
-                                    {event.aiScheduled && (
+                      {(() => {
+                        const positions = getOverlappingEvents(events, day);
+                        return events
+                          .filter((e) => isEventInDay(e, day))
+                          .map((event) => {
+                            const { top, height } = getEventPosition(event);
+                            const pos = positions.get(event.id) || {
+                              width: 98,
+                              left: 1,
+                            };
+                            return (
+                              <Tooltip
+                                key={event.id}
+                                title={
+                                  <div>
+                                    <strong>{event.title}</strong>
+                                    <br />
+                                    {event.start.format("HH:mm")} -{" "}
+                                    {event.end.format("HH:mm")}
+                                    {event.reason && (
                                       <>
-                                        <RobotOutlined className="event-ai-icon" />
-                                        <div
-                                          className="resize-handle"
-                                          onMouseDown={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            setResizingEvent({
-                                              eventId: event.id,
-                                              scheduleId: event.scheduleId,
-                                              sessionId: event.sessionId,
-                                              startY: e.clientY,
-                                              originalEnd: event.end,
-                                              day: day,
-                                            });
-                                          }}
-                                        />
+                                        <br />
+                                        <em>{event.reason}</em>
                                       </>
                                     )}
                                   </div>
-                                </Tooltip>
-                              );
-                            });
-                        })()}
+                                }
+                              >
+                                <div
+                                  className={`calendar-event priority-${event.priority} ${event.aiScheduled ? "ai-event" : ""}`}
+                                  style={{
+                                    top: `${top}px`,
+                                    height: `${Math.max(height, 30)}px`,
+                                    width: `${pos.width}%`,
+                                    left: `${pos.left}%`,
+                                    backgroundColor: getPriorityColor(
+                                      event.priority,
+                                    ),
+                                    opacity:
+                                      event.status === "completed" ||
+                                      event.status === "done"
+                                        ? 0.6
+                                        : 1,
+                                    cursor: event.aiScheduled
+                                      ? "move"
+                                      : "pointer",
+                                  }}
+                                  draggable={event.aiScheduled}
+                                  onDragStart={(e) => {
+                                    if (
+                                      event.aiScheduled &&
+                                      activeSchedule?.id
+                                    ) {
+                                      e.dataTransfer.setData(
+                                        "text/task-id",
+                                        event.id,
+                                      );
+                                      e.dataTransfer.effectAllowed = "move";
+                                      setDraggingTask({
+                                        id: event.id,
+                                        title: event.title,
+                                        estimatedDuration: event.end.diff(
+                                          event.start,
+                                          "minute",
+                                        ),
+                                        isAISession: true,
+                                        scheduleId:
+                                          event.scheduleId || activeSchedule.id,
+                                        sessionId: event.sessionId || event.id,
+                                      });
+                                    }
+                                  }}
+                                  onDragEnd={() => setDraggingTask(null)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/tasks?task=${event.id}`);
+                                  }}
+                                >
+                                  <div className="event-title">
+                                    {event.title}
+                                  </div>
+                                  <div className="event-time">
+                                    {event.start.format("HH:mm")} -{" "}
+                                    {event.end.format("HH:mm")}
+                                  </div>
+                                  {event.aiScheduled && (
+                                    <>
+                                      <RobotOutlined className="event-ai-icon" />
+                                      <div
+                                        className="resize-handle"
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          setResizingEvent({
+                                            eventId: event.id,
+                                            scheduleId: event.scheduleId,
+                                            sessionId: event.sessionId,
+                                            startY: e.clientY,
+                                            originalEnd: event.end,
+                                            day: day,
+                                          });
+                                        }}
+                                      />
+                                    </>
+                                  )}
+                                </div>
+                              </Tooltip>
+                            );
+                          });
+                      })()}
 
-                        {day.isSame(dayjs(), "day") && (
-                          <div
-                            className="current-time-line"
-                            style={{
-                              top: `${dayjs().hour() * 60 + dayjs().minute()}px`,
-                            }}
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
+                      {day.isSame(dayjs(), "day") && (
+                        <div
+                          className="current-time-line"
+                          style={{
+                            top: `${dayjs().hour() * 48 + Math.round(dayjs().minute() * 0.8)}px`,
+                          }}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
             </Card>
           </section>
         </div>
