@@ -130,11 +130,10 @@ export default function AITaskScheduler({
     setApplying(true);
     try {
       const { saveAISchedule } = await import("../../services/aiServices");
-      const result = await saveAISchedule(schedule.schedule);
+      const result = await saveAISchedule(schedule);
 
       message.success(
-        result.message ||
-          `Đã tạo ${result.created} phiên và cập nhật ${result.updated} công việc`,
+        result.message || `Đã lưu lịch trình với ${result.totalSessions} phiên`,
       );
 
       if (onScheduleCreate) {

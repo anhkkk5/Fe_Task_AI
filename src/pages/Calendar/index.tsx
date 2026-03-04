@@ -1,4 +1,11 @@
-import { useState, useMemo, type DragEvent } from "react";
+import {
+  useState,
+  useMemo,
+  useCallback,
+  type DragEvent,
+  useRef,
+  useEffect,
+} from "react";
 import {
   Card,
   Typography,
@@ -31,13 +38,17 @@ import {
   PlusOutlined,
   SyncOutlined,
   BulbOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import "dayjs/locale/vi";
 import { useTasks } from "../../hooks/useTasks";
+import { useAISchedule } from "../../hooks/useAISchedule";
 import {
   aiSchedulePlan,
   saveAISchedule,
+  deleteAISchedule,
+  updateAISessionTime,
   type AIScheduleResponse,
 } from "../../services/aiServices";
 import "./Calendar.scss";
@@ -56,6 +67,10 @@ interface CalendarEvent {
   status: string;
   aiScheduled?: boolean;
   reason?: string;
+  scheduleId?: string;
+  sessionId?: string;
+  originalStart?: dayjs.Dayjs;
+  originalEnd?: dayjs.Dayjs;
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => {
@@ -71,6 +86,7 @@ const WEEK_DAYS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 function Calendar() {
   const navigate = useNavigate();
   const { tasks, loading: tasksLoading, handleUpdate, fetchTasks } = useTasks();
+  const { aiSchedule: activeSchedule, fetchAISchedule } = useAISchedule();
   const [currentWeek, setCurrentWeek] = useState(dayjs());
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
@@ -81,7 +97,21 @@ function Calendar() {
     id: string;
     title: string;
     estimatedDuration?: number;
+    isAISession?: boolean;
+    scheduleId?: string;
+    sessionId?: string;
   } | null>(null);
+  const [resizingEvent, setResizingEvent] = useState<{
+    eventId: string;
+    scheduleId?: string;
+    sessionId?: string;
+    startY: number;
+    originalEnd: dayjs.Dayjs;
+    day: dayjs.Dayjs;
+  } | null>(null);
+  const [tempEvents, setTempEvents] = useState<
+    Map<string, { start: dayjs.Dayjs; end: dayjs.Dayjs }>
+  >(new Map());
 
   const weekDays = useMemo(() => {
     const startOfWeek = currentWeek.startOf("week");
@@ -89,9 +119,7 @@ function Calendar() {
   }, [currentWeek]);
 
   const events = useMemo<CalendarEvent[]>(() => {
-    if (!tasks.length) return [];
-
-    return tasks
+    const taskEvents = tasks
       .filter((t: any) => t?.scheduledTime?.start && t?.scheduledTime?.end)
       .map((t: any) => {
         const start = dayjs(t.scheduledTime.start);
@@ -107,18 +135,168 @@ function Calendar() {
           reason: t?.scheduledTime?.reason,
         };
       });
-  }, [tasks]);
+
+    // Convert AI schedule sessions to events
+    const aiEvents: CalendarEvent[] = [];
+    if (activeSchedule?.schedule) {
+      for (const day of activeSchedule.schedule) {
+        const date = dayjs(day.date);
+        for (const task of day.tasks) {
+          const timeMatch = task.suggestedTime.match(
+            /(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/,
+          );
+          if (timeMatch) {
+            const startHour = parseInt(timeMatch[1], 10);
+            const startMinute = parseInt(timeMatch[2], 10);
+            const endHour = parseInt(timeMatch[3], 10);
+            const endMinute = parseInt(timeMatch[4], 10);
+
+            let start = date.hour(startHour).minute(startMinute);
+            let end = date.hour(endHour).minute(endMinute);
+
+            // Apply optimistic updates if any
+            const eventId = task.sessionId || `${task.taskId}_${day.date}`;
+            const tempUpdate = tempEvents.get(eventId);
+            if (tempUpdate) {
+              start = tempUpdate.start;
+              end = tempUpdate.end;
+            }
+
+            aiEvents.push({
+              id: eventId,
+              title: task.title,
+              start,
+              end,
+              priority: (task.priority as any) || "medium",
+              status: task.status || "pending",
+              aiScheduled: true,
+              reason: task.reason,
+              scheduleId: activeSchedule.id,
+              sessionId: task.sessionId,
+            });
+          }
+        }
+      }
+    }
+
+    return [...taskEvents, ...aiEvents];
+  }, [tasks, activeSchedule, tempEvents]);
+
+  // Global resize handlers
+  useEffect(() => {
+    if (!resizingEvent) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaY = e.clientY - resizingEvent.startY;
+      const deltaMinutes = Math.round(deltaY / 1); // 1px = 1 minute
+      const newEnd = resizingEvent.originalEnd.add(deltaMinutes, "minute");
+
+      // Optimistic update - update immediately without waiting for API
+      setTempEvents((prev) => {
+        const next = new Map(prev);
+        const currentEvent = events.find(
+          (ev) => ev.id === resizingEvent.eventId,
+        );
+        if (currentEvent) {
+          next.set(resizingEvent.eventId, {
+            start: currentEvent.start,
+            end: newEnd,
+          });
+        }
+        return next;
+      });
+    };
+
+    const handleMouseUp = async () => {
+      if (!resizingEvent.scheduleId || !resizingEvent.sessionId) {
+        setResizingEvent(null);
+        return;
+      }
+
+      const tempUpdate = tempEvents.get(resizingEvent.eventId);
+      if (!tempUpdate) {
+        setResizingEvent(null);
+        return;
+      }
+
+      const newTime = `${tempUpdate.start.format("HH:mm")} - ${tempUpdate.end.format("HH:mm")}`;
+
+      try {
+        await updateAISessionTime(
+          resizingEvent.scheduleId,
+          resizingEvent.sessionId,
+          newTime,
+        );
+        // Show toast with undo button
+        const originalTime = `${resizingEvent.originalEnd.subtract(30, "minute").format("HH:mm")} - ${resizingEvent.originalEnd.format("HH:mm")}`;
+        message.success({
+          content: (
+            <span>
+              Đã cập nhật lịch cho sự kiện lúc {newTime}
+              <Button
+                type="link"
+                size="small"
+                style={{ marginLeft: 8 }}
+                onClick={async () => {
+                  // Undo action
+                  await updateAISessionTime(
+                    resizingEvent.scheduleId!,
+                    resizingEvent.sessionId!,
+                    originalTime,
+                  );
+                  await fetchAISchedule();
+                  message.info("Đã hoàn tác thay đổi");
+                }}
+              >
+                Hủy
+              </Button>
+            </span>
+          ),
+          duration: 5,
+        });
+        await fetchAISchedule(); // Sync with server
+      } catch (error: any) {
+        message.error(error?.message || "Không thể cập nhật thời gian");
+        // Rollback optimistic update
+        setTempEvents((prev) => {
+          const next = new Map(prev);
+          next.delete(resizingEvent.eventId);
+          return next;
+        });
+      } finally {
+        setResizingEvent(null);
+      }
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [resizingEvent, events, tempEvents, fetchAISchedule]);
+
+  const handleDeleteAISchedule = async () => {
+    if (!activeSchedule?.id) return;
+    try {
+      await deleteAISchedule(activeSchedule.id);
+      message.success("Đã xóa lịch AI");
+      fetchAISchedule(); // Refresh
+    } catch (error: any) {
+      message.error(error?.message || "Không thể xóa lịch AI");
+    }
+  };
 
   const applyAiSchedule = async () => {
     if (!aiSchedule) return;
     setAiApplying(true);
     try {
-      const result = await saveAISchedule(aiSchedule.schedule);
+      const result = await saveAISchedule(aiSchedule);
       message.success(
-        result.message ||
-          `Đã tạo ${result.created} phiên và cập nhật ${result.updated} công việc`,
+        result.message || `Đã lưu lịch trình với ${result.totalSessions} phiên`,
       );
-      await fetchTasks();
+      await fetchAISchedule(); // Refresh AI schedule on calendar
       setScheduleModalOpen(false);
     } catch (error: any) {
       message.error(
@@ -195,6 +373,63 @@ function Calendar() {
     const start = day.startOf("day").add(startMinutes, "minute");
     const end = day.startOf("day").add(endMinutes, "minute");
 
+    // Handle AI session drag-drop
+    if (
+      draggingTask?.isAISession &&
+      draggingTask?.scheduleId &&
+      draggingTask?.sessionId
+    ) {
+      const newTime = `${start.format("HH:mm")} - ${end.format("HH:mm")}`;
+
+      // Find original time for undo
+      const originalEvent = events.find((e) => e.id === draggingTask.id);
+      const originalTime = originalEvent
+        ? `${originalEvent.start.format("HH:mm")} - ${originalEvent.end.format("HH:mm")}`
+        : null;
+
+      try {
+        await updateAISessionTime(
+          draggingTask.scheduleId,
+          draggingTask.sessionId,
+          newTime,
+        );
+        // Show toast with undo button
+        message.success({
+          content: (
+            <span>
+              Đã cập nhật lịch cho sự kiện lúc {newTime}
+              {originalTime && (
+                <Button
+                  type="link"
+                  size="small"
+                  style={{ marginLeft: 8 }}
+                  onClick={async () => {
+                    await updateAISessionTime(
+                      draggingTask.scheduleId!,
+                      draggingTask.sessionId!,
+                      originalTime,
+                    );
+                    await fetchAISchedule();
+                    message.info("Đã hoàn tác thay đổi");
+                  }}
+                >
+                  Hủy
+                </Button>
+              )}
+            </span>
+          ),
+          duration: 5,
+        });
+        await fetchAISchedule(); // Refresh to show updated time
+      } catch (error: any) {
+        message.error(error?.message || "Không thể cập nhật thời gian");
+      } finally {
+        setDraggingTask(null);
+      }
+      return;
+    }
+
+    // Handle regular task drag-drop
     try {
       const ok = await handleUpdate(taskId, {
         scheduledTime: {
@@ -502,13 +737,23 @@ function Calendar() {
               <Option value="week">Tuần</Option>
               <Option value="day">Ngày</Option>
             </Select>
+            {activeSchedule?.id && (
+              <Button
+                danger
+                icon={<DeleteOutlined />}
+                onClick={handleDeleteAISchedule}
+                style={{ marginRight: 8 }}
+              >
+                Xóa lịch AI
+              </Button>
+            )}
             <Button
               type="primary"
               icon={<RobotOutlined />}
               loading={aiLoading}
               onClick={analyzeSchedule}
             >
-              AI Toi Uu Lich
+              AI Tối ưu Lịch
             </Button>
           </div>
         </div>
@@ -707,10 +952,10 @@ function Calendar() {
                                   }
                                 >
                                   <div
-                                    className={`calendar-event priority-${event.priority}`}
+                                    className={`calendar-event priority-${event.priority} ${event.aiScheduled ? "ai-event" : ""}`}
                                     style={{
                                       top: `${top}px`,
-                                      height: `${Math.min(height, 120)}px`,
+                                      height: `${Math.max(height, 30)}px`,
                                       width: `${pos.width}%`,
                                       left: `${pos.left}%`,
                                       backgroundColor: getPriorityColor(
@@ -721,7 +966,38 @@ function Calendar() {
                                         event.status === "done"
                                           ? 0.6
                                           : 1,
+                                      cursor: event.aiScheduled
+                                        ? "move"
+                                        : "pointer",
                                     }}
+                                    draggable={event.aiScheduled}
+                                    onDragStart={(e) => {
+                                      if (
+                                        event.aiScheduled &&
+                                        activeSchedule?.id
+                                      ) {
+                                        e.dataTransfer.setData(
+                                          "text/task-id",
+                                          event.id,
+                                        );
+                                        e.dataTransfer.effectAllowed = "move";
+                                        setDraggingTask({
+                                          id: event.id,
+                                          title: event.title,
+                                          estimatedDuration: event.end.diff(
+                                            event.start,
+                                            "minute",
+                                          ),
+                                          isAISession: true,
+                                          scheduleId:
+                                            event.scheduleId ||
+                                            activeSchedule.id,
+                                          sessionId:
+                                            event.sessionId || event.id,
+                                        });
+                                      }
+                                    }}
+                                    onDragEnd={() => setDraggingTask(null)}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       navigate(`/tasks?task=${event.id}`);
@@ -735,7 +1011,24 @@ function Calendar() {
                                       {event.end.format("HH:mm")}
                                     </div>
                                     {event.aiScheduled && (
-                                      <RobotOutlined className="event-ai-icon" />
+                                      <>
+                                        <RobotOutlined className="event-ai-icon" />
+                                        <div
+                                          className="resize-handle"
+                                          onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            setResizingEvent({
+                                              eventId: event.id,
+                                              scheduleId: event.scheduleId,
+                                              sessionId: event.sessionId,
+                                              startY: e.clientY,
+                                              originalEnd: event.end,
+                                              day: day,
+                                            });
+                                          }}
+                                        />
+                                      </>
                                     )}
                                   </div>
                                 </Tooltip>

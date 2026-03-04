@@ -18,6 +18,7 @@ export interface AIScheduleRequest {
 }
 
 export interface AIScheduleResponse {
+  id?: string;
   schedule: {
     day: string;
     date: string;
@@ -28,6 +29,7 @@ export interface AIScheduleResponse {
       priority: string;
       suggestedTime: string;
       reason: string;
+      status?: string;
       createSubtask?: boolean;
     }[];
     note?: string;
@@ -93,12 +95,57 @@ export const aiSchedulePlan = async (
 
 // Save AI schedule to tasks
 export const saveAISchedule = async (
-  schedule: AIScheduleResponse["schedule"],
-): Promise<{ message: string; updated: number; created: number }> => {
-  return await post("/tasks/save-ai-schedule", { schedule });
+  aiSchedule: AIScheduleResponse,
+): Promise<{
+  message: string;
+  scheduleId: string;
+  totalSessions: number;
+  totalDays: number;
+}> => {
+  return await post("/tasks/save-ai-schedule", {
+    schedule: aiSchedule.schedule,
+    suggestedOrder: aiSchedule.suggestedOrder,
+    personalizationNote: aiSchedule.personalizationNote,
+    totalEstimatedTime: aiSchedule.totalEstimatedTime,
+    splitStrategy: aiSchedule.splitStrategy,
+    confidenceScore: aiSchedule.confidenceScore,
+    sourceTasks: aiSchedule.totalTasks ? [] : [], // Will be populated from taskIds used in schedule
+  });
 };
 
-// Schedule Template APIs
+// Get active AI schedule
+export const getActiveAISchedule = async (): Promise<{
+  success: boolean;
+  data: AIScheduleResponse | null;
+}> => {
+  return await get("/ai-schedules/active");
+};
+
+// Delete AI schedule
+export const deleteAISchedule = async (
+  scheduleId: string,
+): Promise<{
+  success: boolean;
+  message: string;
+}> => {
+  return await del(`/ai-schedules/${scheduleId}`);
+};
+
+// Update AI session time (drag-drop)
+export const updateAISessionTime = async (
+  scheduleId: string,
+  sessionId: string,
+  suggestedTime: string,
+): Promise<{
+  success: boolean;
+  data: AIScheduleResponse | null;
+}> => {
+  return await patch(`/ai-schedules/${scheduleId}/sessions/time`, {
+    sessionId,
+    suggestedTime,
+  });
+};
+
 export const getScheduleTemplates = async (
   tag?: string,
 ): Promise<{ templates: ScheduleTemplate[] }> => {
