@@ -9,8 +9,6 @@ import {
   Modal,
   Space,
   Select,
-  List,
-  Empty,
   Spin,
   Alert,
   Divider,
@@ -19,10 +17,9 @@ import {
   Col,
   message,
 } from "antd";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   CalendarOutlined,
-  ArrowLeftOutlined,
   LeftOutlined,
   RightOutlined,
   RobotOutlined,
@@ -42,11 +39,12 @@ import {
   saveAISchedule,
   deleteAISchedule,
   updateAISessionTime,
+  deleteAISession,
   type AIScheduleResponse,
 } from "../../services/aiServices";
 import "./Calendar.scss";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const { Option } = Select;
 
 dayjs.locale("vi");
@@ -106,6 +104,14 @@ function Calendar() {
     Map<string, { start: dayjs.Dayjs; end: dayjs.Dayjs }>
   >(new Map());
   const [miniCalendarMonth, setMiniCalendarMonth] = useState(dayjs());
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
+    null,
+  );
+  const [eventModalOpen, setEventModalOpen] = useState(false);
+  const [deletingEvent, setDeletingEvent] = useState(false);
+  const [hiddenEventIds, setHiddenEventIds] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   const weekDays = useMemo(() => {
     const startOfWeek = currentWeek.startOf("week");
@@ -159,6 +165,7 @@ function Calendar() {
       for (const day of activeSchedule.schedule) {
         const date = dayjs(day.date);
         for (const task of day.tasks) {
+          if (String(task.status ?? "") === "skipped") continue;
           const timeMatch = task.suggestedTime.match(
             /(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/,
           );
@@ -188,7 +195,7 @@ function Calendar() {
               status: task.status || "pending",
               aiScheduled: true,
               reason: task.reason,
-              scheduleId: activeSchedule.id,
+              scheduleId: (task as any).scheduleId || activeSchedule.id,
               sessionId: task.sessionId,
             });
           }
@@ -196,8 +203,10 @@ function Calendar() {
       }
     }
 
-    return [...taskEvents, ...aiEvents];
-  }, [tasks, activeSchedule, tempEvents]);
+    return [...taskEvents, ...aiEvents].filter(
+      (e) => !hiddenEventIds.has(e.id),
+    );
+  }, [tasks, activeSchedule, tempEvents, hiddenEventIds]);
 
   // Global resize handlers
   useEffect(() => {
@@ -305,6 +314,53 @@ function Calendar() {
     }
   };
 
+  const openEventModal = (event: CalendarEvent) => {
+    setSelectedEvent(event);
+    setEventModalOpen(true);
+  };
+
+  const handleDeleteSelectedEvent = async () => {
+    if (!selectedEvent) return;
+    setDeletingEvent(true);
+    try {
+      if (selectedEvent.aiScheduled) {
+        if (!selectedEvent.scheduleId || !selectedEvent.sessionId) {
+          message.error("Không thể xóa sự kiện AI");
+          return;
+        }
+        setHiddenEventIds((prev) => {
+          const next = new Set(prev);
+          next.add(selectedEvent.id);
+          return next;
+        });
+
+        await deleteAISession(
+          selectedEvent.scheduleId,
+          selectedEvent.sessionId,
+        );
+        await fetchAISchedule();
+        message.success("Đã xóa sự kiện khỏi lịch");
+      } else {
+        const ok = await handleUpdate(selectedEvent.id, {
+          scheduledTime: null,
+          status: "todo",
+        });
+        if (ok) message.success("Đã xóa sự kiện khỏi lịch");
+      }
+      setEventModalOpen(false);
+      setSelectedEvent(null);
+    } catch (error: any) {
+      setHiddenEventIds((prev) => {
+        const next = new Set(prev);
+        next.delete(selectedEvent.id);
+        return next;
+      });
+      message.error(error?.message || "Không thể xóa sự kiện");
+    } finally {
+      setDeletingEvent(false);
+    }
+  };
+
   const applyAiSchedule = async () => {
     if (!aiSchedule) return;
     setAiApplying(true);
@@ -323,12 +379,6 @@ function Calendar() {
       setAiApplying(false);
     }
   };
-
-  const unscheduledTasks = useMemo(() => {
-    return tasks.filter(
-      (t: any) => !(t?.scheduledTime?.start && t?.scheduledTime?.end),
-    );
-  }, [tasks]);
 
   const snapMinutes = (minutes: number, step: number) => {
     return Math.round(minutes / step) * step;
@@ -365,7 +415,7 @@ function Calendar() {
     const workStart = 8 * 60;
     const lunchStart = 12 * 60;
     const lunchEnd = 13 * 60;
-    const workEnd = 17 * 60;
+    const workEnd = 24 * 60;
 
     let startMinutes = clamp(minutesFromStart, workStart, workEnd - 15);
 
@@ -676,13 +726,8 @@ function Calendar() {
     <div className="calendar-page">
       <main className="calendar-main">
         <div className="calendar-header">
-          <div className="header-left">
-            <Link to="/" className="back-link">
-              <ArrowLeftOutlined /> Dashboard
-            </Link>
-            <Title level={3} style={{ margin: 0 }}>
-              <CalendarOutlined /> Lich cong viec AI
-            </Title>
+          <div className="header-left" style={{ minWidth: 200 }}>
+            {/* Empty left section for balance */}
           </div>
 
           <div className="header-center">
@@ -792,63 +837,6 @@ function Calendar() {
                 })}
               </div>
             </div>
-
-            <Card
-              size="small"
-              className="sidebar-card"
-              title={`Chưa lên lịch (${unscheduledTasks.length})`}
-              style={{ marginTop: 12 }}
-            >
-              {unscheduledTasks.length === 0 ? (
-                <Text type="secondary">Tất cả công việc đã có lịch.</Text>
-              ) : (
-                <List
-                  size="small"
-                  dataSource={unscheduledTasks.slice(0, 8)}
-                  renderItem={(t: any) => (
-                    <List.Item
-                      className="unscheduled-item"
-                      draggable
-                      onDragStart={(e) => {
-                        const id = String(t._id || t.id || "");
-                        e.dataTransfer.setData("text/task-id", id);
-                        e.dataTransfer.effectAllowed = "move";
-                        setDraggingTask({
-                          id,
-                          title: String(t.title || ""),
-                          estimatedDuration: t.estimatedDuration,
-                        });
-                      }}
-                      onDragEnd={() => setDraggingTask(null)}
-                      onClick={() => navigate(`/tasks?task=${t._id || t.id}`)}
-                    >
-                      <Space
-                        direction="vertical"
-                        size={0}
-                        style={{ width: "100%" }}
-                      >
-                        <Text strong className="unscheduled-title">
-                          {t.title}
-                        </Text>
-                        <Space size={6}>
-                          <Tag color={getPriorityColor(t.priority || "medium")}>
-                            {t.priority || "medium"}
-                          </Tag>
-                          {t.deadline && (
-                            <Text
-                              type="secondary"
-                              className="unscheduled-deadline"
-                            >
-                              {dayjs(t.deadline).format("DD/MM")}
-                            </Text>
-                          )}
-                        </Space>
-                      </Space>
-                    </List.Item>
-                  )}
-                />
-              )}
-            </Card>
 
             {/* Lịch của tôi - My Calendars section like Google Calendar */}
             <div className="sidebar-section" style={{ marginTop: 16 }}>
@@ -1062,7 +1050,7 @@ function Calendar() {
                                   onDragEnd={() => setDraggingTask(null)}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    navigate(`/tasks?task=${event.id}`);
+                                    openEventModal(event);
                                   }}
                                 >
                                   <div className="event-title">
@@ -1111,6 +1099,63 @@ function Calendar() {
                 </div>
               </>
             </Card>
+
+            <Modal
+              open={eventModalOpen}
+              onCancel={() => {
+                setEventModalOpen(false);
+                setSelectedEvent(null);
+              }}
+              title={selectedEvent?.title || "Sự kiện"}
+              footer={
+                <Space>
+                  {selectedEvent && !selectedEvent.aiScheduled && (
+                    <Button
+                      onClick={() => {
+                        setEventModalOpen(false);
+                        navigate(`/tasks?task=${selectedEvent.id}`);
+                      }}
+                    >
+                      Mở task
+                    </Button>
+                  )}
+                  <Button
+                    danger
+                    loading={deletingEvent}
+                    onClick={handleDeleteSelectedEvent}
+                  >
+                    Xóa
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setEventModalOpen(false);
+                      setSelectedEvent(null);
+                    }}
+                  >
+                    Đóng
+                  </Button>
+                </Space>
+              }
+            >
+              {selectedEvent && (
+                <div>
+                  <div>
+                    <strong>Thời gian:</strong>{" "}
+                    {selectedEvent.start.format("HH:mm")} -{" "}
+                    {selectedEvent.end.format("HH:mm")}
+                  </div>
+                  {selectedEvent.reason && (
+                    <div style={{ marginTop: 8 }}>
+                      <strong>Lý do:</strong> {selectedEvent.reason}
+                    </div>
+                  )}
+                  <div style={{ marginTop: 8 }}>
+                    <strong>Nguồn:</strong>{" "}
+                    {selectedEvent.aiScheduled ? "AI" : "Task"}
+                  </div>
+                </div>
+              )}
+            </Modal>
           </section>
         </div>
 
@@ -1157,24 +1202,6 @@ function Calendar() {
               Xem chi tiet lich AI
             </Button>
           </Card>
-        )}
-
-        {!tasksLoading && events.length === 0 && (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={
-              <Space direction="vertical">
-                <Text>Chua co cong viec nao tren lich</Text>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => navigate("/tasks")}
-                >
-                  Them cong viec
-                </Button>
-              </Space>
-            }
-          />
         )}
       </main>
 

@@ -5,8 +5,8 @@ export interface Task {
   id?: string;
   title: string;
   description?: string;
-  status: "pending" | "in_progress" | "completed" | "cancelled";
-  priority: "low" | "medium" | "high";
+  status: "todo" | "scheduled" | "in_progress" | "completed" | "cancelled";
+  priority: "low" | "medium" | "high" | "urgent";
   deadline?: string;
   tags?: string[];
   reminderAt?: string;
@@ -17,6 +17,8 @@ export interface Task {
     reason?: string;
   };
   estimatedDuration?: number;
+  dailyTargetDuration?: number;
+  dailyTargetMin?: number;
   aiBreakdown?: {
     title: string;
     status?: string;
@@ -34,8 +36,8 @@ export interface TaskListResponse {
 export interface UpdateTaskData {
   title?: string;
   description?: string;
-  status?: "pending" | "in_progress" | "completed" | "cancelled";
-  priority?: "low" | "medium" | "high";
+  status?: "todo" | "scheduled" | "in_progress" | "completed" | "cancelled";
+  priority?: "low" | "medium" | "high" | "urgent";
   deadline?: string;
   tags?: string[];
   reminderAt?: string;
@@ -44,7 +46,7 @@ export interface UpdateTaskData {
     end: string;
     aiPlanned?: boolean;
     reason?: string;
-  };
+  } | null;
 }
 
 // Get task list
@@ -94,6 +96,9 @@ export const createTask = async (data: {
   deadline?: string;
   tags?: string[];
   reminderAt?: string;
+  estimatedDuration?: number;
+  dailyTargetDuration?: number;
+  dailyTargetMin?: number;
 }): Promise<{ task: Task }> => {
   return await post("/tasks", data);
 };

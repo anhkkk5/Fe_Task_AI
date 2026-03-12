@@ -23,6 +23,7 @@ export interface AIScheduleResponse {
     day: string;
     date: string;
     tasks: {
+      scheduleId?: string;
       sessionId?: string;
       taskId: string;
       title: string;
@@ -144,6 +145,30 @@ export const updateAISessionTime = async (
     sessionId,
     suggestedTime,
   });
+};
+
+export const updateAISessionStatus = async (
+  scheduleId: string,
+  sessionId: string,
+  status: "pending" | "in_progress" | "completed" | "skipped",
+): Promise<{
+  success: boolean;
+  data: AIScheduleResponse | null;
+}> => {
+  return await patch(`/ai-schedules/${scheduleId}/sessions/status`, {
+    sessionId,
+    status,
+  });
+};
+
+export const deleteAISession = async (
+  scheduleId: string,
+  sessionId: string,
+): Promise<{
+  success: boolean;
+  data: AIScheduleResponse | null;
+}> => {
+  return await del(`/ai-schedules/${scheduleId}/sessions/${sessionId}`);
 };
 
 export const getScheduleTemplates = async (

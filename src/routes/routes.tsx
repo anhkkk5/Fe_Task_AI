@@ -1,6 +1,6 @@
 import LayoutDefault from "../layouts/LayoutDefault";
 import PrivateRoutes from "../components/privateRoutes";
-import Home from "../pages/Home";
+import { Navigate } from "react-router-dom";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 import VerifyOtp from "../pages/VerifyOtp";
@@ -41,7 +41,7 @@ export const routes = [
         children: [
           {
             index: true,
-            element: <Home />,
+            element: <Navigate to="/tasks" replace />,
           },
           {
             path: "profile",

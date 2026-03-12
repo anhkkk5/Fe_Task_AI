@@ -1,23 +1,6 @@
 import { useEffect, useState } from "react";
+import { Card, Row, Col, Button, Table, Tag, List, Typography } from "antd";
 import {
-  Card,
-  Row,
-  Col,
-  Button,
-  Table,
-  Tag,
-  List,
-  Typography,
-  Modal,
-  Form,
-  Input,
-  Select,
-  Popconfirm,
-  Space,
-  DatePicker,
-} from "antd";
-import {
-  PlusOutlined,
   RobotOutlined,
   CalendarOutlined,
   TeamOutlined,
@@ -26,8 +9,6 @@ import {
   ExclamationCircleOutlined,
   FolderOutlined,
   ArrowRightOutlined,
-  EditOutlined,
-  DeleteOutlined,
 } from "@ant-design/icons";
 import { useTasks } from "../../hooks/useTasks";
 import { getMe } from "../../services/authServices";
@@ -42,8 +23,7 @@ const upcomingDeadlines: any[] = [];
 function Home() {
   const dispatch = useDispatch();
   const { user } = useSelector((state: any) => state.loginReducer);
-  const { tasks, loading, handleCreate, handleUpdate, handleDelete } =
-    useTasks();
+  const { tasks, loading } = useTasks();
 
   console.log("Home: tasks count:", tasks.length, "loading:", loading);
 
@@ -53,17 +33,6 @@ function Home() {
     completed: 0,
     overdue: 0,
   });
-
-  // Create modal state
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [createForm] = Form.useForm();
-  const [createLoading, setCreateLoading] = useState(false);
-
-  // Edit modal state
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<any>(null);
-  const [editForm] = Form.useForm();
-  const [editLoading, setEditLoading] = useState(false);
 
   // Fetch user on mount
   useEffect(() => {
@@ -80,39 +49,6 @@ function Home() {
     };
     fetchUser();
   }, [dispatch, user]);
-
-  // Handle create
-  const onCreateSubmit = async (values: any) => {
-    setCreateLoading(true);
-    const success = await handleCreate(values);
-    setCreateLoading(false);
-    if (success) {
-      setIsCreateModalOpen(false);
-      createForm.resetFields();
-    }
-  };
-
-  // Handle edit click
-  const onEditClick = (task: any) => {
-    setEditingTask(task);
-    editForm.setFieldsValue({
-      title: task.title,
-      status: task.status,
-      priority: task.priority,
-    });
-    setIsEditModalOpen(true);
-  };
-
-  // Handle update
-  const onUpdateSubmit = async (values: any) => {
-    if (!editingTask) return;
-    setEditLoading(true);
-    const success = await handleUpdate(editingTask._id, values);
-    setEditLoading(false);
-    if (success) {
-      setIsEditModalOpen(false);
-    }
-  };
 
   // Table columns
   const columns = [
@@ -172,28 +108,6 @@ function Home() {
         ) : (
           "—"
         ),
-    },
-    {
-      title: "",
-      key: "action",
-      render: (_: any, record: any) => (
-        <Space>
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            onClick={() => onEditClick(record)}
-          />
-          <Popconfirm
-            title="Xóa công việc"
-            description="Bạn có chắc muốn xóa công việc này?"
-            onConfirm={() => handleDelete(record._id || record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Button type="text" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      ),
     },
   ];
 
@@ -261,12 +175,6 @@ function Home() {
               title={<Title level={4}>Công việc của tôi</Title>}
               extra={
                 <div className="card-actions">
-                  <Button
-                    type="link"
-                    onClick={() => setIsCreateModalOpen(true)}
-                  >
-                    <PlusOutlined /> Thêm nhanh
-                  </Button>
                   <Button type="link">
                     Xem tất cả <ArrowRightOutlined />
                   </Button>
@@ -316,15 +224,6 @@ function Home() {
             <Card className="quick-actions-card">
               <Title level={5}>Thao tác nhanh</Title>
               <div className="quick-actions">
-                <Button
-                  type="primary"
-                  block
-                  size="large"
-                  icon={<PlusOutlined />}
-                  onClick={() => setIsCreateModalOpen(true)}
-                >
-                  Thêm công việc
-                </Button>
                 <Button block size="large" icon={<RobotOutlined />}>
                   Yêu cầu AI
                 </Button>
@@ -365,98 +264,6 @@ function Home() {
           </Col>
         </Row>
       </main>
-
-      {/* Create Task Modal */}
-      <Modal
-        title="Thêm công việc mới"
-        open={isCreateModalOpen}
-        onCancel={() => setIsCreateModalOpen(false)}
-        onOk={() => createForm.submit()}
-        confirmLoading={createLoading}
-        okText="Tạo"
-        cancelText="Hủy"
-      >
-        <Form form={createForm} layout="vertical" onFinish={onCreateSubmit}>
-          <Form.Item
-            name="title"
-            label="Tên công việc"
-            rules={[{ required: true, message: "Vui lòng nhập tên công việc" }]}
-          >
-            <Input placeholder="Nhập tên công việc" />
-          </Form.Item>
-          <Form.Item name="description" label="Mô tả">
-            <Input.TextArea rows={3} placeholder="Nhập mô tả công việc" />
-          </Form.Item>
-          <Form.Item name="status" label="Trạng thái" initialValue="pending">
-            <Select placeholder="Chọn trạng thái">
-              <Select.Option value="pending">Chờ xử lý</Select.Option>
-              <Select.Option value="in_progress">Đang thực hiện</Select.Option>
-              <Select.Option value="completed">Hoàn thành</Select.Option>
-              <Select.Option value="cancelled">Đã hủy</Select.Option>
-            </Select>
-          </Form.Item>
-          <Form.Item name="priority" label="Ưu tiên" initialValue="medium">
-            <Select placeholder="Chọn mức độ ưu tiên">
-              <Select.Option value="low">Thấp</Select.Option>
-              <Select.Option value="medium">Trung bình</Select.Option>
-              <Select.Option value="high">Cao</Select.Option>
-            </Select>
-          </Form.Item>
-          <Form.Item name="deadline" label="Hạn chót">
-            <DatePicker
-              style={{ width: "100%" }}
-              format="DD/MM/YYYY"
-              placeholder="Chọn ngày hạn chót"
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* Edit Task Modal */}
-      <Modal
-        title="Chỉnh sửa công việc"
-        open={isEditModalOpen}
-        onCancel={() => setIsEditModalOpen(false)}
-        onOk={() => editForm.submit()}
-        confirmLoading={editLoading}
-        okText="Lưu"
-        cancelText="Hủy"
-      >
-        <Form form={editForm} layout="vertical" onFinish={onUpdateSubmit}>
-          <Form.Item
-            name="title"
-            label="Tên công việc"
-            rules={[{ required: true, message: "Vui lòng nhập tên công việc" }]}
-          >
-            <Input placeholder="Nhập tên công việc" />
-          </Form.Item>
-          <Form.Item
-            name="status"
-            label="Trạng thái"
-            rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
-          >
-            <Select placeholder="Chọn trạng thái">
-              <Select.Option value="pending">Chờ xử lý</Select.Option>
-              <Select.Option value="in_progress">Đang thực hiện</Select.Option>
-              <Select.Option value="completed">Hoàn thành</Select.Option>
-              <Select.Option value="cancelled">Đã hủy</Select.Option>
-            </Select>
-          </Form.Item>
-          <Form.Item
-            name="priority"
-            label="Ưu tiên"
-            rules={[
-              { required: true, message: "Vui lòng chọn mức độ ưu tiên" },
-            ]}
-          >
-            <Select placeholder="Chọn mức độ ưu tiên">
-              <Select.Option value="low">Thấp</Select.Option>
-              <Select.Option value="medium">Trung bình</Select.Option>
-              <Select.Option value="high">Cao</Select.Option>
-            </Select>
-          </Form.Item>
-        </Form>
-      </Modal>
     </div>
   );
 }

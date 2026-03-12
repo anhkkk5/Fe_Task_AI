@@ -46,9 +46,6 @@ function Header() {
           <span className="logo-text">TaskMind AI</span>
         </div>
         <nav className="main-nav">
-          <Link to="/" className={`nav-link ${isActive("/") ? "active" : ""}`}>
-            Dashboard
-          </Link>
           <Link
             to="/tasks"
             className={`nav-link ${isActive("/tasks") ? "active" : ""}`}

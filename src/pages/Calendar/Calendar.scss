@@ -31,9 +31,16 @@
   border-right: 1px solid #dadce0;
   padding: 8px 12px;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  scrollbar-width: none; // Firefox
+  -ms-overflow-style: none; // IE 10+
+
+  &::-webkit-scrollbar {
+    display: none; // Chrome, Safari, Edge
+  }
 
   // Create button style
   .sidebar-create-btn {
@@ -399,23 +406,33 @@
 // Week view styled like Google Calendar
 .calendar-days-header {
   display: grid;
-  grid-template-columns: 50px repeat(7, minmax(0, 1fr));
+  grid-template-columns: 50px repeat(7, 1fr);
   border-bottom: 1px solid #dadce0;
   flex-shrink: 0;
-  margin-left: 0;
   width: 100%;
 
   .time-column-header {
     border-right: 1px solid #dadce0;
     background: #fff;
+    text-align: center;
+    font-size: 10px;
+    color: #70757a;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 64px;
   }
 
   .day-header {
-    padding: 8px 4px;
     text-align: center;
     border-right: 1px solid #dadce0;
-    min-width: 0;
     background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 64px;
 
     &:last-child {
       border-right: none;
@@ -437,7 +454,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 4px auto 0;
+        margin-top: 4px;
         font-size: 14px;
       }
     }
@@ -461,20 +478,43 @@
 
 .calendar-time-grid {
   display: grid;
-  grid-template-columns: 50px repeat(7, minmax(0, 1fr));
+  grid-template-columns: 50px repeat(7, 1fr);
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
   width: 100%;
   min-height: 0;
+  scrollbar-gutter: stable; // Giữ chỗ cho scrollbar để không lệch cột
+
+  // Ẩn scrollbar nhưng vẫn scroll được
+  scrollbar-width: none; // Firefox
+  -ms-overflow-style: none; // IE 10+
+
+  &::-webkit-scrollbar {
+    width: 8px;
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
 
   // Google Calendar style - 48px per hour
   .time-labels {
     border-right: 1px solid #dadce0;
     position: relative;
     background: #fff;
-    min-height: 1152px; // Match day-column height
+    min-height: 1152px;
 
     .time-label {
       position: absolute;
@@ -493,9 +533,8 @@
     position: relative;
     border-right: 1px solid #dadce0;
     background: white;
-    min-width: 0;
+    min-height: 1152px;
     overflow: hidden;
-    min-height: 1152px; // 24 hours * 48px
 
     &:last-child {
       border-right: none;
@@ -506,9 +545,9 @@
     }
 
     .hour-cell {
-      height: 48px; // Google Calendar compact style
+      height: 48px;
       border-bottom: 1px solid #e0e0e0;
-      cursor: pointer;
+      box-sizing: border-box;
 
       &:hover {
         background: #f8f9fa;
@@ -517,8 +556,6 @@
 
     .calendar-event {
       position: absolute;
-      left: 1px;
-      right: 1px;
       border-radius: 4px;
       padding: 2px 4px;
       color: white;
@@ -530,7 +567,7 @@
       z-index: 10;
       user-select: none;
       border-left: 3px solid transparent;
-      max-width: calc(100% - 2px);
+      box-sizing: border-box;
 
       &:hover {
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);

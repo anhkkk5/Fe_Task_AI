@@ -35,148 +35,129 @@ import {
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import AITaskScheduler from "../../components/AITaskScheduler";
+import StatusDropdown from "../../components/StatusDropdown";
 import { useTasks } from "../../hooks/useTasks";
+import dayjs from "dayjs";
+import {
+  parseEstimatedDuration,
+  parseTimeRange,
+  minutesToHourString,
+  timeRegex,
+  rangeRegex,
+} from "../../utils/timeParser";
 import "./Tasks.scss";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
+// Helper: Calculate optimal distribution across days
+const calculateDistribution = (
+  totalMinutes: number,
+  targetRange: { min: number; max: number },
+  days: number,
+): number[] => {
+  // Validate: can we fit within constraints?
+  const minTotal = targetRange.min * days;
+  const maxTotal = targetRange.max * days;
+
+  if (totalMinutes < minTotal) {
+    // Not enough days with current target, use min target
+    const base = Math.floor(totalMinutes / days);
+    const remainder = totalMinutes % days;
+    return Array(days)
+      .fill(0)
+      .map((_, i) => base + (i < remainder ? 1 : 0));
+  }
+
+  if (totalMinutes > maxTotal) {
+    // Exceeds max, cap at max per day and extend days
+    return Array(days).fill(targetRange.max);
+  }
+
+  // Optimal: distribute as evenly as possible within range
+  const idealPerDay = Math.floor(totalMinutes / days);
+
+  // Adjust to be within range
+  const targetPerDay = Math.max(
+    targetRange.min,
+    Math.min(idealPerDay, targetRange.max),
+  );
+
+  // Calculate distribution
+  let remaining = totalMinutes;
+  const distribution: number[] = [];
+
+  for (let i = 0; i < days; i++) {
+    if (i === days - 1) {
+      // Last day takes remainder
+      distribution.push(remaining);
+    } else {
+      const dayMinutes = Math.min(
+        targetPerDay +
+          (remaining > targetPerDay * (days - i)
+            ? targetRange.max - targetPerDay
+            : 0),
+        remaining - targetRange.min * (days - i - 1), // Ensure remaining days can meet min
+      );
+      distribution.push(Math.round(dayMinutes));
+      remaining -= Math.round(dayMinutes);
+    }
+  }
+
+  return distribution;
+};
+
 interface Task {
   id: string;
   title: string;
   description: string;
-  status: "todo" | "in_progress" | "done" | "overdue";
+  status:
+    | "todo"
+    | "in_progress"
+    | "done"
+    | "overdue"
+    | "completed"
+    | "cancelled";
   priority: "low" | "medium" | "high" | "urgent";
   dueDate: string;
   assignee?: string;
   aiAssisted: boolean;
   tags: string[];
+  estimatedDuration?: number;
+  dailyTargetDuration?: number;
+  dailyTargetMin?: number;
 }
 
-const taskColumns = [
-  {
-    title: "Công việc",
-    dataIndex: "title",
-    key: "title",
-    render: (text: string, record: Task) => (
-      <div className="task-title-cell">
-        <div className="task-title-row">
-          <Text strong>{text}</Text>
-          {record.aiAssisted && (
-            <Tooltip title="AI đã hỗ trợ">
-              <RobotOutlined className="ai-badge" />
-            </Tooltip>
-          )}
-        </div>
-        <Text type="secondary" className="task-desc">
-          {record.description}
-        </Text>
-        <div className="task-tags">
-          {record.tags.map((tag) => (
-            <Tag key={tag}>{tag}</Tag>
-          ))}
-        </div>
-      </div>
-    ),
-  },
-  {
-    title: "Người thực hiện",
-    dataIndex: "assignee",
-    key: "assignee",
-    render: (assignee: string) => (
-      <div className="assignee-cell">
-        <Avatar size="small" style={{ backgroundColor: "#4a90e2" }}>
-          {assignee?.charAt(0) || "?"}
-        </Avatar>
-        <Text>{assignee || "Chưa gán"}</Text>
-      </div>
-    ),
-  },
-  {
-    title: "Trạng thái",
-    dataIndex: "status",
-    key: "status",
-    width: 140,
-    render: (status: string) => {
-      const statusMap: Record<
-        string,
-        { color: string; text: string; icon: React.ReactNode }
-      > = {
-        todo: {
-          color: "default",
-          text: "Chờ xử lý",
-          icon: <ClockCircleOutlined />,
-        },
-        in_progress: {
-          color: "processing",
-          text: "Đang thực hiện",
-          icon: <ClockCircleOutlined />,
-        },
-        done: {
-          color: "success",
-          text: "Hoàn thành",
-          icon: <CheckCircleOutlined />,
-        },
-        overdue: {
-          color: "error",
-          text: "Quá hạn",
-          icon: <ClockCircleOutlined />,
-        },
-      };
-      const { color, text } = statusMap[status] || statusMap.todo;
-      return <Tag color={color}>{text}</Tag>;
-    },
-  },
-  {
-    title: "Ưu tiên",
-    dataIndex: "priority",
-    key: "priority",
-    width: 100,
-    render: (priority: string) => {
-      const priorityMap: Record<string, { color: string; text: string }> = {
-        low: { color: "default", text: "Thấp" },
-        medium: { color: "warning", text: "Trung bình" },
-        high: { color: "error", text: "Cao" },
-      };
-      const { color, text } = priorityMap[priority] || priorityMap.low;
-      return <Tag color={color}>{text}</Tag>;
-    },
-  },
-  {
-    title: "Hạn chót",
-    dataIndex: "dueDate",
-    key: "dueDate",
-    width: 120,
-    render: (date: string) => (
-      <Text>
-        <CalendarOutlined style={{ marginRight: 4 }} />
-        {new Date(date).toLocaleDateString("vi-VN")}
-      </Text>
-    ),
-  },
-  {
-    title: "",
-    key: "action",
-    width: 80,
-    render: () => {
-      const items = [
-        { key: "edit", icon: <EditOutlined />, label: "Chỉnh sửa" },
-        {
-          key: "complete",
-          icon: <CheckCircleOutlined />,
-          label: "Đánh dấu hoàn thành",
-        },
-        { type: "divider" as const },
-        { key: "delete", icon: <DeleteOutlined />, label: "Xóa", danger: true },
-      ];
-      return (
-        <Dropdown menu={{ items }} placement="bottomRight">
-          <Button type="text" icon={<MoreOutlined />} />
-        </Dropdown>
-      );
-    },
-  },
-];
+type ApiTaskStatus =
+  | "todo"
+  | "scheduled"
+  | "in_progress"
+  | "completed"
+  | "cancelled";
+
+type DropdownTaskStatus = "todo" | "scheduled";
+
+const normalizeApiStatus = (apiStatus: string): ApiTaskStatus => {
+  if (
+    apiStatus === "todo" ||
+    apiStatus === "scheduled" ||
+    apiStatus === "in_progress" ||
+    apiStatus === "completed" ||
+    apiStatus === "cancelled"
+  ) {
+    return apiStatus;
+  }
+
+  if (apiStatus === "pending") return "todo";
+
+  return "todo";
+};
+
+const toDropdownStatus = (status: string): DropdownTaskStatus => {
+  const s = normalizeApiStatus(status);
+  if (s === "scheduled") return "scheduled";
+  return "todo";
+};
 
 const aiSuggestions = [
   {
@@ -200,19 +181,35 @@ interface TaskItem {
   _id?: string;
   title: string;
   description: string;
-  status: "todo" | "in_progress" | "done" | "overdue";
+  status: "todo" | "scheduled" | "in_progress" | "completed" | "cancelled";
   priority: "low" | "medium" | "high" | "urgent";
   dueDate: string;
   deadline?: string;
+  scheduledTime?: {
+    start: string;
+    end: string;
+    aiPlanned?: boolean;
+    reason?: string;
+  } | null;
   assignee?: string;
   userId?: string;
   aiBreakdown?: any[];
   aiAssisted: boolean;
   tags: string[];
+  estimatedDuration?: number;
+  dailyTargetDuration?: number;
+  dailyTargetMin?: number;
 }
 
 function Tasks() {
-  const { tasks: apiTasks, loading, fetchTasks, handleCreate } = useTasks();
+  const {
+    tasks: apiTasks,
+    loading,
+    fetchTasks,
+    handleCreate,
+    handleUpdate,
+    handleDelete,
+  } = useTasks();
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [schedulerVisible, setSchedulerVisible] = useState(false);
@@ -220,28 +217,250 @@ function Tasks() {
   const [creating, setCreating] = useState(false);
   const [form] = Form.useForm();
 
+  // Edit modal state
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
+  const [editForm] = Form.useForm();
+  const [editLoading, setEditLoading] = useState(false);
+
+  // Delete confirmation
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deletingTask, setDeletingTask] = useState<TaskItem | null>(null);
+
+  // Handle status change from dropdown
+  const handleStatusChange = (taskId: string, newStatus: string) => {
+    // Refresh tasks list after status change
+    fetchTasks();
+  };
+
+  // Define taskColumns inside component to access handleStatusChange
+  const taskColumns = [
+    {
+      title: "Công việc",
+      dataIndex: "title",
+      key: "title",
+      render: (text: string, record: TaskItem) => (
+        <div className="task-title-cell">
+          <div className="task-title-row">
+            <Text strong>{text}</Text>
+            {record.aiAssisted && (
+              <Tooltip title="AI đã hỗ trợ">
+                <RobotOutlined className="ai-badge" />
+              </Tooltip>
+            )}
+          </div>
+          <Text type="secondary" className="task-desc">
+            {record.description}
+          </Text>
+          <div className="task-tags">
+            {record.tags.map((tag) => (
+              <Tag key={tag}>{tag}</Tag>
+            ))}
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "Người thực hiện",
+      dataIndex: "assignee",
+      key: "assignee",
+      render: (assignee: string) => (
+        <div className="assignee-cell">
+          <Avatar size="small" style={{ backgroundColor: "#4a90e2" }}>
+            {assignee?.charAt(0) || "?"}
+          </Avatar>
+          <Text>{assignee || "Chưa gán"}</Text>
+        </div>
+      ),
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      width: 140,
+      render: (status: string, record: TaskItem) => {
+        // status is already normalized in tasks mapping
+        // Just convert to dropdown format (only "todo" or "scheduled")
+        const dropdownStatus: "todo" | "scheduled" =
+          status === "scheduled" ? "scheduled" : "todo";
+
+        console.log(
+          `[StatusDropdown] Task: ${record.title}, DB Status: ${status}, Dropdown Status: ${dropdownStatus}`,
+        );
+
+        return (
+          <StatusDropdown
+            taskId={record.id}
+            currentStatus={dropdownStatus}
+            onStatusChange={(newStatus) =>
+              handleStatusChange(record.id, newStatus)
+            }
+          />
+        );
+      },
+    },
+    {
+      title: "Ưu tiên",
+      dataIndex: "priority",
+      key: "priority",
+      width: 100,
+      render: (priority: string) => {
+        const priorityMap: Record<string, { color: string; text: string }> = {
+          low: { color: "default", text: "Thấp" },
+          medium: { color: "warning", text: "Trung bình" },
+          high: { color: "error", text: "Cao" },
+        };
+        const { color, text } = priorityMap[priority] || priorityMap.low;
+        return <Tag color={color}>{text}</Tag>;
+      },
+    },
+    {
+      title: "Hạn chót",
+      dataIndex: "dueDate",
+      key: "dueDate",
+      width: 120,
+      render: (date: string) => (
+        <Text>
+          <CalendarOutlined style={{ marginRight: 4 }} />
+          {new Date(date).toLocaleDateString("vi-VN")}
+        </Text>
+      ),
+    },
+    {
+      title: "Thời gian dự kiến",
+      dataIndex: "estimatedDuration",
+      key: "estimatedDuration",
+      width: 130,
+      render: (minutes: number) => {
+        if (!minutes) return <Text type="secondary">-</Text>;
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        return (
+          <Tag color="blue">{mins > 0 ? `${hours}h${mins}` : `${hours}h`}</Tag>
+        );
+      },
+    },
+    {
+      title: "Mục tiêu/ngày",
+      dataIndex: "dailyTargetDuration",
+      key: "dailyTargetDuration",
+      width: 120,
+      render: (maxMinutes: number, record: TaskItem) => {
+        if (!maxMinutes) return <Text type="secondary">-</Text>;
+        const maxHours = Math.floor(maxMinutes / 60);
+        const maxMins = maxMinutes % 60;
+        const minMinutes =
+          record.dailyTargetMin || Math.floor(maxMinutes * 0.8);
+        const minHours = Math.floor(minMinutes / 60);
+        const minMins = minMinutes % 60;
+
+        const maxStr = maxMins > 0 ? `${maxHours}h${maxMins}` : `${maxHours}h`;
+        const minStr = minMins > 0 ? `${minHours}h${minMins}` : `${minHours}h`;
+
+        return (
+          <Tag color="green">
+            {minStr}-{maxStr}
+          </Tag>
+        );
+      },
+    },
+  ];
+
+  // Handle edit click
+  const onEditClick = (task: TaskItem) => {
+    setEditingTask(task);
+    editForm.setFieldsValue({
+      title: task.title,
+      description: task.description,
+      priority: task.priority,
+      deadline: task.deadline ? dayjs(task.deadline) : null,
+      tags: task.tags?.join(", "),
+      estimatedDuration: task.estimatedDuration
+        ? minutesToHourString(task.estimatedDuration)
+        : "",
+      dailyTargetRange:
+        task.dailyTargetDuration && task.dailyTargetMin
+          ? `${minutesToHourString(task.dailyTargetMin)}-${minutesToHourString(task.dailyTargetDuration)}`
+          : "",
+    });
+    setIsEditModalOpen(true);
+  };
+
+  // Handle update submit
+  const onUpdateSubmit = async (values: any) => {
+    if (!editingTask) return;
+    setEditLoading(true);
+
+    // Parse time formats to minutes
+    const estimatedMinutes = parseEstimatedDuration(values.estimatedDuration);
+    const range = parseTimeRange(values.dailyTargetRange);
+
+    // Debug log
+    console.log("=== UPDATE TASK DEBUG ===");
+    console.log("Form values:", values);
+    console.log("estimatedMinutes:", estimatedMinutes);
+    console.log("range:", range);
+
+    const payload = {
+      title: values.title,
+      description: values.description,
+      priority: values.priority,
+      deadline: values.deadline?.toISOString(),
+      tags:
+        values.tags
+          ?.split(",")
+          .map((t: string) => t.trim())
+          .filter(Boolean) || [],
+      estimatedDuration: estimatedMinutes,
+      dailyTargetDuration: range.dailyTargetDuration,
+      dailyTargetMin: range.dailyTargetMin,
+    };
+    console.log("Payload gửi lên API:", payload);
+
+    const success = await handleUpdate(editingTask.id, payload);
+
+    setEditLoading(false);
+    if (success) {
+      setIsEditModalOpen(false);
+      setEditingTask(null);
+    }
+  };
+
+  // Handle delete click
+  const onDeleteClick = (task: TaskItem) => {
+    setDeletingTask(task);
+    setIsDeleteModalOpen(true);
+  };
+
+  // Handle delete confirm
+  const onDeleteConfirm = async () => {
+    if (!deletingTask) return;
+    const success = await handleDelete(deletingTask.id);
+    if (success) {
+      setIsDeleteModalOpen(false);
+      setDeletingTask(null);
+    }
+  };
+
   // Map API tasks to component format
   const tasks: TaskItem[] = apiTasks.map((t: any) => ({
     id: t._id || t.id,
     _id: t._id,
     title: t.title,
     description: t.description || "",
-    status:
-      t.status === "completed"
-        ? "done"
-        : t.status === "in_progress"
-          ? "in_progress"
-          : t.status === "cancelled"
-            ? "done"
-            : "todo",
+    status: normalizeApiStatus(String(t.status ?? "todo")),
     priority: (t.priority || "medium") as "low" | "medium" | "high" | "urgent",
     dueDate: t.deadline || t.dueDate || new Date().toISOString(),
     deadline: t.deadline,
+    scheduledTime: t.scheduledTime ?? null,
     assignee: t.userId?.name || "Bạn",
     userId: t.userId,
     aiBreakdown: t.aiBreakdown,
     aiAssisted: !!(t.aiBreakdown && t.aiBreakdown.length > 0),
     tags: t.tags || [],
+    estimatedDuration: t.estimatedDuration,
+    dailyTargetDuration: t.dailyTargetDuration,
+    dailyTargetMin: t.dailyTargetMin,
   }));
 
   const filteredTasks = tasks.filter((task) => {
@@ -252,6 +471,44 @@ function Tasks() {
       statusFilter === "all" || task.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  // Add action column to taskColumns
+  const columnsWithActions = [
+    ...taskColumns,
+    {
+      title: "",
+      key: "action",
+      width: 80,
+      render: (_: any, record: TaskItem) => {
+        const items = [
+          {
+            key: "edit",
+            icon: <EditOutlined />,
+            label: "Chỉnh sửa",
+            onClick: () => onEditClick(record),
+          },
+          {
+            key: "complete",
+            icon: <CheckCircleOutlined />,
+            label: "Đánh dấu hoàn thành",
+          },
+          { type: "divider" as const },
+          {
+            key: "delete",
+            icon: <DeleteOutlined />,
+            label: "Xóa",
+            danger: true,
+            onClick: () => onDeleteClick(record),
+          },
+        ];
+        return (
+          <Dropdown menu={{ items }} placement="bottomRight">
+            <Button type="text" icon={<MoreOutlined />} />
+          </Dropdown>
+        );
+      },
+    },
+  ];
 
   return (
     <div className="tasks-page">
@@ -269,8 +526,8 @@ function Tasks() {
         </div>
 
         <Row gutter={[24, 24]}>
-          {/* Left - Tasks Table */}
-          <Col xs={24} lg={16}>
+          {/* Tasks Table - Full width */}
+          <Col xs={24}>
             <Card
               className="tasks-table-card"
               title={
@@ -320,72 +577,12 @@ function Tasks() {
               }
             >
               <Table
-                columns={taskColumns}
+                columns={columnsWithActions}
                 dataSource={filteredTasks}
                 loading={loading}
                 pagination={{ pageSize: 10 }}
                 rowKey="id"
               />
-            </Card>
-          </Col>
-
-          {/* Right - AI Sidebar */}
-          <Col xs={24} lg={8}>
-            {/* AI Assistant Card */}
-            <Card className="ai-assistant-card">
-              <div className="ai-header">
-                <div className="ai-avatar">
-                  <RobotOutlined />
-                </div>
-                <div>
-                  <Title level={5} style={{ margin: 0 }}>
-                    Trợ lý AI
-                  </Title>
-                  <Text type="secondary">Sẵn sàng hỗ trợ bạn</Text>
-                </div>
-              </div>
-              <Button
-                type="primary"
-                block
-                icon={<RobotOutlined />}
-                size="large"
-              >
-                Yêu cầu AI phân tích
-              </Button>
-            </Card>
-
-            {/* AI Suggestions */}
-            <Card className="ai-suggestions-card" style={{ marginTop: 16 }}>
-              <Title level={5}>Gợi ý thông minh</Title>
-              {aiSuggestions.map((suggestion) => (
-                <div key={suggestion.id} className="suggestion-item">
-                  <Text strong>{suggestion.title}</Text>
-                  <p className="suggestion-desc">{suggestion.description}</p>
-                  <Button type="link" size="small">
-                    {suggestion.action}
-                  </Button>
-                </div>
-              ))}
-            </Card>
-
-            {/* Quick Stats */}
-            <Card className="quick-stats-card" style={{ marginTop: 16 }}>
-              <Title level={5}>Thống kê nhanh</Title>
-              <div className="stat-item">
-                <Text>Công việc AI hỗ trợ</Text>
-                <Badge
-                  count={tasks.filter((t) => t.aiAssisted).length}
-                  style={{ backgroundColor: "#4a90e2" }}
-                />
-              </div>
-              <div className="stat-item">
-                <Text>Cần hoàn thành tuần này</Text>
-                <Badge count={3} style={{ backgroundColor: "#f59e0b" }} />
-              </div>
-              <div className="stat-item">
-                <Text>Đã hoàn thành hôm nay</Text>
-                <Badge count={1} style={{ backgroundColor: "#10b981" }} />
-              </div>
             </Card>
           </Col>
         </Row>
@@ -396,6 +593,8 @@ function Tasks() {
           onScheduleCreate={(schedule) => {
             console.log("Schedule created:", schedule);
             message.success("Đã tạo lịch trình thành công!");
+            // Refresh tasks to show updated status
+            fetchTasks();
           }}
         />
 
@@ -408,7 +607,20 @@ function Tasks() {
             try {
               const values = await form.validateFields();
               setCreating(true);
-              const success = await handleCreate({
+
+              // Parse time formats to minutes
+              const estimatedMinutes = parseEstimatedDuration(
+                values.estimatedDuration,
+              );
+              const range = parseTimeRange(values.dailyTargetRange);
+
+              // Debug log
+              console.log("=== CREATE TASK DEBUG ===");
+              console.log("Form values:", values);
+              console.log("estimatedMinutes:", estimatedMinutes);
+              console.log("range:", range);
+
+              const payload = {
                 title: values.title,
                 description: values.description,
                 priority: values.priority,
@@ -418,7 +630,13 @@ function Tasks() {
                     ?.split(",")
                     .map((t: string) => t.trim())
                     .filter(Boolean) || [],
-              });
+                estimatedDuration: estimatedMinutes,
+                dailyTargetDuration: range.dailyTargetDuration,
+                dailyTargetMin: range.dailyTargetMin,
+              };
+              console.log("Payload gửi lên API:", payload);
+
+              const success = await handleCreate(payload);
               if (success) {
                 form.resetFields();
                 setCreateModalVisible(false);
@@ -468,7 +686,130 @@ function Tasks() {
             <Form.Item name="tags" label="Tags (phân cách bằng dấu phẩy)">
               <Input placeholder="VD: backend, database, urgent" />
             </Form.Item>
+            <Form.Item
+              name="estimatedDuration"
+              label="Thời gian dự kiến"
+              initialValue="11h"
+              rules={[
+                { required: true, message: "Vui lòng nhập thời gian" },
+                {
+                  pattern: timeRegex,
+                  message: "Định dạng: 11h, 2h30, 2.5h",
+                },
+              ]}
+            >
+              <Input placeholder="VD: 11h, 2h30, 2.5h, 1h30" suffix="giờ" />
+            </Form.Item>
+            <Form.Item
+              name="dailyTargetRange"
+              label="Mục tiêu/ngày"
+              initialValue="2h-2.5h"
+              rules={[
+                { required: true, message: "Vui lòng nhập mục tiêu" },
+                {
+                  pattern: rangeRegex,
+                  message: "VD: 2h-3h, 2h30-3h, 2.5h-3h",
+                },
+              ]}
+              tooltip="Nhập khoảng thời gian tối thiểu - tối đa mỗi ngày. VD: 2h-2.5h"
+            >
+              <Input
+                placeholder="VD: 2h-2.5h, 2h30-3h30, 1h-2h"
+                suffix="/ngày"
+              />
+            </Form.Item>
           </Form>
+        </Modal>
+
+        {/* Edit Task Modal */}
+        <Modal
+          title="Chỉnh sửa công việc"
+          open={isEditModalOpen}
+          onCancel={() => setIsEditModalOpen(false)}
+          onOk={() => editForm.submit()}
+          confirmLoading={editLoading}
+          okText="Lưu"
+          cancelText="Hủy"
+        >
+          <Form
+            form={editForm}
+            layout="vertical"
+            style={{ marginTop: 16 }}
+            onFinish={onUpdateSubmit}
+          >
+            <Form.Item
+              name="title"
+              label="Tiêu đề"
+              rules={[{ required: true, message: "Vui lòng nhập tiêu đề" }]}
+            >
+              <Input placeholder="VD: Phân tích database hệ thống" />
+            </Form.Item>
+            <Form.Item name="description" label="Mô tả">
+              <Input.TextArea
+                rows={3}
+                placeholder="Mô tả chi tiết công việc..."
+              />
+            </Form.Item>
+            <Form.Item name="priority" label="Mức độ ưu tiên">
+              <Select>
+                <Option value="low">Thấp</Option>
+                <Option value="medium">Trung bình</Option>
+                <Option value="high">Cao</Option>
+              </Select>
+            </Form.Item>
+            <Form.Item name="deadline" label="Hạn chót">
+              <DatePicker
+                style={{ width: "100%" }}
+                showTime
+                format="DD/MM/YYYY HH:mm"
+              />
+            </Form.Item>
+            <Form.Item name="tags" label="Tags (phân cách bằng dấu phẩy)">
+              <Input placeholder="VD: backend, database, urgent" />
+            </Form.Item>
+            <Form.Item
+              name="estimatedDuration"
+              label="Thời gian dự kiến"
+              rules={[
+                {
+                  pattern: timeRegex,
+                  message: "Định dạng: 11h, 2h30, 2.5h",
+                },
+              ]}
+            >
+              <Input placeholder="VD: 11h, 2h30, 2.5h, 1h30" suffix="giờ" />
+            </Form.Item>
+            <Form.Item
+              name="dailyTargetRange"
+              label="Mục tiêu/ngày"
+              rules={[
+                {
+                  pattern: rangeRegex,
+                  message: "VD: 2h-3h, 2h30-3h, 2.5h-3h",
+                },
+              ]}
+              tooltip="Nhập khoảng thời gian tối thiểu - tối đa mỗi ngày. VD: 2h-2.5h"
+            >
+              <Input
+                placeholder="VD: 2h-2.5h, 2h30-3h30, 1h-2h"
+                suffix="/ngày"
+              />
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          title="Xác nhận xóa"
+          open={isDeleteModalOpen}
+          onCancel={() => setIsDeleteModalOpen(false)}
+          onOk={onDeleteConfirm}
+          okText="Xóa"
+          cancelText="Hủy"
+          okButtonProps={{ danger: true }}
+        >
+          <p>Bạn có chắc muốn xóa công việc "{deletingTask?.title}"?</p>
+          <p>Hành động này không thể hoàn tác.</p>
         </Modal>
       </main>
     </div>

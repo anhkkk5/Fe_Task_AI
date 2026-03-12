@@ -38,6 +38,12 @@ interface Task {
   priority: "low" | "medium" | "high" | "urgent";
   dueDate: string;
   aiAssisted?: boolean;
+  scheduledTime?: {
+    start: string;
+    end: string;
+    aiPlanned?: boolean;
+    reason?: string;
+  } | null;
 }
 
 interface ScheduleDay {
@@ -97,6 +103,7 @@ export default function AITaskScheduler({
   const handleSelectAll = () => {
     const incompleteTasks = tasks
       .filter((t) => t.status !== "done")
+      .filter((t) => !t.scheduledTime)
       .slice(0, 10)
       .map((t) => t.id);
     setSelectedTasks(incompleteTasks);
@@ -175,7 +182,9 @@ export default function AITaskScheduler({
     return map[priority] || priority;
   };
 
-  const incompleteTasks = tasks.filter((t) => t.status !== "done");
+  const incompleteTasks = tasks
+    .filter((t) => t.status !== "done")
+    .filter((t) => !t.scheduledTime);
 
   return (
     <Modal
