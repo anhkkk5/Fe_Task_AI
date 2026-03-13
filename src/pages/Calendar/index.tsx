@@ -9,6 +9,7 @@ import {
   Modal,
   Space,
   Select,
+  TimePicker,
   Spin,
   Alert,
   Divider,
@@ -109,6 +110,11 @@ function Calendar() {
   );
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [deletingEvent, setDeletingEvent] = useState(false);
+  const [savingEventTime, setSavingEventTime] = useState(false);
+  const [editEventStart, setEditEventStart] = useState<dayjs.Dayjs | null>(
+    null,
+  );
+  const [editEventEnd, setEditEventEnd] = useState<dayjs.Dayjs | null>(null);
   const [hiddenEventIds, setHiddenEventIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -316,18 +322,89 @@ function Calendar() {
 
   const openEventModal = (event: CalendarEvent) => {
     setSelectedEvent(event);
+    setEditEventStart(event.start);
+    setEditEventEnd(event.end);
     setEventModalOpen(true);
+  };
+
+  const handleSaveSelectedEventTime = async () => {
+    if (!selectedEvent) return;
+    if (!editEventStart || !editEventEnd) {
+      message.error("Vui lòng chọn thời gian bắt đầu và kết thúc");
+      return;
+    }
+
+    const start = selectedEvent.start
+      .clone()
+      .hour(editEventStart.hour())
+      .minute(editEventStart.minute())
+      .second(0);
+    const end = selectedEvent.end
+      .clone()
+      .hour(editEventEnd.hour())
+      .minute(editEventEnd.minute())
+      .second(0);
+
+    if (!end.isAfter(start)) {
+      message.error("Giờ kết thúc phải sau giờ bắt đầu");
+      return;
+    }
+
+    setSavingEventTime(true);
+    try {
+      if (
+        selectedEvent.aiScheduled &&
+        selectedEvent.scheduleId &&
+        selectedEvent.sessionId
+      ) {
+        const newTime = `${start.format("HH:mm")} - ${end.format("HH:mm")}`;
+        await updateAISessionTime(
+          selectedEvent.scheduleId,
+          selectedEvent.sessionId,
+          newTime,
+        );
+        await fetchAISchedule();
+        message.success("Đã cập nhật thời gian");
+      } else {
+        const ok = await handleUpdate(selectedEvent.id, {
+          scheduledTime: {
+            start: start.toISOString(),
+            end: end.toISOString(),
+            aiPlanned: false,
+            reason: "Người dùng chỉnh sửa thời gian",
+          },
+          status: "scheduled",
+        });
+        if (ok) message.success("Đã cập nhật thời gian");
+      }
+
+      setSelectedEvent((prev) =>
+        prev
+          ? {
+              ...prev,
+              start,
+              end,
+            }
+          : prev,
+      );
+      setEditEventStart(start);
+      setEditEventEnd(end);
+    } catch (error: any) {
+      message.error(error?.message || "Không thể cập nhật thời gian");
+    } finally {
+      setSavingEventTime(false);
+    }
   };
 
   const handleDeleteSelectedEvent = async () => {
     if (!selectedEvent) return;
     setDeletingEvent(true);
     try {
-      if (selectedEvent.aiScheduled) {
-        if (!selectedEvent.scheduleId || !selectedEvent.sessionId) {
-          message.error("Không thể xóa sự kiện AI");
-          return;
-        }
+      if (
+        selectedEvent.aiScheduled &&
+        selectedEvent.scheduleId &&
+        selectedEvent.sessionId
+      ) {
         setHiddenEventIds((prev) => {
           const next = new Set(prev);
           next.add(selectedEvent.id);
@@ -1105,11 +1182,13 @@ function Calendar() {
               onCancel={() => {
                 setEventModalOpen(false);
                 setSelectedEvent(null);
+                setEditEventStart(null);
+                setEditEventEnd(null);
               }}
               title={selectedEvent?.title || "Sự kiện"}
               footer={
                 <Space>
-                  {selectedEvent && !selectedEvent.aiScheduled && (
+                  {selectedEvent && !selectedEvent.sessionId && (
                     <Button
                       onClick={() => {
                         setEventModalOpen(false);
@@ -1119,6 +1198,13 @@ function Calendar() {
                       Mở task
                     </Button>
                   )}
+                  <Button
+                    type="primary"
+                    loading={savingEventTime}
+                    onClick={handleSaveSelectedEventTime}
+                  >
+                    Lưu thời gian
+                  </Button>
                   <Button
                     danger
                     loading={deletingEvent}
@@ -1130,6 +1216,8 @@ function Calendar() {
                     onClick={() => {
                       setEventModalOpen(false);
                       setSelectedEvent(null);
+                      setEditEventStart(null);
+                      setEditEventEnd(null);
                     }}
                   >
                     Đóng
@@ -1144,6 +1232,34 @@ function Calendar() {
                     {selectedEvent.start.format("HH:mm")} -{" "}
                     {selectedEvent.end.format("HH:mm")}
                   </div>
+                  <div style={{ marginTop: 12 }}>
+                    <Space>
+                      <div>
+                        <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                          Bắt đầu
+                        </div>
+                        <TimePicker
+                          value={editEventStart}
+                          onChange={(v) => setEditEventStart(v)}
+                          format="HH:mm"
+                          minuteStep={5}
+                          allowClear={false}
+                        />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                          Kết thúc
+                        </div>
+                        <TimePicker
+                          value={editEventEnd}
+                          onChange={(v) => setEditEventEnd(v)}
+                          format="HH:mm"
+                          minuteStep={5}
+                          allowClear={false}
+                        />
+                      </div>
+                    </Space>
+                  </div>
                   {selectedEvent.reason && (
                     <div style={{ marginTop: 8 }}>
                       <strong>Lý do:</strong> {selectedEvent.reason}
@@ -1151,7 +1267,11 @@ function Calendar() {
                   )}
                   <div style={{ marginTop: 8 }}>
                     <strong>Nguồn:</strong>{" "}
-                    {selectedEvent.aiScheduled ? "AI" : "Task"}
+                    {selectedEvent.sessionId
+                      ? "AI"
+                      : selectedEvent.aiScheduled
+                        ? "AI (Task)"
+                        : "Task"}
                   </div>
                 </div>
               )}
