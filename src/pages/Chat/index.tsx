@@ -42,7 +42,7 @@ interface Chat {
 }
 
 function Chat() {
-  const { user } = useSelector((state: any) => state.loginReducer);
+  const { user } = useSelector((state: any) => state.auth);
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);

@@ -101,12 +101,13 @@ export default function AITaskScheduler({
   };
 
   const handleSelectAll = () => {
-    const incompleteTasks = tasks
+    const canPickTasks = tasks
       .filter((t) => t.status !== "done")
-      .filter((t) => !t.scheduledTime)
+      .filter((t) => t.status !== "scheduled")
+      .filter((t) => !t.scheduledTime || t.status === "todo")
       .slice(0, 10)
       .map((t) => t.id);
-    setSelectedTasks(incompleteTasks);
+    setSelectedTasks(canPickTasks);
   };
 
   const handleGenerateSchedule = async () => {
@@ -184,7 +185,8 @@ export default function AITaskScheduler({
 
   const incompleteTasks = tasks
     .filter((t) => t.status !== "done")
-    .filter((t) => !t.scheduledTime);
+    .filter((t) => t.status !== "scheduled")
+    .filter((t) => !t.scheduledTime || t.status === "todo");
 
   return (
     <Modal

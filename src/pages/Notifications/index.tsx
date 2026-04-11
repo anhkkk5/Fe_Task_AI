@@ -1,5 +1,15 @@
-import { useEffect } from "react";
-import { Card, Typography, List, Button, Badge, Empty, Spin } from "antd";
+import { useEffect, useState } from "react";
+import {
+  Card,
+  Typography,
+  List,
+  Button,
+  Badge,
+  Empty,
+  Spin,
+  InputNumber,
+  message,
+} from "antd";
 import { Link } from "react-router-dom";
 import {
   BellOutlined,
@@ -9,11 +19,15 @@ import {
 } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import {
+  getNotificationSettings,
+  updateNotificationSettings,
+} from "../../services/userServices";
+import {
   fetchNotifications,
   markAsRead,
   markAllAsRead,
   removeNotification,
-} from "../../reducers/notifications";
+} from "../../store/slices/notificationSlice";
 import "./Notifications.scss";
 
 const { Title, Text } = Typography;
@@ -24,9 +38,44 @@ function Notifications() {
     (state: any) => state.notifications,
   );
 
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [reminderMinutes, setReminderMinutes] = useState<number>(5);
+  const [savingSettings, setSavingSettings] = useState(false);
+
   useEffect(() => {
     dispatch(fetchNotifications() as any);
   }, [dispatch]);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      setSettingsLoading(true);
+      try {
+        const res: any = await getNotificationSettings();
+        const n = res?.settings?.reminderMinutes;
+        if (typeof n === "number" && Number.isFinite(n)) {
+          setReminderMinutes(n);
+        }
+      } catch (_err) {
+        // keep default
+      } finally {
+        setSettingsLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, []);
+
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      await updateNotificationSettings({ reminderMinutes });
+      message.success("Đã lưu cài đặt nhắc lịch");
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || "Không thể lưu cài đặt");
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   const handleMarkAsRead = (id: string) => {
     dispatch(markAsRead(id) as any);
@@ -52,6 +101,37 @@ function Notifications() {
           </Title>
           <Text type="secondary">Quản lý thông báo và nhắc nhở của bạn</Text>
         </div>
+
+        <Card style={{ marginBottom: 16 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <Text strong>Nhắc lịch qua email trước (phút):</Text>
+            <Spin spinning={settingsLoading}>
+              <InputNumber
+                min={0}
+                max={24 * 60}
+                value={reminderMinutes}
+                onChange={(v) =>
+                  setReminderMinutes(typeof v === "number" ? v : 5)
+                }
+              />
+            </Spin>
+            <Button
+              type="primary"
+              loading={savingSettings}
+              onClick={handleSaveSettings}
+            >
+              Lưu
+            </Button>
+            <Text type="secondary">Mặc định: 5 phút</Text>
+          </div>
+        </Card>
 
         {items.length > 0 && (
           <div className="notifications-actions">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Card,
   Row,
@@ -199,6 +199,9 @@ interface TaskItem {
   estimatedDuration?: number;
   dailyTargetDuration?: number;
   dailyTargetMin?: number;
+  parentTaskId?: string;
+  subtasks?: TaskItem[];
+  isSubtask?: boolean;
 }
 
 function Tasks() {
@@ -319,12 +322,15 @@ function Tasks() {
       dataIndex: "dueDate",
       key: "dueDate",
       width: 120,
-      render: (date: string) => (
-        <Text>
-          <CalendarOutlined style={{ marginRight: 4 }} />
-          {new Date(date).toLocaleDateString("vi-VN")}
-        </Text>
-      ),
+      render: (date?: string) => {
+        if (!date) return <Text type="secondary">-</Text>;
+        return (
+          <Text>
+            <CalendarOutlined style={{ marginRight: 4 }} />
+            {new Date(date).toLocaleDateString("vi-VN")}
+          </Text>
+        );
+      },
     },
     {
       title: "Thời gian dự kiến",
@@ -443,34 +449,76 @@ function Tasks() {
   };
 
   // Map API tasks to component format
-  const tasks: TaskItem[] = apiTasks.map((t: any) => ({
-    id: t._id || t.id,
-    _id: t._id,
-    title: t.title,
-    description: t.description || "",
-    status: normalizeApiStatus(String(t.status ?? "todo")),
-    priority: (t.priority || "medium") as "low" | "medium" | "high" | "urgent",
-    dueDate: t.deadline || t.dueDate || new Date().toISOString(),
-    deadline: t.deadline,
-    scheduledTime: t.scheduledTime ?? null,
-    assignee: t.userId?.name || "Bạn",
-    userId: t.userId,
-    aiBreakdown: t.aiBreakdown,
-    aiAssisted: !!(t.aiBreakdown && t.aiBreakdown.length > 0),
-    tags: t.tags || [],
-    estimatedDuration: t.estimatedDuration,
-    dailyTargetDuration: t.dailyTargetDuration,
-    dailyTargetMin: t.dailyTargetMin,
-  }));
+  const tasks: TaskItem[] = apiTasks
+    .filter((t: any) => !(t.parentTaskId && t.scheduledTime?.aiPlanned))
+    .map((t: any) => ({
+      id: t._id || t.id,
+      _id: t._id,
+      title: t.title,
+      description: t.description || "",
+      status: normalizeApiStatus(String(t.status ?? "todo")),
+      priority: (t.priority || "medium") as "low" | "medium" | "high" | "urgent",
+      dueDate: t.deadline || t.dueDate || undefined,
+      deadline: t.deadline,
+      scheduledTime: t.scheduledTime ?? null,
+      assignee: t.userId?.name || "Bạn",
+      userId: t.userId,
+      aiBreakdown: t.aiBreakdown,
+      aiAssisted: !!(t.aiBreakdown && t.aiBreakdown.length > 0),
+      tags: t.tags || [],
+      estimatedDuration: t.estimatedDuration,
+      dailyTargetDuration: t.dailyTargetDuration,
+      dailyTargetMin: t.dailyTargetMin,
+      parentTaskId: t.parentTaskId,
+      isSubtask: !!t.parentTaskId,
+    }));
 
-  const filteredTasks = tasks.filter((task) => {
-    const matchesSearch =
-      task.title.toLowerCase().includes(searchText.toLowerCase()) ||
-      task.description.toLowerCase().includes(searchText.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" || task.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // Group subtasks under parent tasks
+  const groupedTasks = useMemo(() => {
+    const taskMap = new Map<string, TaskItem>();
+    const subtasks: TaskItem[] = [];
+
+    // First pass: separate parents and subtasks
+    tasks.forEach((task) => {
+      if (task.isSubtask && task.parentTaskId) {
+        subtasks.push(task);
+      } else {
+        taskMap.set(task.id, { ...task, subtasks: [] });
+      }
+    });
+
+    // Second pass: attach subtasks to parents
+    subtasks.forEach((subtask) => {
+      const parent = taskMap.get(subtask.parentTaskId!);
+      if (parent) {
+        parent.subtasks!.push(subtask);
+      } else {
+        // Orphan subtask (parent not found), add as standalone
+        taskMap.set(subtask.id, subtask);
+      }
+    });
+
+    return Array.from(taskMap.values());
+  }, [tasks]);
+
+  const filteredTasks = useMemo(() => {
+    return groupedTasks.filter((task) => {
+      const searchLower = searchText.toLowerCase();
+      const matchesSearch =
+        task.title.toLowerCase().includes(searchLower) ||
+        task.description.toLowerCase().includes(searchLower) ||
+        task.subtasks?.some(
+          (st) =>
+            st.title.toLowerCase().includes(searchLower) ||
+            st.description.toLowerCase().includes(searchLower),
+        );
+      const matchesStatus =
+        statusFilter === "all" ||
+        task.status === statusFilter ||
+        task.subtasks?.some((st) => st.status === statusFilter);
+      return matchesSearch && matchesStatus;
+    });
+  }, [groupedTasks, searchText, statusFilter]);
 
   // Add action column to taskColumns
   const columnsWithActions = [

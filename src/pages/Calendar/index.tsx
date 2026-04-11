@@ -1,4 +1,4 @@
-import { useState, useMemo, type DragEvent, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Card,
   Typography,
@@ -9,6 +9,8 @@ import {
   Modal,
   Space,
   Select,
+  TimePicker,
+  Input,
   Spin,
   Alert,
   Divider,
@@ -76,7 +78,13 @@ const WEEK_DAYS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
 function Calendar() {
   const navigate = useNavigate();
-  const { tasks, handleUpdate, loading: tasksLoading } = useTasks();
+  const {
+    tasks,
+    handleCreate,
+    handleUpdate,
+    handleDelete,
+    loading: tasksLoading,
+  } = useTasks();
   const { aiSchedule: activeSchedule, fetchAISchedule } = useAISchedule();
   const [currentWeek, setCurrentWeek] = useState(dayjs());
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
@@ -84,34 +92,26 @@ function Calendar() {
   const [aiSchedule, setAiSchedule] = useState<AIScheduleResponse | null>(null);
   const [aiApplying, setAiApplying] = useState(false);
   const [viewMode, setViewMode] = useState<"week" | "day" | "month">("week");
-  const [draggingTask, setDraggingTask] = useState<{
-    id: string;
-    title: string;
-    estimatedDuration?: number;
-    isAISession?: boolean;
-    scheduleId?: string;
-    sessionId?: string;
-  } | null>(null);
-  const [resizingEvent, setResizingEvent] = useState<{
-    eventId: string;
-    scheduleId?: string;
-    sessionId?: string;
-    startY: number;
-    originalEnd: dayjs.Dayjs;
-    day: dayjs.Dayjs;
-  } | null>(null);
-  const [tempEvents, setTempEvents] = useState<
-    Map<string, { start: dayjs.Dayjs; end: dayjs.Dayjs }>
-  >(new Map());
   const [miniCalendarMonth, setMiniCalendarMonth] = useState(dayjs());
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
     null,
   );
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [deletingEvent, setDeletingEvent] = useState(false);
+  const [savingEventTime, setSavingEventTime] = useState(false);
+  const [editEventStart, setEditEventStart] = useState<dayjs.Dayjs | null>(
+    null,
+  );
+  const [editEventEnd, setEditEventEnd] = useState<dayjs.Dayjs | null>(null);
   const [hiddenEventIds, setHiddenEventIds] = useState<Set<string>>(
     () => new Set(),
   );
+
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [creatingTask, setCreatingTask] = useState(false);
+  const [createTitle, setCreateTitle] = useState("");
+  const [createStart, setCreateStart] = useState<dayjs.Dayjs | null>(null);
+  const [createEnd, setCreateEnd] = useState<dayjs.Dayjs | null>(null);
 
   const weekDays = useMemo(() => {
     const startOfWeek = currentWeek.startOf("week");
@@ -142,8 +142,36 @@ function Calendar() {
   }, [miniCalendarMonth]);
 
   const events = useMemo<CalendarEvent[]>(() => {
+    const aiTaskIdsInSchedule = new Set<string>();
+    if (activeSchedule?.schedule) {
+      for (const day of activeSchedule.schedule) {
+        for (const task of day.tasks || []) {
+          if (!task?.taskId) continue;
+          aiTaskIdsInSchedule.add(String(task.taskId));
+        }
+      }
+    }
+
+    // Identify parent tasks that have subtasks (to avoid showing both parent and subtasks)
+    const taskIdsWithParent = new Set<string>();
+    tasks.forEach((t: any) => {
+      if (t?.parentTaskId) {
+        taskIdsWithParent.add(String(t.parentTaskId));
+      }
+    });
+
     const taskEvents = tasks
       .filter((t: any) => t?.scheduledTime?.start && t?.scheduledTime?.end)
+      // Skip parent tasks that have subtasks (show only subtasks to avoid duplicates)
+      .filter((t: any) => {
+        const taskId = String(t._id || t.id);
+        // If this task has subtasks, skip it (let subtasks be shown instead)
+        if (taskIdsWithParent.has(taskId)) return false;
+        // Lọc bỏ các subtask do AI tự sinh ra (để tránh hiển thị trùng lặp với aiEvents từ activeSchedule)
+        if (t.parentTaskId && t.scheduledTime?.aiPlanned) return false;
+        
+        return true;
+      })
       .map((t: any) => {
         const start = dayjs(t.scheduledTime.start);
         const end = dayjs(t.scheduledTime.end);
@@ -178,13 +206,12 @@ function Calendar() {
             let start = date.hour(startHour).minute(startMinute);
             let end = date.hour(endHour).minute(endMinute);
 
-            // Apply optimistic updates if any
             const eventId = task.sessionId || `${task.taskId}_${day.date}`;
-            const tempUpdate = tempEvents.get(eventId);
-            if (tempUpdate) {
-              start = tempUpdate.start;
-              end = tempUpdate.end;
-            }
+
+            const scheduleId =
+              (task as any).scheduleId ||
+              (activeSchedule as any)?.id ||
+              (activeSchedule as any)?._id;
 
             aiEvents.push({
               id: eventId,
@@ -195,7 +222,7 @@ function Calendar() {
               status: task.status || "pending",
               aiScheduled: true,
               reason: task.reason,
-              scheduleId: (task as any).scheduleId || activeSchedule.id,
+              scheduleId,
               sessionId: task.sessionId,
             });
           }
@@ -206,102 +233,7 @@ function Calendar() {
     return [...taskEvents, ...aiEvents].filter(
       (e) => !hiddenEventIds.has(e.id),
     );
-  }, [tasks, activeSchedule, tempEvents, hiddenEventIds]);
-
-  // Global resize handlers
-  useEffect(() => {
-    if (!resizingEvent) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const deltaY = e.clientY - resizingEvent.startY;
-      const deltaMinutes = Math.round(deltaY / 1); // 1px = 1 minute
-      const newEnd = resizingEvent.originalEnd.add(deltaMinutes, "minute");
-
-      // Optimistic update - update immediately without waiting for API
-      setTempEvents((prev) => {
-        const next = new Map(prev);
-        const currentEvent = events.find(
-          (ev) => ev.id === resizingEvent.eventId,
-        );
-        if (currentEvent) {
-          next.set(resizingEvent.eventId, {
-            start: currentEvent.start,
-            end: newEnd,
-          });
-        }
-        return next;
-      });
-    };
-
-    const handleMouseUp = async () => {
-      if (!resizingEvent.scheduleId || !resizingEvent.sessionId) {
-        setResizingEvent(null);
-        return;
-      }
-
-      const tempUpdate = tempEvents.get(resizingEvent.eventId);
-      if (!tempUpdate) {
-        setResizingEvent(null);
-        return;
-      }
-
-      const newTime = `${tempUpdate.start.format("HH:mm")} - ${tempUpdate.end.format("HH:mm")}`;
-
-      try {
-        await updateAISessionTime(
-          resizingEvent.scheduleId,
-          resizingEvent.sessionId,
-          newTime,
-        );
-        // Show toast with undo button
-        const originalTime = `${resizingEvent.originalEnd.subtract(30, "minute").format("HH:mm")} - ${resizingEvent.originalEnd.format("HH:mm")}`;
-        message.success({
-          content: (
-            <span>
-              Đã cập nhật lịch cho sự kiện lúc {newTime}
-              <Button
-                type="link"
-                size="small"
-                style={{ marginLeft: 8 }}
-                onClick={async () => {
-                  // Undo action
-                  await updateAISessionTime(
-                    resizingEvent.scheduleId!,
-                    resizingEvent.sessionId!,
-                    originalTime,
-                  );
-                  await fetchAISchedule();
-                  message.info("Đã hoàn tác thay đổi");
-                }}
-              >
-                Hủy
-              </Button>
-            </span>
-          ),
-          duration: 5,
-        });
-        await fetchAISchedule(); // Sync with server
-      } catch (error: any) {
-        message.error(error?.message || "Không thể cập nhật thời gian");
-        // Rollback optimistic update
-        setTempEvents((prev) => {
-          const next = new Map(prev);
-          next.delete(resizingEvent.eventId);
-          return next;
-        });
-      } finally {
-        setResizingEvent(null);
-      }
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [resizingEvent, events, tempEvents, fetchAISchedule]);
+  }, [tasks, activeSchedule, hiddenEventIds]);
 
   const handleDeleteAISchedule = async () => {
     if (!activeSchedule?.id) return;
@@ -316,7 +248,147 @@ function Calendar() {
 
   const openEventModal = (event: CalendarEvent) => {
     setSelectedEvent(event);
+    setEditEventStart(event.start);
+    setEditEventEnd(event.end);
     setEventModalOpen(true);
+  };
+
+  const openCreateTaskModalFromClick = (
+    day: dayjs.Dayjs,
+    clientY: number,
+    columnEl: HTMLElement,
+  ) => {
+    const rect = columnEl.getBoundingClientRect();
+    const y = clientY - rect.top;
+    const rawMinutes = y / 0.8;
+    const startMinutes = clamp(snapMinutes(rawMinutes, 30), 0, 24 * 60 - 30);
+
+    const start = day
+      .clone()
+      .hour(Math.floor(startMinutes / 60))
+      .minute(startMinutes % 60)
+      .second(0)
+      .millisecond(0);
+
+    const endMinutes = clamp(startMinutes + 60, 0, 24 * 60);
+    const end = day
+      .clone()
+      .hour(Math.floor(endMinutes / 60))
+      .minute(endMinutes % 60)
+      .second(0)
+      .millisecond(0);
+
+    setCreateTitle("");
+    setCreateStart(start);
+    setCreateEnd(end);
+    setCreateModalOpen(true);
+  };
+
+  const handleCreateTaskFromCalendar = async () => {
+    if (!createStart || !createEnd) {
+      message.error("Vui lòng chọn thời gian bắt đầu và kết thúc");
+      return;
+    }
+    const title = createTitle.trim();
+    if (!title) {
+      message.error("Vui lòng nhập tiêu đề công việc");
+      return;
+    }
+    if (!createEnd.isAfter(createStart)) {
+      message.error("Giờ kết thúc phải sau giờ bắt đầu");
+      return;
+    }
+
+    setCreatingTask(true);
+    try {
+      const ok = await handleCreate({
+        title,
+        status: "scheduled",
+        priority: "medium",
+        scheduledTime: {
+          start: createStart.toISOString(),
+          end: createEnd.toISOString(),
+          aiPlanned: false,
+          reason: "Người dùng tạo từ lịch",
+        },
+      });
+      if (!ok) return;
+      setCreateModalOpen(false);
+      setCreateTitle("");
+      setCreateStart(null);
+      setCreateEnd(null);
+    } finally {
+      setCreatingTask(false);
+    }
+  };
+
+  const handleSaveSelectedEventTime = async () => {
+    if (!selectedEvent) return;
+    if (!editEventStart || !editEventEnd) {
+      message.error("Vui lòng chọn thời gian bắt đầu và kết thúc");
+      return;
+    }
+
+    const start = selectedEvent.start
+      .clone()
+      .hour(editEventStart.hour())
+      .minute(editEventStart.minute())
+      .second(0);
+    const end = selectedEvent.end
+      .clone()
+      .hour(editEventEnd.hour())
+      .minute(editEventEnd.minute())
+      .second(0);
+
+    if (!end.isAfter(start)) {
+      message.error("Giờ kết thúc phải sau giờ bắt đầu");
+      return;
+    }
+
+    setSavingEventTime(true);
+    try {
+      if (
+        selectedEvent.aiScheduled &&
+        selectedEvent.scheduleId &&
+        selectedEvent.sessionId
+      ) {
+        const newTime = `${start.format("HH:mm")} - ${end.format("HH:mm")}`;
+        await updateAISessionTime(
+          selectedEvent.scheduleId,
+          selectedEvent.sessionId,
+          newTime,
+        );
+        await fetchAISchedule();
+      } else {
+        const ok = await handleUpdate(selectedEvent.id, {
+          scheduledTime: {
+            start: start.toISOString(),
+            end: end.toISOString(),
+            aiPlanned: false,
+            reason: "Người dùng chỉnh sửa thời gian",
+          },
+          status: "scheduled",
+        });
+        if (!ok) return;
+      }
+
+      message.success("Đã cập nhật thời gian");
+      setSelectedEvent((prev) =>
+        prev
+          ? {
+              ...prev,
+              start,
+              end,
+            }
+          : prev,
+      );
+      setEditEventStart(start);
+      setEditEventEnd(end);
+    } catch (error: any) {
+      message.error(error?.message || "Không thể cập nhật thời gian");
+    } finally {
+      setSavingEventTime(false);
+    }
   };
 
   const handleDeleteSelectedEvent = async () => {
@@ -324,28 +396,29 @@ function Calendar() {
     setDeletingEvent(true);
     try {
       if (selectedEvent.aiScheduled) {
-        if (!selectedEvent.scheduleId || !selectedEvent.sessionId) {
-          message.error("Không thể xóa sự kiện AI");
-          return;
-        }
-        setHiddenEventIds((prev) => {
-          const next = new Set(prev);
-          next.add(selectedEvent.id);
-          return next;
-        });
+        // AI event can be either:
+        // - a suggestion session from AISchedule (has scheduleId + sessionId)
+        // - a real Task that was applied by AI (scheduledTime.aiPlanned=true) -> should be deletable like normal tasks
+        if (selectedEvent.scheduleId && selectedEvent.sessionId) {
+          setHiddenEventIds((prev) => {
+            const next = new Set(prev);
+            next.add(selectedEvent.id);
+            return next;
+          });
 
-        await deleteAISession(
-          selectedEvent.scheduleId,
-          selectedEvent.sessionId,
-        );
-        await fetchAISchedule();
-        message.success("Đã xóa sự kiện khỏi lịch");
+          await deleteAISession(
+            selectedEvent.scheduleId,
+            selectedEvent.sessionId,
+          );
+          await fetchAISchedule();
+          message.success("Đã xóa sự kiện khỏi lịch");
+        } else {
+          const ok = await handleDelete(selectedEvent.id);
+          if (ok) message.success("Đã xóa công việc");
+        }
       } else {
-        const ok = await handleUpdate(selectedEvent.id, {
-          scheduledTime: null,
-          status: "todo",
-        });
-        if (ok) message.success("Đã xóa sự kiện khỏi lịch");
+        const ok = await handleDelete(selectedEvent.id);
+        if (ok) message.success("Đã xóa công việc");
       }
       setEventModalOpen(false);
       setSelectedEvent(null);
@@ -394,124 +467,6 @@ function Calendar() {
     const minutes = task?.estimatedDuration ?? 60;
     if (minutes <= 0) return 60;
     return Math.min(minutes, 240);
-  };
-
-  const handleDropOnDayColumn = async (
-    e: DragEvent<HTMLDivElement>,
-    day: dayjs.Dayjs,
-  ) => {
-    e.preventDefault();
-    const rawId = e.dataTransfer.getData("text/task-id");
-    const taskId = rawId || draggingTask?.id;
-    if (!taskId) return;
-
-    const container = e.currentTarget;
-    const rect = container.getBoundingClientRect();
-    const y = e.clientY - rect.top;
-
-    // Week view: 1px = 1 minute (because top = hour*60 + minute)
-    const minutesFromStart = snapMinutes(y, 15);
-
-    const workStart = 8 * 60;
-    const lunchStart = 12 * 60;
-    const lunchEnd = 13 * 60;
-    const workEnd = 24 * 60;
-
-    let startMinutes = clamp(minutesFromStart, workStart, workEnd - 15);
-
-    // Avoid lunch break
-    if (startMinutes >= lunchStart && startMinutes < lunchEnd) {
-      startMinutes = lunchEnd;
-    }
-
-    const duration = getDefaultDurationMinutes(draggingTask);
-    let endMinutes = startMinutes + duration;
-
-    // Clamp to workEnd
-    if (endMinutes > workEnd) {
-      endMinutes = workEnd;
-      startMinutes = Math.max(workStart, endMinutes - duration);
-      // Re-avoid lunch if pushed back
-      if (startMinutes >= lunchStart && startMinutes < lunchEnd) {
-        startMinutes = lunchEnd;
-      }
-    }
-
-    const start = day.startOf("day").add(startMinutes, "minute");
-    const end = day.startOf("day").add(endMinutes, "minute");
-
-    // Handle AI session drag-drop
-    if (
-      draggingTask?.isAISession &&
-      draggingTask?.scheduleId &&
-      draggingTask?.sessionId
-    ) {
-      const newTime = `${start.format("HH:mm")} - ${end.format("HH:mm")}`;
-
-      // Find original time for undo
-      const originalEvent = events.find((e) => e.id === draggingTask.id);
-      const originalTime = originalEvent
-        ? `${originalEvent.start.format("HH:mm")} - ${originalEvent.end.format("HH:mm")}`
-        : null;
-
-      try {
-        await updateAISessionTime(
-          draggingTask.scheduleId,
-          draggingTask.sessionId,
-          newTime,
-        );
-        // Show toast with undo button
-        message.success({
-          content: (
-            <span>
-              Đã cập nhật lịch cho sự kiện lúc {newTime}
-              {originalTime && (
-                <Button
-                  type="link"
-                  size="small"
-                  style={{ marginLeft: 8 }}
-                  onClick={async () => {
-                    await updateAISessionTime(
-                      draggingTask.scheduleId!,
-                      draggingTask.sessionId!,
-                      originalTime,
-                    );
-                    await fetchAISchedule();
-                    message.info("Đã hoàn tác thay đổi");
-                  }}
-                >
-                  Hủy
-                </Button>
-              )}
-            </span>
-          ),
-          duration: 5,
-        });
-        await fetchAISchedule(); // Refresh to show updated time
-      } catch (error: any) {
-        message.error(error?.message || "Không thể cập nhật thời gian");
-      } finally {
-        setDraggingTask(null);
-      }
-      return;
-    }
-
-    // Handle regular task drag-drop
-    try {
-      const ok = await handleUpdate(taskId, {
-        scheduledTime: {
-          start: start.toISOString(),
-          end: end.toISOString(),
-          aiPlanned: false,
-          reason: "Người dùng kéo-thả để lên lịch",
-        },
-      });
-      if (ok) {
-        message.success("Đã lên lịch cho công việc");
-      }
-    } finally {
-      setDraggingTask(null);
-    }
   };
 
   const analyzeSchedule = async () => {
@@ -966,10 +921,19 @@ function Calendar() {
                     <div
                       key={dayIndex}
                       className={`day-column ${day.isSame(dayjs(), "day") ? "today" : ""}`}
-                      onDragOver={(e) => {
-                        if (draggingTask) e.preventDefault();
+                      onClick={(e) => {
+                        if (
+                          eventModalOpen ||
+                          scheduleModalOpen ||
+                          createModalOpen
+                        )
+                          return;
+                        openCreateTaskModalFromClick(
+                          day,
+                          e.clientY,
+                          e.currentTarget as HTMLElement,
+                        );
                       }}
-                      onDrop={(e) => handleDropOnDayColumn(e, day)}
                     >
                       {Array.from({ length: 24 }).map((_, hour) => (
                         <div key={hour} className="hour-cell" />
@@ -1018,36 +982,8 @@ function Calendar() {
                                       event.status === "done"
                                         ? 0.6
                                         : 1,
-                                    cursor: event.aiScheduled
-                                      ? "move"
-                                      : "pointer",
+                                    cursor: "pointer",
                                   }}
-                                  draggable={event.aiScheduled}
-                                  onDragStart={(e) => {
-                                    if (
-                                      event.aiScheduled &&
-                                      activeSchedule?.id
-                                    ) {
-                                      e.dataTransfer.setData(
-                                        "text/task-id",
-                                        event.id,
-                                      );
-                                      e.dataTransfer.effectAllowed = "move";
-                                      setDraggingTask({
-                                        id: event.id,
-                                        title: event.title,
-                                        estimatedDuration: event.end.diff(
-                                          event.start,
-                                          "minute",
-                                        ),
-                                        isAISession: true,
-                                        scheduleId:
-                                          event.scheduleId || activeSchedule.id,
-                                        sessionId: event.sessionId || event.id,
-                                      });
-                                    }
-                                  }}
-                                  onDragEnd={() => setDraggingTask(null)}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     openEventModal(event);
@@ -1061,24 +997,7 @@ function Calendar() {
                                     {event.end.format("HH:mm")}
                                   </div>
                                   {event.aiScheduled && (
-                                    <>
-                                      <RobotOutlined className="event-ai-icon" />
-                                      <div
-                                        className="resize-handle"
-                                        onMouseDown={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          setResizingEvent({
-                                            eventId: event.id,
-                                            scheduleId: event.scheduleId,
-                                            sessionId: event.sessionId,
-                                            startY: e.clientY,
-                                            originalEnd: event.end,
-                                            day: day,
-                                          });
-                                        }}
-                                      />
-                                    </>
+                                    <RobotOutlined className="event-ai-icon" />
                                   )}
                                 </div>
                               </Tooltip>
@@ -1105,6 +1024,8 @@ function Calendar() {
               onCancel={() => {
                 setEventModalOpen(false);
                 setSelectedEvent(null);
+                setEditEventStart(null);
+                setEditEventEnd(null);
               }}
               title={selectedEvent?.title || "Sự kiện"}
               footer={
@@ -1120,6 +1041,13 @@ function Calendar() {
                     </Button>
                   )}
                   <Button
+                    type="primary"
+                    loading={savingEventTime}
+                    onClick={handleSaveSelectedEventTime}
+                  >
+                    Lưu thời gian
+                  </Button>
+                  <Button
                     danger
                     loading={deletingEvent}
                     onClick={handleDeleteSelectedEvent}
@@ -1130,6 +1058,8 @@ function Calendar() {
                     onClick={() => {
                       setEventModalOpen(false);
                       setSelectedEvent(null);
+                      setEditEventStart(null);
+                      setEditEventEnd(null);
                     }}
                   >
                     Đóng
@@ -1144,6 +1074,34 @@ function Calendar() {
                     {selectedEvent.start.format("HH:mm")} -{" "}
                     {selectedEvent.end.format("HH:mm")}
                   </div>
+                  <div style={{ marginTop: 12 }}>
+                    <Space>
+                      <div>
+                        <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                          Bắt đầu
+                        </div>
+                        <TimePicker
+                          value={editEventStart}
+                          onChange={(v) => setEditEventStart(v)}
+                          format="HH:mm"
+                          minuteStep={5}
+                          allowClear={false}
+                        />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                          Kết thúc
+                        </div>
+                        <TimePicker
+                          value={editEventEnd}
+                          onChange={(v) => setEditEventEnd(v)}
+                          format="HH:mm"
+                          minuteStep={5}
+                          allowClear={false}
+                        />
+                      </div>
+                    </Space>
+                  </div>
                   {selectedEvent.reason && (
                     <div style={{ marginTop: 8 }}>
                       <strong>Lý do:</strong> {selectedEvent.reason}
@@ -1155,6 +1113,96 @@ function Calendar() {
                   </div>
                 </div>
               )}
+            </Modal>
+
+            <Modal
+              open={createModalOpen}
+              onCancel={() => {
+                setCreateModalOpen(false);
+                setCreateTitle("");
+                setCreateStart(null);
+                setCreateEnd(null);
+              }}
+              title="Tạo công việc"
+              footer={
+                <Space>
+                  <Button
+                    onClick={() => {
+                      setCreateModalOpen(false);
+                      setCreateTitle("");
+                      setCreateStart(null);
+                      setCreateEnd(null);
+                    }}
+                  >
+                    Đóng
+                  </Button>
+                  <Button
+                    type="primary"
+                    loading={creatingTask}
+                    onClick={handleCreateTaskFromCalendar}
+                  >
+                    Lưu
+                  </Button>
+                </Space>
+              }
+            >
+              <div>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                    Tiêu đề
+                  </div>
+                  <Input
+                    value={createTitle}
+                    onChange={(e) => setCreateTitle(e.target.value)}
+                    placeholder="Nhập tiêu đề"
+                    autoFocus
+                  />
+                </div>
+                <Space>
+                  <div>
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                      Bắt đầu
+                    </div>
+                    <TimePicker
+                      value={createStart}
+                      onChange={(v) => {
+                        if (!createStart || !v) return;
+                        const next = createStart
+                          .clone()
+                          .hour(v.hour())
+                          .minute(v.minute())
+                          .second(0)
+                          .millisecond(0);
+                        setCreateStart(next);
+                      }}
+                      format="HH:mm"
+                      minuteStep={5}
+                      allowClear={false}
+                    />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                      Kết thúc
+                    </div>
+                    <TimePicker
+                      value={createEnd}
+                      onChange={(v) => {
+                        if (!createEnd || !v) return;
+                        const next = createEnd
+                          .clone()
+                          .hour(v.hour())
+                          .minute(v.minute())
+                          .second(0)
+                          .millisecond(0);
+                        setCreateEnd(next);
+                      }}
+                      format="HH:mm"
+                      minuteStep={5}
+                      allowClear={false}
+                    />
+                  </div>
+                </Space>
+              </div>
             </Modal>
           </section>
         </div>

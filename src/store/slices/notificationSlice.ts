@@ -5,7 +5,7 @@ import {
   markAllNotificationsAsRead,
   deleteNotification,
   type Notification,
-} from "../services/notificationServices";
+} from "../../services/notificationServices";
 
 interface NotificationState {
   items: Notification[];

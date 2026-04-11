@@ -5,7 +5,7 @@ import { getAccessToken } from "../../utils/axios/request";
 import { refreshToken, getMe } from "../../services/authServices";
 
 const PrivateRoutes = () => {
-  const { isLogin, user } = useSelector((state: any) => state.loginReducer);
+  const { isLogin, user } = useSelector((state: any) => state.auth);
   const dispatch = useDispatch();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuth, setIsAuth] = useState(false);

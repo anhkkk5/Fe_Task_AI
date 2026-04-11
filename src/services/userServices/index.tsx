@@ -21,6 +21,10 @@ export interface ChangePasswordData {
   newPassword: string;
 }
 
+export interface NotificationSettings {
+  reminderMinutes: number;
+}
+
 // Get all users (admin)
 export const getUsers = async (params?: { page?: number; limit?: number }) => {
   const queryParams = new URLSearchParams();
@@ -50,4 +54,15 @@ export const changePassword = async (data: ChangePasswordData) => {
 // Delete user (admin)
 export const deleteUser = async (id: string) => {
   return await del(`/users/${id}`);
+};
+
+// Notification settings (current user)
+export const getNotificationSettings = async () => {
+  return await get("/users/notification-settings");
+};
+
+export const updateNotificationSettings = async (
+  data: NotificationSettings,
+) => {
+  return await patch("/users/notification-settings", data);
 };

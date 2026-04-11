@@ -22,7 +22,7 @@ const upcomingDeadlines: any[] = [];
 
 function Home() {
   const dispatch = useDispatch();
-  const { user } = useSelector((state: any) => state.loginReducer);
+  const { user } = useSelector((state: any) => state.auth);
   const { tasks, loading } = useTasks();
 
   console.log("Home: tasks count:", tasks.length, "loading:", loading);

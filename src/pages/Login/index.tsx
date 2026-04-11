@@ -11,7 +11,7 @@ import {
   AppleOutlined,
 } from "@ant-design/icons";
 import { loginUser, getMe } from "../../services/authServices";
-import { checkLogin } from "../../actions/login";
+import { checkLogin } from "../../store/slices/authSlice";
 import "./Login.scss";
 
 interface LoginFormData {
@@ -37,7 +37,7 @@ function Login() {
       // Fetch user data ngay sau khi login
       const userData =
         loginResponse.user || (await getMe().then((r) => r.user || r));
-      dispatch(checkLogin(true, userData));
+      dispatch(checkLogin({ status: true, user: userData }));
 
       messageApi.success("Đăng nhập thành công!");
       setTimeout(() => {

@@ -29,7 +29,7 @@ import {
   getMe,
   logoutUser,
 } from "../../services/authServices";
-import { logout } from "../../actions/login";
+import { logout, updateUser } from "../../store/slices/authSlice";
 import { clearAccessToken } from "../../utils/axios/request";
 import ImageUpload from "../../components/ImageUpload";
 import { ChangePasswordModal } from "../../components/ChangePasswordModal";
@@ -41,7 +41,7 @@ const { Option } = Select;
 function Profile() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user } = useSelector((state: any) => state.loginReducer);
+  const { user } = useSelector((state: any) => state.auth);
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -69,10 +69,7 @@ function Profile() {
         const response = await getMe();
         // Backend returns { accessToken, user }, extract user only
         const userData = response.user || response;
-        dispatch({
-          type: "UPDATE_USER",
-          payload: userData,
-        });
+        dispatch(updateUser(userData));
       } catch (error) {
         console.error("Failed to fetch user data:", error);
       } finally {
@@ -104,10 +101,7 @@ function Profile() {
         name: values.name,
         avatar: user?.avatar,
       });
-      dispatch({
-        type: "UPDATE_USER",
-        payload: updatedUser.user || updatedUser,
-      });
+      dispatch(updateUser(updatedUser.user || updatedUser));
       message.success("Cập nhật hồ sơ thành công!");
     } catch (error: any) {
       message.error(error.response?.data?.message || "Cập nhật thất bại!");

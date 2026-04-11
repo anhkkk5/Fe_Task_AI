@@ -7,7 +7,7 @@ function Header() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const location = useLocation();
-  const { user } = useSelector((state: any) => state.loginReducer);
+  const { user } = useSelector((state: any) => state.auth);
 
   const handleMenuClick = (key: string) => {
     if (key === "logout") {
