@@ -169,7 +169,7 @@ function Calendar() {
         if (taskIdsWithParent.has(taskId)) return false;
         // Lọc bỏ các subtask do AI tự sinh ra (để tránh hiển thị trùng lặp với aiEvents từ activeSchedule)
         if (t.parentTaskId && t.scheduledTime?.aiPlanned) return false;
-        
+
         return true;
       })
       .map((t: any) => {
@@ -359,6 +359,7 @@ function Calendar() {
           newTime,
         );
         await fetchAISchedule();
+        message.success("Đã cập nhật thời gian");
       } else {
         const ok = await handleUpdate(selectedEvent.id, {
           scheduledTime: {
@@ -369,10 +370,9 @@ function Calendar() {
           },
           status: "scheduled",
         });
-        if (!ok) return;
+        if (ok) message.success("Đã cập nhật thời gian");
       }
 
-      message.success("Đã cập nhật thời gian");
       setSelectedEvent((prev) =>
         prev
           ? {
@@ -395,27 +395,23 @@ function Calendar() {
     if (!selectedEvent) return;
     setDeletingEvent(true);
     try {
-      if (selectedEvent.aiScheduled) {
-        // AI event can be either:
-        // - a suggestion session from AISchedule (has scheduleId + sessionId)
-        // - a real Task that was applied by AI (scheduledTime.aiPlanned=true) -> should be deletable like normal tasks
-        if (selectedEvent.scheduleId && selectedEvent.sessionId) {
-          setHiddenEventIds((prev) => {
-            const next = new Set(prev);
-            next.add(selectedEvent.id);
-            return next;
-          });
+      if (
+        selectedEvent.aiScheduled &&
+        selectedEvent.scheduleId &&
+        selectedEvent.sessionId
+      ) {
+        setHiddenEventIds((prev) => {
+          const next = new Set(prev);
+          next.add(selectedEvent.id);
+          return next;
+        });
 
-          await deleteAISession(
-            selectedEvent.scheduleId,
-            selectedEvent.sessionId,
-          );
-          await fetchAISchedule();
-          message.success("Đã xóa sự kiện khỏi lịch");
-        } else {
-          const ok = await handleDelete(selectedEvent.id);
-          if (ok) message.success("Đã xóa công việc");
-        }
+        await deleteAISession(
+          selectedEvent.scheduleId,
+          selectedEvent.sessionId,
+        );
+        await fetchAISchedule();
+        message.success("Đã xóa sự kiện khỏi lịch");
       } else {
         const ok = await handleDelete(selectedEvent.id);
         if (ok) message.success("Đã xóa công việc");
@@ -1030,7 +1026,7 @@ function Calendar() {
               title={selectedEvent?.title || "Sự kiện"}
               footer={
                 <Space>
-                  {selectedEvent && !selectedEvent.aiScheduled && (
+                  {selectedEvent && !selectedEvent.sessionId && (
                     <Button
                       onClick={() => {
                         setEventModalOpen(false);
@@ -1082,7 +1078,9 @@ function Calendar() {
                         </div>
                         <TimePicker
                           value={editEventStart}
-                          onChange={(v) => setEditEventStart(v)}
+                          onChange={(v: dayjs.Dayjs | null) =>
+                            setEditEventStart(v)
+                          }
                           format="HH:mm"
                           minuteStep={5}
                           allowClear={false}
@@ -1094,7 +1092,9 @@ function Calendar() {
                         </div>
                         <TimePicker
                           value={editEventEnd}
-                          onChange={(v) => setEditEventEnd(v)}
+                          onChange={(v: dayjs.Dayjs | null) =>
+                            setEditEventEnd(v)
+                          }
                           format="HH:mm"
                           minuteStep={5}
                           allowClear={false}
@@ -1109,7 +1109,11 @@ function Calendar() {
                   )}
                   <div style={{ marginTop: 8 }}>
                     <strong>Nguồn:</strong>{" "}
-                    {selectedEvent.aiScheduled ? "AI" : "Task"}
+                    {selectedEvent.sessionId
+                      ? "AI"
+                      : selectedEvent.aiScheduled
+                        ? "AI (Task)"
+                        : "Task"}
                   </div>
                 </div>
               )}
@@ -1165,7 +1169,7 @@ function Calendar() {
                     </div>
                     <TimePicker
                       value={createStart}
-                      onChange={(v) => {
+                      onChange={(v: dayjs.Dayjs | null) => {
                         if (!createStart || !v) return;
                         const next = createStart
                           .clone()
@@ -1186,7 +1190,7 @@ function Calendar() {
                     </div>
                     <TimePicker
                       value={createEnd}
-                      onChange={(v) => {
+                      onChange={(v: dayjs.Dayjs | null) => {
                         if (!createEnd || !v) return;
                         const next = createEnd
                           .clone()
