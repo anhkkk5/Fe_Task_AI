@@ -11,6 +11,7 @@ import Teams from "../pages/Teams";
 import Calendar from "../pages/Calendar";
 import Notifications from "../pages/Notifications";
 import Chat from "../pages/Chat";
+import GoogleCallback from "../pages/GoogleCallback";
 
 export const routes = [
   // Auth routes - Full screen, no LayoutDefault
@@ -29,6 +30,10 @@ export const routes = [
   {
     path: "/forgot-password",
     element: <ForgotPassword />,
+  },
+  {
+    path: "/auth/google/callback",
+    element: <GoogleCallback />,
   },
   // Main app routes with LayoutDefault
   {

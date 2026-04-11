@@ -18,6 +18,8 @@ import {
   Row,
   Col,
   message,
+  Tabs,
+  Checkbox,
 } from "antd";
 import { useNavigate } from "react-router-dom";
 import {
@@ -31,6 +33,11 @@ import {
   SyncOutlined,
   BulbOutlined,
   DeleteOutlined,
+  UserOutlined,
+  EnvironmentOutlined,
+  FileTextOutlined,
+  VideoCameraOutlined,
+  GlobalOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import "dayjs/locale/vi";
@@ -44,7 +51,20 @@ import {
   deleteAISession,
   type AIScheduleResponse,
 } from "../../services/aiServices";
+import {
+  getGoogleStatus,
+  redirectToGoogleAuth,
+  getContactByEmail,
+  createGoogleMeetLink,
+  type GoogleUserInfo,
+} from "../../services/backendGoogleServices";
 import "./Calendar.scss";
+
+interface GuestWithAvatar {
+  email: string;
+  name?: string;
+  avatar?: string;
+}
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -110,8 +130,27 @@ function Calendar() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [creatingTask, setCreatingTask] = useState(false);
   const [createTitle, setCreateTitle] = useState("");
+  const [createType, setCreateType] = useState<
+    "event" | "todo" | "appointment"
+  >("event");
+  const [createAllDay, setCreateAllDay] = useState(false);
+  const [createGuests, setCreateGuests] = useState<string[]>([]);
+  const [createLocation, setCreateLocation] = useState("");
+  const [createReminder, setCreateReminder] = useState<number | null>(15);
+  const [createVisibility, setCreateVisibility] = useState<
+    "default" | "public" | "private"
+  >("default");
+  const [createDescription, setCreateDescription] = useState("");
+  const [createMeetingLink, setCreateMeetingLink] = useState("");
   const [createStart, setCreateStart] = useState<dayjs.Dayjs | null>(null);
   const [createEnd, setCreateEnd] = useState<dayjs.Dayjs | null>(null);
+
+  // Google integration states
+  const [googleUser, setGoogleUser] = useState<GoogleUserInfo | null>(null);
+  const [guestsWithAvatar, setGuestsWithAvatar] = useState<GuestWithAvatar[]>(
+    [],
+  );
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const weekDays = useMemo(() => {
     const startOfWeek = currentWeek.startOf("week");
@@ -305,6 +344,14 @@ function Calendar() {
         title,
         status: "scheduled",
         priority: "medium",
+        type: createType,
+        allDay: createAllDay,
+        guests: createGuests.length > 0 ? createGuests : undefined,
+        location: createLocation.trim() || undefined,
+        visibility: createVisibility,
+        reminderMinutes: createReminder ?? undefined,
+        description: createDescription.trim() || undefined,
+        meetingLink: createMeetingLink.trim() || undefined,
         scheduledTime: {
           start: createStart.toISOString(),
           end: createEnd.toISOString(),
@@ -313,12 +360,109 @@ function Calendar() {
         },
       });
       if (!ok) return;
+      // Reset form
       setCreateModalOpen(false);
       setCreateTitle("");
+      setCreateType("event");
+      setCreateAllDay(false);
+      setCreateGuests([]);
+      setCreateLocation("");
+      setCreateReminder(15);
+      setCreateVisibility("default");
+      setCreateDescription("");
+      setCreateMeetingLink("");
       setCreateStart(null);
       setCreateEnd(null);
     } finally {
       setCreatingTask(false);
+    }
+  };
+
+  // Check Google auth status on mount
+  useEffect(() => {
+    const checkGoogleStatus = async () => {
+      try {
+        const status = await getGoogleStatus();
+        if (status.connected && status.user) {
+          setGoogleUser({
+            id: status.user.userId,
+            email: status.user.email,
+            name: status.user.name,
+            picture: status.user.picture,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to check Google status:", err);
+      }
+    };
+    checkGoogleStatus();
+  }, []);
+
+  // Update guests with avatar when createGuests changes
+  useEffect(() => {
+    if (createGuests.length === 0) {
+      setGuestsWithAvatar([]);
+      return;
+    }
+
+    const fetchGuestInfo = async () => {
+      const guestsInfo: GuestWithAvatar[] = [];
+      for (const email of createGuests) {
+        try {
+          const contact = await getContactByEmail(email);
+          guestsInfo.push({
+            email,
+            name: contact?.name,
+            avatar: contact?.photoUrl,
+          });
+        } catch {
+          guestsInfo.push({ email, name: email.split("@")[0] });
+        }
+      }
+      setGuestsWithAvatar(guestsInfo);
+    };
+
+    fetchGuestInfo();
+  }, [createGuests]);
+
+  // Handle Google Sign-In - redirect to backend OAuth
+  const handleGoogleSignIn = () => {
+    setIsGoogleLoading(true);
+    redirectToGoogleAuth();
+  };
+
+  // Create real Google Meet link via backend
+  const handleCreateRealMeetLink = async () => {
+    if (!createStart || !createEnd || !createTitle) {
+      message.error("Vui lòng nhập tiêu đề và chọn thời gian");
+      return;
+    }
+
+    setIsGoogleLoading(true);
+    try {
+      const meetData = await createGoogleMeetLink({
+        title: createTitle,
+        description: createDescription,
+        startTime: createStart.toISOString(),
+        endTime: createEnd.toISOString(),
+        guests: createGuests,
+      });
+
+      if (meetData) {
+        setCreateMeetingLink(meetData.meetingUri);
+        message.success("Đã tạo link Google Meet thật");
+      } else {
+        message.error("Không thể tạo link Google Meet");
+      }
+    } catch (error: any) {
+      if (error.message?.includes("Chưa đăng nhập Google")) {
+        message.info("Vui lòng đăng nhập Google để tạo link Meet");
+        handleGoogleSignIn();
+      } else {
+        message.error(error?.message || "Lỗi tạo link Meet");
+      }
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -730,7 +874,23 @@ function Calendar() {
             {/* Nút Tạo giống Google Calendar */}
             <button
               className="sidebar-create-btn"
-              onClick={() => navigate("/tasks")}
+              onClick={() => {
+                const now = dayjs();
+                const start = now.add(1, "hour").minute(0).second(0);
+                const end = start.add(1, "hour");
+                setCreateTitle("");
+                setCreateType("event");
+                setCreateAllDay(false);
+                setCreateGuests([]);
+                setCreateLocation("");
+                setCreateReminder(15);
+                setCreateVisibility("default");
+                setCreateDescription("");
+                setCreateMeetingLink("");
+                setCreateStart(start);
+                setCreateEnd(end);
+                setCreateModalOpen(true);
+              }}
             >
               <PlusOutlined /> Tạo
             </button>
@@ -1124,16 +1284,45 @@ function Calendar() {
               onCancel={() => {
                 setCreateModalOpen(false);
                 setCreateTitle("");
+                setCreateType("event");
+                setCreateAllDay(false);
+                setCreateGuests([]);
+                setCreateLocation("");
+                setCreateReminder(15);
+                setCreateVisibility("default");
+                setCreateDescription("");
+                setCreateMeetingLink("");
                 setCreateStart(null);
                 setCreateEnd(null);
               }}
-              title="Tạo công việc"
+              title={
+                <Tabs
+                  activeKey={createType}
+                  onChange={(k) =>
+                    setCreateType(k as "event" | "todo" | "appointment")
+                  }
+                  centered
+                  items={[
+                    { key: "event", label: "Sự kiện" },
+                    { key: "todo", label: "Việc cần làm" },
+                    { key: "appointment", label: "Lên lịch hẹn" },
+                  ]}
+                />
+              }
               footer={
                 <Space>
                   <Button
                     onClick={() => {
                       setCreateModalOpen(false);
                       setCreateTitle("");
+                      setCreateType("event");
+                      setCreateAllDay(false);
+                      setCreateGuests([]);
+                      setCreateLocation("");
+                      setCreateReminder(15);
+                      setCreateVisibility("default");
+                      setCreateDescription("");
+                      setCreateMeetingLink("");
                       setCreateStart(null);
                       setCreateEnd(null);
                     }}
@@ -1149,63 +1338,402 @@ function Calendar() {
                   </Button>
                 </Space>
               }
+              width={600}
             >
-              <div>
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontWeight: 600, marginBottom: 6 }}>
-                    Tiêu đề
-                  </div>
+              <div style={{ padding: "0 8px" }}>
+                {/* Title - Google Calendar style */}
+                <div style={{ marginBottom: 20 }}>
                   <Input
                     value={createTitle}
                     onChange={(e) => setCreateTitle(e.target.value)}
-                    placeholder="Nhập tiêu đề"
+                    placeholder="Thêm tiêu đề"
+                    variant="borderless"
+                    style={{
+                      fontSize: 22,
+                      fontWeight: 400,
+                      padding: 0,
+                      borderBottom: "1px solid #dadce0",
+                      borderRadius: 0,
+                    }}
                     autoFocus
                   />
                 </div>
-                <Space>
-                  <div>
-                    <div style={{ fontWeight: 600, marginBottom: 6 }}>
-                      Bắt đầu
-                    </div>
-                    <TimePicker
-                      value={createStart}
-                      onChange={(v: dayjs.Dayjs | null) => {
-                        if (!createStart || !v) return;
-                        const next = createStart
-                          .clone()
-                          .hour(v.hour())
-                          .minute(v.minute())
-                          .second(0)
-                          .millisecond(0);
-                        setCreateStart(next);
-                      }}
-                      format="HH:mm"
-                      minuteStep={5}
-                      allowClear={false}
+
+                {/* Date/Time Row with Icon */}
+                <Row gutter={16} align="middle" style={{ marginBottom: 20 }}>
+                  <Col flex="32px" style={{ textAlign: "center" }}>
+                    <ClockCircleOutlined
+                      style={{ fontSize: 18, color: "#5f6368" }}
                     />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 600, marginBottom: 6 }}>
-                      Kết thúc
-                    </div>
-                    <TimePicker
-                      value={createEnd}
-                      onChange={(v: dayjs.Dayjs | null) => {
-                        if (!createEnd || !v) return;
-                        const next = createEnd
-                          .clone()
-                          .hour(v.hour())
-                          .minute(v.minute())
-                          .second(0)
-                          .millisecond(0);
-                        setCreateEnd(next);
+                  </Col>
+                  <Col flex="auto">
+                    <Row gutter={8} align="middle">
+                      <Col>
+                        <Checkbox
+                          checked={createAllDay}
+                          onChange={(e) => setCreateAllDay(e.target.checked)}
+                        >
+                          Cả ngày
+                        </Checkbox>
+                      </Col>
+                      <Col>
+                        <TimePicker
+                          value={createStart}
+                          onChange={(v: dayjs.Dayjs | null) => {
+                            if (!createStart || !v) return;
+                            const next = createStart
+                              .clone()
+                              .hour(v.hour())
+                              .minute(v.minute())
+                              .second(0)
+                              .millisecond(0);
+                            setCreateStart(next);
+                            if (createEnd && createEnd.isBefore(next)) {
+                              setCreateEnd(next.add(30, "minute"));
+                            }
+                          }}
+                          format="HH:mm"
+                          minuteStep={5}
+                          allowClear={false}
+                          disabled={createAllDay}
+                          style={{ width: 100 }}
+                        />
+                      </Col>
+                      <Col style={{ color: "#5f6368" }}>-</Col>
+                      <Col>
+                        <TimePicker
+                          value={createEnd}
+                          onChange={(v: dayjs.Dayjs | null) => {
+                            if (!createEnd || !v) return;
+                            const next = createEnd
+                              .clone()
+                              .hour(v.hour())
+                              .minute(v.minute())
+                              .second(0)
+                              .millisecond(0);
+                            setCreateEnd(next);
+                          }}
+                          format="HH:mm"
+                          minuteStep={5}
+                          allowClear={false}
+                          disabled={createAllDay}
+                          style={{ width: 100 }}
+                        />
+                      </Col>
+                      <Col>
+                        <Select
+                          value={createReminder}
+                          onChange={setCreateReminder}
+                          style={{ width: 140 }}
+                          variant="borderless"
+                          options={[
+                            { value: null, label: "Không nhắc" },
+                            { value: 0, label: "Vào thời điểm" },
+                            { value: 5, label: "5 phút trước" },
+                            { value: 10, label: "10 phút trước" },
+                            { value: 15, label: "15 phút trước" },
+                            { value: 30, label: "30 phút trước" },
+                            { value: 60, label: "1 giờ trước" },
+                            { value: 120, label: "2 giờ trước" },
+                            { value: 1440, label: "1 ngày trước" },
+                          ]}
+                        />
+                      </Col>
+                    </Row>
+                  </Col>
+                </Row>
+
+                {/* Google Sign In Button - Show if not signed in */}
+                {!googleUser && (
+                  <Row gutter={16} style={{ marginBottom: 12 }}>
+                    <Col flex="32px" />
+                    <Col flex="auto">
+                      <Button
+                        loading={isGoogleLoading}
+                        onClick={handleGoogleSignIn}
+                        style={{
+                          border: "1px solid #dadce0",
+                          borderRadius: 4,
+                          color: "#3c4043",
+                        }}
+                      >
+                        <span style={{ marginRight: 8 }}>🔒</span>
+                        Đăng nhập Google để lấy avatar khách và tạo Meet
+                      </Button>
+                    </Col>
+                  </Row>
+                )}
+
+                {/* Show signed in user */}
+                {googleUser && (
+                  <Row gutter={16} style={{ marginBottom: 12 }}>
+                    <Col flex="32px" />
+                    <Col flex="auto">
+                      <Space>
+                        {googleUser.picture ? (
+                          <img
+                            src={googleUser.picture}
+                            alt={googleUser.name}
+                            style={{
+                              width: 24,
+                              height: 24,
+                              borderRadius: "50%",
+                            }}
+                          />
+                        ) : (
+                          <UserOutlined />
+                        )}
+                        <span>{googleUser.name}</span>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={() => {
+                            setGoogleUser(null);
+                          }}
+                        >
+                          Đăng xuất
+                        </Button>
+                      </Space>
+                    </Col>
+                  </Row>
+                )}
+
+                {/* Guests Row with Icon */}
+                <Row gutter={16} style={{ marginBottom: 20 }}>
+                  <Col
+                    flex="32px"
+                    style={{ textAlign: "center", paddingTop: 4 }}
+                  >
+                    <UserOutlined style={{ fontSize: 18, color: "#5f6368" }} />
+                  </Col>
+                  <Col flex="auto">
+                    <Select
+                      mode="tags"
+                      placeholder="Thêm khách"
+                      value={createGuests}
+                      onChange={setCreateGuests}
+                      style={{ width: "100%" }}
+                      tokenSeparators={[",", ";"]}
+                      variant="borderless"
+                      tagRender={(props) => {
+                        const { value, closable, onClose } = props;
+                        const guest = guestsWithAvatar.find(
+                          (g) => g.email === value,
+                        );
+                        return (
+                          <div
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              background: "#e8f0fe",
+                              borderRadius: 16,
+                              padding: "2px 8px 2px 2px",
+                              margin: "2px 4px 2px 0",
+                            }}
+                          >
+                            {guest?.avatar ? (
+                              <img
+                                src={guest.avatar}
+                                alt={guest.email}
+                                style={{
+                                  width: 20,
+                                  height: 20,
+                                  borderRadius: "50%",
+                                  marginRight: 6,
+                                }}
+                              />
+                            ) : (
+                              <div
+                                style={{
+                                  width: 20,
+                                  height: 20,
+                                  borderRadius: "50%",
+                                  background: "#1a73e8",
+                                  color: "white",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: 10,
+                                  marginRight: 6,
+                                }}
+                              >
+                                {guest?.name?.[0]?.toUpperCase() ||
+                                  guest?.email?.[0]?.toUpperCase() ||
+                                  "?"}
+                              </div>
+                            )}
+                            <span style={{ fontSize: 13 }}>
+                              {guest?.name || guest?.email || value}
+                            </span>
+                            {closable && (
+                              <span
+                                style={{
+                                  marginLeft: 4,
+                                  cursor: "pointer",
+                                  color: "#5f6368",
+                                }}
+                                onClick={onClose}
+                              >
+                                ×
+                              </span>
+                            )}
+                          </div>
+                        );
                       }}
-                      format="HH:mm"
-                      minuteStep={5}
-                      allowClear={false}
                     />
-                  </div>
-                </Space>
+                  </Col>
+                </Row>
+
+                {/* Google Meet Button */}
+                {!createMeetingLink ? (
+                  <Row gutter={16} style={{ marginBottom: 20 }}>
+                    <Col flex="32px" style={{ textAlign: "center" }}>
+                      <VideoCameraOutlined
+                        style={{ fontSize: 18, color: "#5f6368" }}
+                      />
+                    </Col>
+                    <Col flex="auto">
+                      <Button
+                        type="default"
+                        loading={isGoogleLoading}
+                        style={{
+                          background: "#e8eaed",
+                          border: "none",
+                          borderRadius: 4,
+                          color: "#3c4043",
+                          fontWeight: 500,
+                        }}
+                        onClick={handleCreateRealMeetLink}
+                      >
+                        <span style={{ marginRight: 8 }}>📹</span>
+                        Thêm hội nghị truyền hình trên Google Meet
+                      </Button>
+                    </Col>
+                  </Row>
+                ) : (
+                  <Row gutter={16} style={{ marginBottom: 20 }}>
+                    <Col
+                      flex="32px"
+                      style={{ textAlign: "center", paddingTop: 4 }}
+                    >
+                      <VideoCameraOutlined
+                        style={{ fontSize: 18, color: "#1a73e8" }}
+                      />
+                    </Col>
+                    <Col flex="auto">
+                      <div
+                        style={{
+                          background: "#e8f0fe",
+                          borderRadius: 4,
+                          padding: "8px 12px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <span style={{ color: "#1a73e8", fontWeight: 500 }}>
+                          📹 Tham gia bằng Google Meet
+                        </span>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={() => setCreateMeetingLink("")}
+                          style={{ color: "#5f6368" }}
+                        >
+                          Xóa
+                        </Button>
+                      </div>
+                      <div style={{ marginTop: 4, paddingLeft: 4 }}>
+                        <a
+                          href={createMeetingLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: "#1a73e8", fontSize: 13 }}
+                        >
+                          {createMeetingLink}
+                        </a>
+                      </div>
+                    </Col>
+                  </Row>
+                )}
+
+                {/* Location Row with Icon */}
+                <Row gutter={16} style={{ marginBottom: 20 }}>
+                  <Col
+                    flex="32px"
+                    style={{ textAlign: "center", paddingTop: 4 }}
+                  >
+                    <EnvironmentOutlined
+                      style={{ fontSize: 18, color: "#5f6368" }}
+                    />
+                  </Col>
+                  <Col flex="auto">
+                    <Input
+                      placeholder="Thêm vị trí"
+                      value={createLocation}
+                      onChange={(e) => setCreateLocation(e.target.value)}
+                      variant="borderless"
+                      style={{ width: "100%" }}
+                    />
+                  </Col>
+                </Row>
+
+                {/* Description Row with Icon */}
+                <Row gutter={16} style={{ marginBottom: 20 }}>
+                  <Col
+                    flex="32px"
+                    style={{ textAlign: "center", paddingTop: 4 }}
+                  >
+                    <FileTextOutlined
+                      style={{ fontSize: 18, color: "#5f6368" }}
+                    />
+                  </Col>
+                  <Col flex="auto">
+                    <Input.TextArea
+                      placeholder="Thêm mô tả hoặc tệp đính kèm"
+                      value={createDescription}
+                      onChange={(e) => setCreateDescription(e.target.value)}
+                      variant="borderless"
+                      autoSize={{ minRows: 2, maxRows: 6 }}
+                      style={{ width: "100%", resize: "none" }}
+                    />
+                  </Col>
+                </Row>
+
+                {/* Owner & Visibility Row */}
+                <Row gutter={16} style={{ marginBottom: 12 }}>
+                  <Col
+                    flex="32px"
+                    style={{ textAlign: "center", paddingTop: 4 }}
+                  >
+                    <GlobalOutlined
+                      style={{ fontSize: 18, color: "#5f6368" }}
+                    />
+                  </Col>
+                  <Col flex="auto">
+                    <Space size={4} style={{ color: "#5f6368", fontSize: 13 }}>
+                      <span style={{ color: "#1a73e8", fontWeight: 500 }}>
+                        Bạn
+                      </span>
+                      <span>•</span>
+                      <Select
+                        value={createVisibility}
+                        onChange={setCreateVisibility}
+                        variant="borderless"
+                        style={{ color: "#5f6368" }}
+                        popupMatchSelectWidth={false}
+                        options={[
+                          {
+                            value: "default",
+                            label: "Chế độ hiển thị mặc định",
+                          },
+                          { value: "public", label: "Công khai" },
+                          { value: "private", label: "Riêng tư" },
+                        ]}
+                      />
+                    </Space>
+                  </Col>
+                </Row>
               </div>
             </Modal>
           </section>

@@ -12,6 +12,7 @@ import {
 } from "@ant-design/icons";
 import { loginUser, getMe } from "../../services/authServices";
 import { checkLogin } from "../../store/slices/authSlice";
+import { redirectToGoogleAuth } from "../../services/backendGoogleServices";
 import "./Login.scss";
 
 interface LoginFormData {
@@ -154,6 +155,7 @@ function Login() {
                 size="large"
                 className="social-button google"
                 icon={<GoogleOutlined />}
+                onClick={redirectToGoogleAuth}
               >
                 Tiếp tục với Google
               </Button>

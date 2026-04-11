@@ -49,7 +49,9 @@ export const resendOtp = async (email: string): Promise<void> => {
 };
 
 export const logoutUser = async (): Promise<void> => {
-  return await post("/auth/logout", {});
+  await post("/auth/logout", {});
+  clearAccessToken();
+  localStorage.removeItem("token");
 };
 
 export const getMe = async () => {
