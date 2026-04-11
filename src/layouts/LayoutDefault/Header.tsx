@@ -2,6 +2,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { Avatar, Badge, Dropdown } from "antd";
 import { clearAccessToken } from "../../utils/axios/request";
+import { logout } from "../../store/slices/authSlice";
 
 function Header() {
   const navigate = useNavigate();
@@ -12,7 +13,7 @@ function Header() {
   const handleMenuClick = (key: string) => {
     if (key === "logout") {
       clearAccessToken();
-      dispatch({ type: "CHECK_LOGIN", status: false });
+      dispatch(logout());
       navigate("/login");
     } else if (key === "profile") {
       navigate("/profile");

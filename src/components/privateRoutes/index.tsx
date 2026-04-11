@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { Navigate, Outlet } from "react-router-dom";
 import { getAccessToken } from "../../utils/axios/request";
 import { refreshToken, getMe } from "../../services/authServices";
+import { checkLogin } from "../../store/slices/authSlice";
 
 const PrivateRoutes = () => {
   const { isLogin, user } = useSelector((state: any) => state.auth);
@@ -27,7 +28,7 @@ const PrivateRoutes = () => {
         // Fetch user data sau khi refresh token thành công
         const userResponse = await getMe();
         const userData = userResponse.user || userResponse;
-        dispatch({ type: "CHECK_LOGIN", status: true, payload: userData });
+        dispatch(checkLogin({ status: true, user: userData }));
         setIsAuth(true);
       } catch (error) {
         console.log("Session expired or invalid");
