@@ -25,11 +25,13 @@ function GoogleCallback() {
       // httpOnly cookie is set by backend, fetch user info
       getMe()
         .then((res) => {
-          dispatch(checkLogin({ status: true, user: res.user }));
+          const userData = res.user || res;
+          dispatch(checkLogin({ status: true, user: userData }));
           message.success("Đăng nhập Google thành công!");
-          navigate("/calendar", { replace: true });
+          navigate("/tasks", { replace: true });
         })
-        .catch(() => {
+        .catch((err) => {
+          console.error("[GoogleCallback] getMe failed:", err);
           message.error("Không thể lấy thông tin người dùng");
           navigate("/login", { replace: true });
         });
