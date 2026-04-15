@@ -4,7 +4,7 @@ import { message, Spin } from "antd";
 import { useDispatch } from "react-redux";
 import { getMe } from "../../services/authServices";
 import { checkLogin } from "../../store/slices/authSlice";
-import { clearAccessToken } from "../../utils/axios/request";
+import { clearAccessToken, setAccessToken } from "../../utils/axios/request";
 
 function GoogleCallback() {
   const navigate = useNavigate();
@@ -25,7 +25,16 @@ function GoogleCallback() {
       // httpOnly cookie is set by backend, fetch user info
       getMe()
         .then((res) => {
+          // ✅ FIX: Extract accessToken from response
+          const accessToken = res.accessToken;
           const userData = res.user || res;
+
+          // ✅ NEW: Set accessToken in memory for subsequent requests
+          if (accessToken) {
+            setAccessToken(accessToken);
+            console.log("[GoogleCallback] AccessToken set in memory");
+          }
+
           dispatch(checkLogin({ status: true, user: userData }));
           message.success("Đăng nhập Google thành công!");
           navigate("/tasks", { replace: true });

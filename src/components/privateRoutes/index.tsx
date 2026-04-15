@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Navigate, Outlet } from "react-router-dom";
-import { getAccessToken } from "../../utils/axios/request";
+import { getAccessToken, setAccessToken } from "../../utils/axios/request";
 import { refreshToken, getMe } from "../../services/authServices";
 import { checkLogin } from "../../store/slices/authSlice";
 
@@ -28,6 +28,14 @@ const PrivateRoutes = () => {
         // Fetch user data sau khi refresh token thành công
         const userResponse = await getMe();
         const userData = userResponse.user || userResponse;
+
+        // ✅ FIX: Set accessToken từ getMe() response vào memory
+        // Điều này đảm bảo googleAccessToken được lưu khi user refresh page
+        if (userResponse.accessToken) {
+          setAccessToken(userResponse.accessToken);
+          console.log("[PrivateRoutes] AccessToken set from getMe response");
+        }
+
         dispatch(checkLogin({ status: true, user: userData }));
         setIsAuth(true);
       } catch (error) {
