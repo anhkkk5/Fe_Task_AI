@@ -1,0 +1,14 @@
+.permission-selector {
+  display: flex;
+  align-items: center;
+
+  &.compact {
+    .permission-select {
+      min-width: 120px !important;
+    }
+  }
+
+  .permission-select {
+    width: 100%;
+  }
+}

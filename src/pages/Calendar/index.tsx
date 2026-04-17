@@ -20,6 +20,7 @@ import {
   message,
   Tabs,
   Checkbox,
+  Drawer,
 } from "antd";
 import { useNavigate } from "react-router-dom";
 import {
@@ -58,6 +59,8 @@ import {
   createGoogleMeetLink,
   type GoogleUserInfo,
 } from "../../services/backendGoogleServices";
+import { getEventGuests } from "../../services/guestServices";
+import GuestManager from "../../components/GuestManager";
 import "./Calendar.scss";
 
 interface GuestWithAvatar {
@@ -144,6 +147,9 @@ function Calendar() {
   const [createMeetingLink, setCreateMeetingLink] = useState("");
   const [createStart, setCreateStart] = useState<dayjs.Dayjs | null>(null);
   const [createEnd, setCreateEnd] = useState<dayjs.Dayjs | null>(null);
+  const [createEventId, setCreateEventId] = useState<string>("");
+  const [showGuestManager, setShowGuestManager] = useState(false);
+  const [guestManagerEventId, setGuestManagerEventId] = useState<string>("");
 
   // Google integration states
   const [googleUser, setGoogleUser] = useState<GoogleUserInfo | null>(null);
@@ -340,6 +346,27 @@ function Calendar() {
 
     setCreatingTask(true);
     try {
+      // Retrieve guest details from GuestManager if event was created
+      let guestDetails = undefined;
+      if (createEventId) {
+        try {
+          const guestResponse = await getEventGuests(createEventId);
+          if (guestResponse.success && guestResponse.data?.guests) {
+            guestDetails = guestResponse.data.guests.map((g) => ({
+              guestId: g._id || g.guestId || "",
+              email: g.email,
+              name: g.name,
+              avatar: g.avatar,
+              permission: g.permission,
+              status: g.status || "pending",
+            }));
+          }
+        } catch (err) {
+          console.error("Failed to retrieve guest details:", err);
+          // Continue without guest details if retrieval fails
+        }
+      }
+
       const ok = await handleCreate({
         title,
         status: "scheduled",
@@ -347,6 +374,7 @@ function Calendar() {
         type: createType,
         allDay: createAllDay,
         guests: createGuests.length > 0 ? createGuests : undefined,
+        guestDetails,
         location: createLocation.trim() || undefined,
         visibility: createVisibility,
         reminderMinutes: createReminder ?? undefined,
@@ -373,6 +401,8 @@ function Calendar() {
       setCreateMeetingLink("");
       setCreateStart(null);
       setCreateEnd(null);
+      setCreateEventId("");
+      setShowGuestManager(false);
     } finally {
       setCreatingTask(false);
     }
@@ -1507,82 +1537,121 @@ function Calendar() {
                     <UserOutlined style={{ fontSize: 18, color: "#5f6368" }} />
                   </Col>
                   <Col flex="auto">
-                    <Select
-                      mode="tags"
-                      placeholder="Thêm khách"
-                      value={createGuests}
-                      onChange={setCreateGuests}
-                      style={{ width: "100%" }}
-                      tokenSeparators={[",", ";"]}
-                      variant="borderless"
-                      tagRender={(props) => {
-                        const { value, closable, onClose } = props;
-                        const guest = guestsWithAvatar.find(
-                          (g) => g.email === value,
-                        );
-                        return (
-                          <div
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              background: "#e8f0fe",
-                              borderRadius: 16,
-                              padding: "2px 8px 2px 2px",
-                              margin: "2px 4px 2px 0",
-                            }}
-                          >
-                            {guest?.avatar ? (
-                              <img
-                                src={guest.avatar}
-                                alt={guest.email}
-                                style={{
-                                  width: 20,
-                                  height: 20,
-                                  borderRadius: "50%",
-                                  marginRight: 6,
-                                }}
-                              />
-                            ) : (
-                              <div
-                                style={{
-                                  width: 20,
-                                  height: 20,
-                                  borderRadius: "50%",
-                                  background: "#1a73e8",
-                                  color: "white",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  fontSize: 10,
-                                  marginRight: 6,
-                                }}
-                              >
-                                {guest?.name?.[0]?.toUpperCase() ||
-                                  guest?.email?.[0]?.toUpperCase() ||
-                                  "?"}
-                              </div>
-                            )}
-                            <span style={{ fontSize: 13 }}>
-                              {guest?.name || guest?.email || value}
-                            </span>
-                            {closable && (
-                              <span
-                                style={{
-                                  marginLeft: 4,
-                                  cursor: "pointer",
-                                  color: "#5f6368",
-                                }}
-                                onClick={onClose}
-                              >
-                                ×
-                              </span>
-                            )}
-                          </div>
-                        );
+                    <Button
+                      type="default"
+                      block
+                      onClick={() => {
+                        // Generate a temporary event ID for GuestManager
+                        // This will be replaced with the actual event ID after creation
+                        const tempEventId = `temp_${Date.now()}`;
+                        setGuestManagerEventId(tempEventId);
+                        setShowGuestManager(true);
                       }}
-                    />
+                      style={{
+                        background: "#e8eaed",
+                        border: "none",
+                        borderRadius: 4,
+                        color: "#3c4043",
+                        fontWeight: 500,
+                      }}
+                    >
+                      <span style={{ marginRight: 8 }}>👥</span>
+                      {createGuests.length > 0
+                        ? `${createGuests.length} khách`
+                        : "Quản lý khách"}
+                    </Button>
                   </Col>
                 </Row>
+
+                {/* Legacy Guests Select - kept for backward compatibility */}
+                {false && (
+                  <Row gutter={16} style={{ marginBottom: 20 }}>
+                    <Col
+                      flex="32px"
+                      style={{ textAlign: "center", paddingTop: 4 }}
+                    >
+                      <UserOutlined
+                        style={{ fontSize: 18, color: "#5f6368" }}
+                      />
+                    </Col>
+                    <Col flex="auto">
+                      <Select
+                        mode="tags"
+                        placeholder="Thêm khách"
+                        value={createGuests}
+                        onChange={setCreateGuests}
+                        style={{ width: "100%" }}
+                        tokenSeparators={[",", ";"]}
+                        variant="borderless"
+                        tagRender={(props) => {
+                          const { value, closable, onClose } = props;
+                          const guest = guestsWithAvatar.find(
+                            (g) => g.email === value,
+                          );
+                          return (
+                            <div
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                background: "#e8f0fe",
+                                borderRadius: 16,
+                                padding: "2px 8px 2px 2px",
+                                margin: "2px 4px 2px 0",
+                              }}
+                            >
+                              {guest?.avatar ? (
+                                <img
+                                  src={guest.avatar}
+                                  alt={guest.email}
+                                  style={{
+                                    width: 20,
+                                    height: 20,
+                                    borderRadius: "50%",
+                                    marginRight: 6,
+                                  }}
+                                />
+                              ) : (
+                                <div
+                                  style={{
+                                    width: 20,
+                                    height: 20,
+                                    borderRadius: "50%",
+                                    background: "#1a73e8",
+                                    color: "white",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: 10,
+                                    marginRight: 6,
+                                  }}
+                                >
+                                  {guest?.name?.[0]?.toUpperCase() ||
+                                    guest?.email?.[0]?.toUpperCase() ||
+                                    "?"}
+                                </div>
+                              )}
+                              <span style={{ fontSize: 13 }}>
+                                {guest?.name || guest?.email || value}
+                              </span>
+                              {closable && (
+                                <span
+                                  style={{
+                                    marginLeft: 4,
+                                    cursor: "pointer",
+                                    color: "#5f6368",
+                                  }}
+                                  onClick={onClose}
+                                >
+                                  ×
+                                </span>
+                              )}
+                            </div>
+                          );
+                        }}
+                      />
+                    </Col>
+                  </Row>
+                )}
 
                 {/* Google Meet Button */}
                 {!createMeetingLink ? (
@@ -1735,6 +1804,41 @@ function Calendar() {
                   </Col>
                 </Row>
               </div>
+            </Modal>
+
+            {/* Guest Manager Modal */}
+            <Modal
+              open={showGuestManager}
+              onCancel={() => {
+                setShowGuestManager(false);
+              }}
+              title="Quản lý khách"
+              width={700}
+              footer={[
+                <Button
+                  key="close"
+                  onClick={() => {
+                    setShowGuestManager(false);
+                  }}
+                >
+                  Đóng
+                </Button>,
+              ]}
+            >
+              {guestManagerEventId && (
+                <GuestManager
+                  eventId={guestManagerEventId}
+                  onGuestAdded={(guest) => {
+                    // Update createGuests with the new guest email
+                    if (!createGuests.includes(guest.email)) {
+                      setCreateGuests([...createGuests, guest.email]);
+                    }
+                  }}
+                  onGuestRemoved={(guestId) => {
+                    // Optionally update createGuests if needed
+                  }}
+                />
+              )}
             </Modal>
           </section>
         </div>

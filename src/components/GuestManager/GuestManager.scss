@@ -1,0 +1,28 @@
+.guest-manager-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 16px;
+  background-color: #fff;
+  border-radius: 8px;
+
+  &.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+  }
+
+  .search-section {
+    h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #000;
+    }
+  }
+
+  .guests-section {
+    margin-top: 8px;
+  }
+}
