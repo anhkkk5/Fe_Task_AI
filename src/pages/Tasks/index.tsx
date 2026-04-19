@@ -36,6 +36,11 @@ import {
 import { Link } from "react-router-dom";
 import AITaskScheduler from "../../components/AITaskScheduler";
 import StatusDropdown from "../../components/StatusDropdown";
+import { AIBreakdownButton } from "../../components/AIBreakdownButton";
+import { SubtaskList } from "../../components/SubtaskList";
+import { useChatbot } from "../../contexts/ChatbotContext";
+import { updateSubtaskStatus } from "../../services/taskServices";
+import type { Subtask, SubtaskStatus } from "../../services/taskServices";
 import { useTasks } from "../../hooks/useTasks";
 import dayjs from "dayjs";
 import {
@@ -225,6 +230,13 @@ function Tasks() {
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
   const [editForm] = Form.useForm();
   const [editLoading, setEditLoading] = useState(false);
+
+  // AI Breakdown modal state (riêng biệt)
+  const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
+  const [breakdownTask, setBreakdownTask] = useState<TaskItem | null>(null);
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const [breakdownLoading, setBreakdownLoading] = useState(false);
+  const { openWithSubtask } = useChatbot();
 
   // Delete confirmation
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -432,6 +444,51 @@ function Tasks() {
     }
   };
 
+  // Handle AI Breakdown modal open
+  const onBreakdownClick = async (task: TaskItem) => {
+    setBreakdownTask(task);
+    setSubtasks((task.aiBreakdown as Subtask[]) ?? []);
+    setIsBreakdownModalOpen(true);
+
+    // Nếu chưa có breakdown, tự động trigger luôn
+    if (!task.aiBreakdown?.length) {
+      setBreakdownLoading(true);
+      try {
+        const { triggerAiBreakdown } =
+          await import("../../services/taskServices");
+        const res = await triggerAiBreakdown(task.id);
+        setSubtasks((res.task.aiBreakdown as Subtask[]) ?? []);
+        fetchTasks();
+      } catch (err: any) {
+        message.error(
+          err?.response?.data?.message || "Không thể tạo AI Breakdown",
+        );
+      } finally {
+        setBreakdownLoading(false);
+      }
+    }
+  };
+
+  // Handle regenerate breakdown
+  const onRegenerateBreakdown = async () => {
+    if (!breakdownTask) return;
+    setBreakdownLoading(true);
+    try {
+      const { triggerAiBreakdown } =
+        await import("../../services/taskServices");
+      const res = await triggerAiBreakdown(breakdownTask.id);
+      setSubtasks((res.task.aiBreakdown as Subtask[]) ?? []);
+      fetchTasks();
+      message.success("Đã tạo lại AI Breakdown!");
+    } catch (err: any) {
+      message.error(
+        err?.response?.data?.message || "Không thể tạo lại AI Breakdown",
+      );
+    } finally {
+      setBreakdownLoading(false);
+    }
+  };
+
   // Handle delete click
   const onDeleteClick = (task: TaskItem) => {
     setDeletingTask(task);
@@ -457,7 +514,11 @@ function Tasks() {
       title: t.title,
       description: t.description || "",
       status: normalizeApiStatus(String(t.status ?? "todo")),
-      priority: (t.priority || "medium") as "low" | "medium" | "high" | "urgent",
+      priority: (t.priority || "medium") as
+        | "low"
+        | "medium"
+        | "high"
+        | "urgent",
       dueDate: t.deadline || t.dueDate || undefined,
       deadline: t.deadline,
       scheduledTime: t.scheduledTime ?? null,
@@ -534,6 +595,14 @@ function Tasks() {
             icon: <EditOutlined />,
             label: "Chỉnh sửa",
             onClick: () => onEditClick(record),
+          },
+          {
+            key: "ai-breakdown",
+            icon: <RobotOutlined />,
+            label: record.aiBreakdown?.length
+              ? "Xem AI Breakdown"
+              : "AI Breakdown",
+            onClick: () => onBreakdownClick(record),
           },
           {
             key: "complete",
@@ -844,6 +913,84 @@ function Tasks() {
               />
             </Form.Item>
           </Form>
+        </Modal>
+
+        {/* AI Breakdown Modal — riêng biệt */}
+        <Modal
+          title={
+            <Space>
+              <RobotOutlined style={{ color: "#1677ff" }} />
+              <span>AI Breakdown: {breakdownTask?.title}</span>
+            </Space>
+          }
+          open={isBreakdownModalOpen}
+          onCancel={() => setIsBreakdownModalOpen(false)}
+          footer={
+            <Space>
+              <Button
+                icon={<RobotOutlined />}
+                loading={breakdownLoading}
+                onClick={onRegenerateBreakdown}
+              >
+                Tạo lại
+              </Button>
+              <Button
+                type="primary"
+                onClick={() => setIsBreakdownModalOpen(false)}
+              >
+                Đóng
+              </Button>
+            </Space>
+          }
+          width={600}
+        >
+          {breakdownLoading && !subtasks.length ? (
+            <div style={{ textAlign: "center", padding: "40px 0" }}>
+              <Space direction="vertical">
+                <RobotOutlined style={{ fontSize: 32, color: "#1677ff" }} />
+                <Text>AI đang phân tích công việc...</Text>
+              </Space>
+            </div>
+          ) : subtasks.length > 0 ? (
+            <SubtaskList
+              subtasks={subtasks}
+              parentTaskTitle={breakdownTask?.title ?? ""}
+              onSubtaskClick={(subtask) =>
+                openWithSubtask(
+                  subtask,
+                  breakdownTask?.title ?? "",
+                  breakdownTask?.id ?? "",
+                  subtasks.indexOf(subtask),
+                )
+              }
+              onStatusChange={async (index, status: SubtaskStatus) => {
+                const updated = subtasks.map((s, i) =>
+                  i === index ? { ...s, status } : s,
+                );
+                setSubtasks(updated);
+                try {
+                  await updateSubtaskStatus(breakdownTask!.id, updated);
+                } catch {
+                  message.error("Không thể cập nhật trạng thái");
+                }
+              }}
+            />
+          ) : (
+            <div style={{ textAlign: "center", padding: "40px 0" }}>
+              <Space direction="vertical">
+                <RobotOutlined style={{ fontSize: 32, color: "#d9d9d9" }} />
+                <Text type="secondary">Chưa có AI Breakdown</Text>
+                <Button
+                  type="primary"
+                  icon={<RobotOutlined />}
+                  loading={breakdownLoading}
+                  onClick={onRegenerateBreakdown}
+                >
+                  Tạo AI Breakdown
+                </Button>
+              </Space>
+            </div>
+          )}
         </Modal>
 
         {/* Delete Confirmation Modal */}

@@ -1,5 +1,16 @@
 import { get, post, patch, del } from "../../utils/axios/request";
 
+export type SubtaskStatus = "todo" | "in_progress" | "completed" | "cancelled";
+export type SubtaskDifficulty = "easy" | "medium" | "hard";
+
+export interface Subtask {
+  title: string;
+  status: SubtaskStatus;
+  estimatedDuration?: number;
+  difficulty?: SubtaskDifficulty;
+  description?: string;
+}
+
 export interface Task {
   _id?: string;
   id?: string;
@@ -19,11 +30,7 @@ export interface Task {
   estimatedDuration?: number;
   dailyTargetDuration?: number;
   dailyTargetMin?: number;
-  aiBreakdown?: {
-    title: string;
-    status?: string;
-    estimatedDuration?: number;
-  }[];
+  aiBreakdown?: Subtask[];
   createdAt: string;
   updatedAt: string;
 }
@@ -107,4 +114,19 @@ export const createTask = async (data: {
   dailyTargetMin?: number;
 }): Promise<{ task: Task }> => {
   return await post("/tasks", data);
+};
+
+// Trigger AI breakdown for a task
+export const triggerAiBreakdown = async (
+  taskId: string,
+): Promise<{ task: Task }> => {
+  return await post(`/tasks/${taskId}/ai-breakdown`, {});
+};
+
+// Update subtask statuses
+export const updateSubtaskStatus = async (
+  taskId: string,
+  subtasks: Subtask[],
+): Promise<{ task: Task }> => {
+  return await patch(`/tasks/${taskId}`, { aiBreakdown: subtasks });
 };

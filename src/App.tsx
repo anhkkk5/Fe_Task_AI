@@ -1,6 +1,8 @@
 import "./App.css";
 import AllRoute from "./routes";
 import { ConfigProvider } from "antd";
+import Chatbot from "./components/Chatbot";
+import { ChatbotProvider } from "./contexts/ChatbotContext";
 
 function App() {
   return (
@@ -13,7 +15,10 @@ function App() {
         },
       }}
     >
-      <AllRoute />
+      <ChatbotProvider>
+        <AllRoute />
+        <Chatbot />
+      </ChatbotProvider>
     </ConfigProvider>
   );
 }
