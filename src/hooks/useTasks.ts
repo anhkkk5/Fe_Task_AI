@@ -27,10 +27,22 @@ export function useTasks() {
     }
   }, []);
 
-  // Initial load
+  // Initial load + refetch khi window focus lại
   useEffect(() => {
     console.log("useEffect: calling fetchTasks");
     fetchTasks();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        console.log("[useTasks] Tab visible, refetching tasks...");
+        fetchTasks();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [fetchTasks]);
 
   // Create task
@@ -64,7 +76,12 @@ export function useTasks() {
     try {
       await deleteTask(taskId);
       message.success("Xóa công việc thành công!");
-      setTasks((prev) => prev.filter((t) => (t._id || t.id) !== taskId));
+      // Refetch để cập nhật cả task con đã bị xóa ở backend
+      await fetchTasks();
+      // Notify calendar để refresh AISchedule
+      window.dispatchEvent(
+        new CustomEvent("task-deleted", { detail: { taskId } }),
+      );
       return true;
     } catch (error) {
       message.error("Xóa thất bại!");

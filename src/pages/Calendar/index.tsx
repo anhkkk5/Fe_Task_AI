@@ -291,6 +291,13 @@ function Calendar() {
     }
   };
 
+  // Lắng nghe event xóa task để refresh AISchedule
+  useEffect(() => {
+    const handler = () => fetchAISchedule();
+    window.addEventListener("task-deleted", handler);
+    return () => window.removeEventListener("task-deleted", handler);
+  }, [fetchAISchedule]);
+
   const openEventModal = (event: CalendarEvent) => {
     setSelectedEvent(event);
     setEditEventStart(event.start);
