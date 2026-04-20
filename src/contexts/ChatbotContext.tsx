@@ -19,6 +19,9 @@ interface ChatbotContextValue {
   subtaskContext: SubtaskChatContext | null;
   currentHistory: Message[];
   setCurrentHistory: React.Dispatch<React.SetStateAction<Message[]>>;
+  // conversationId đang active (dùng để lưu lịch sử vào BE)
+  activeConversationId: string | null;
+  setActiveConversationId: React.Dispatch<React.SetStateAction<string | null>>;
   openWithSubtask: (
     subtask: Subtask,
     parentTaskTitle: string,
@@ -45,9 +48,14 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({
   const [currentHistory, setCurrentHistory] = useState<Message[]>([
     DEFAULT_WELCOME,
   ]);
+  const [activeConversationId, setActiveConversationId] = useState<
+    string | null
+  >(null);
 
-  // Map lưu history riêng cho từng subtask
-  const conversationMap = useRef<Map<string, Message[]>>(new Map());
+  // Map lưu history + conversationId riêng cho từng subtask/general
+  const conversationMap = useRef<
+    Map<string, { history: Message[]; convId: string | null }>
+  >(new Map());
 
   const openWithSubtask = (
     subtask: Subtask,
@@ -64,15 +72,20 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({
       subtaskKey,
     };
 
-    // Lưu history hiện tại nếu đang có subtask context
-    if (subtaskContext) {
-      conversationMap.current.set(subtaskContext.subtaskKey, currentHistory);
-    }
+    // Lưu history + convId hiện tại
+    const currentKey = subtaskContext
+      ? subtaskContext.subtaskKey
+      : "__general__";
+    conversationMap.current.set(currentKey, {
+      history: currentHistory,
+      convId: activeConversationId,
+    });
 
     // Load history của subtask mới (hoặc tạo initial message)
-    const existingHistory = conversationMap.current.get(subtaskKey);
-    if (existingHistory) {
-      setCurrentHistory(existingHistory);
+    const existing = conversationMap.current.get(subtaskKey);
+    if (existing) {
+      setCurrentHistory(existing.history);
+      setActiveConversationId(existing.convId);
     } else {
       const difficultyLabel =
         subtask.difficulty === "easy"
@@ -88,6 +101,7 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({
         text: `📚 Chào bạn! Tôi sẽ giúp bạn học về **${subtask.title}** trong task "${parentTaskTitle}".\n\n${difficultyLabel ? `Độ khó: **${difficultyLabel}**\n\n` : ""}Bạn muốn bắt đầu từ đâu?\n- 📖 **Lý thuyết** — Giải thích khái niệm cơ bản\n- 🏋️ **Bài tập** — Thực hành ngay\n- 💡 **Ví dụ** — Xem ví dụ thực tế`,
       };
       setCurrentHistory([initialMsg]);
+      setActiveConversationId(null); // new conversation, will be created on first message
     }
 
     setSubtaskContext(ctx);
@@ -96,19 +110,37 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const openGeneral = () => {
     // Lưu history subtask hiện tại nếu có
-    if (subtaskContext) {
-      conversationMap.current.set(subtaskContext.subtaskKey, currentHistory);
+    const currentKey = subtaskContext
+      ? subtaskContext.subtaskKey
+      : "__general__";
+    conversationMap.current.set(currentKey, {
+      history: currentHistory,
+      convId: activeConversationId,
+    });
+
+    // Load general history
+    const existing = conversationMap.current.get("__general__");
+    if (existing && existing.history.length > 1) {
+      setCurrentHistory(existing.history);
+      setActiveConversationId(existing.convId);
+    } else {
+      setCurrentHistory([DEFAULT_WELCOME]);
+      setActiveConversationId(null);
     }
+
     setSubtaskContext(null);
-    setCurrentHistory([DEFAULT_WELCOME]);
     setIsOpen(true);
   };
 
   const close = () => {
     // Lưu history trước khi đóng
-    if (subtaskContext) {
-      conversationMap.current.set(subtaskContext.subtaskKey, currentHistory);
-    }
+    const currentKey = subtaskContext
+      ? subtaskContext.subtaskKey
+      : "__general__";
+    conversationMap.current.set(currentKey, {
+      history: currentHistory,
+      convId: activeConversationId,
+    });
     setIsOpen(false);
   };
 
@@ -119,6 +151,8 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({
         subtaskContext,
         currentHistory,
         setCurrentHistory,
+        activeConversationId,
+        setActiveConversationId,
         openWithSubtask,
         openGeneral,
         close,
