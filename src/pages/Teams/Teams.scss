@@ -1,68 +1,287 @@
-.teams-page {
+/* ============================================
+   Jira-style Teams Page
+   ============================================ */
+
+.jira-teams-page {
+  display: flex;
   min-height: 100vh;
-  background: var(--background-tertiary);
+  background: var(--color-white);
 }
 
-.teams-main {
-  padding: 88px 30px 24px;
-  max-width: 1400px;
-  margin: 0 auto;
-  width: 100%;
-  box-sizing: border-box;
-}
+/* ─── Left Sidebar ─────────────────────────────────────────────────────────── */
 
-.page-header {
-  margin-bottom: 24px;
+.jira-teams-sidebar {
+  width: 200px;
+  min-width: 200px;
+  border-right: 1px solid var(--color-light-border-gray);
+  padding: 20px 0;
+  background: var(--color-white);
 
-  .back-link {
+  nav {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--color-text-secondary);
-    text-decoration: none;
-    font-size: 14px;
-    margin-bottom: 12px;
-
-    &:hover {
-      color: var(--color-primary-blue);
-    }
-  }
-
-  h2 {
-    margin: 0 0 8px 0 !important;
-    color: var(--color-text-primary);
+    flex-direction: column;
+    gap: 2px;
+    padding: 0 8px;
   }
 }
 
-.coming-soon-card {
-  max-width: 600px;
-  margin: 0 auto;
-  text-align: center;
+.jira-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition:
+    background 0.15s,
+    color 0.15s;
 
-  .ant-card-body {
-    padding: 48px;
+  .anticon {
+    font-size: 16px;
   }
 
-  .coming-soon-icon {
-    font-size: 64px;
-    color: var(--color-primary-blue);
-    margin-bottom: 24px;
-  }
-
-  h4 {
-    margin-bottom: 16px !important;
+  &:hover {
+    background: var(--color-light-gray);
     color: var(--color-text-primary);
   }
 
-  .feature-list {
-    text-align: left;
-    max-width: 400px;
-    margin: 24px auto 0;
-    padding-left: 20px;
+  &.active {
+    background: var(--color-very-light-blue);
+    color: var(--color-primary-blue);
+    font-weight: 600;
+  }
+}
 
-    li {
-      padding: 8px 0;
-      color: var(--color-text-secondary);
+/* ─── Main Content ──────────────────────────────────────────────────────────── */
+
+.jira-teams-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.jira-teams-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 32px;
+  border-bottom: 1px solid var(--color-light-border-gray);
+
+  .jira-search-input {
+    max-width: 480px;
+    border-radius: 6px;
+  }
+}
+
+.jira-loading {
+  display: flex;
+  justify-content: center;
+  padding: 80px;
+}
+
+.jira-teams-body {
+  padding: 32px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ─── Section ───────────────────────────────────────────────────────────────── */
+
+.jira-section {
+  margin-bottom: 40px;
+}
+
+.jira-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0;
+  }
+}
+
+.jira-link {
+  background: none;
+  border: none;
+  color: var(--color-primary-blue);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.jira-count {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.jira-empty-text {
+  color: var(--color-text-tertiary);
+  font-size: 14px;
+}
+
+.jira-empty-teams {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+
+  p {
+    color: var(--color-text-secondary);
+    margin: 0;
+  }
+}
+
+/* ─── People Grid ───────────────────────────────────────────────────────────── */
+
+.jira-people-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+
+  &.large {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+}
+
+.jira-person-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 16px;
+  border: 1px solid var(--color-light-border-gray);
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    box-shadow 0.15s,
+    border-color 0.15s;
+  text-align: center;
+  background: var(--color-white);
+
+  &:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-lighter-blue);
+  }
+
+  &.large {
+    padding: 24px 16px;
+  }
+}
+
+.jira-person-name {
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.jira-person-email {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.jira-person-role {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  text-transform: capitalize;
+}
+
+/* ─── Teams List ────────────────────────────────────────────────────────────── */
+
+.jira-teams-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jira-team-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-light-border-gray);
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    box-shadow 0.15s,
+    border-color 0.15s;
+  background: var(--color-white);
+
+  &:hover {
+    box-shadow: var(--shadow-sm);
+    border-color: var(--color-lighter-blue);
+  }
+}
+
+.jira-team-icon {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  background: var(--color-very-light-blue);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--color-primary-blue);
+}
+
+.jira-team-row-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.jira-team-row-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jira-team-row-meta {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.jira-team-avatars {
+  display: flex;
+  gap: -4px;
+
+  > div {
+    margin-left: -6px;
+    border: 2px solid var(--color-white);
+
+    &:first-child {
+      margin-left: 0;
     }
   }
 }

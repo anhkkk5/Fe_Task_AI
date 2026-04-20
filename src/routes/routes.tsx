@@ -8,6 +8,8 @@ import ForgotPassword from "../pages/ForgotPassword";
 import Profile from "../pages/Profile";
 import Tasks from "../pages/Tasks";
 import Teams from "../pages/Teams";
+import TeamDetail from "../pages/Teams/TeamDetail";
+import AcceptInvite from "../pages/Teams/AcceptInvite";
 import Calendar from "../pages/Calendar";
 import Notifications from "../pages/Notifications";
 import Chat from "../pages/Chat";
@@ -35,6 +37,11 @@ export const routes = [
     path: "/auth/google/callback",
     element: <GoogleCallback />,
   },
+  // Public invite accept route (no layout)
+  {
+    path: "/teams/invite/accept",
+    element: <AcceptInvite />,
+  },
   // Main app routes with LayoutDefault
   {
     path: "/",
@@ -59,6 +66,10 @@ export const routes = [
           {
             path: "teams",
             element: <Teams />,
+          },
+          {
+            path: "teams/:id",
+            element: <TeamDetail />,
           },
           {
             path: "calendar",

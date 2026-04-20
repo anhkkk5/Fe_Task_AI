@@ -1,0 +1,48 @@
+.team-detail-page {
+  min-height: 100vh;
+  background: var(--background-tertiary);
+}
+
+.team-detail-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.team-detail-main {
+  padding: 24px 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.team-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+
+  .team-title-section {
+    flex: 1;
+
+    h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--color-text-primary);
+      margin: 0 0 4px 0;
+    }
+
+    p {
+      color: var(--color-text-secondary);
+      font-size: 14px;
+      margin: 0;
+    }
+  }
+
+  .team-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+}
