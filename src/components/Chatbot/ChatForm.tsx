@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, forwardRef, useImperativeHandle } from "react";
 import { SendOutlined } from "@ant-design/icons";
 import { Button, Input } from "antd";
 
@@ -14,59 +14,67 @@ interface ChatFormProps {
   isLoading: boolean;
 }
 
-const ChatForm: React.FC<ChatFormProps> = ({
-  chatHistory,
-  setChatHistory,
-  generateBotResponse,
-  isLoading,
-}) => {
-  const [inputValue, setInputValue] = useState("");
+export interface ChatFormHandle {
+  setInputValue: (value: string) => void;
+}
 
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const userMessage = inputValue.trim();
-    if (!userMessage || isLoading) return;
+const ChatForm = forwardRef<ChatFormHandle, ChatFormProps>(
+  ({ chatHistory, setChatHistory, generateBotResponse, isLoading }, ref) => {
+    const [inputValue, setInputValue] = useState("");
 
-    setInputValue("");
+    // Expose setInputValue to parent
+    useImperativeHandle(ref, () => ({
+      setInputValue: (value: string) => setInputValue(value),
+    }));
 
-    // Add user message to chat
-    setChatHistory((history) => [
-      ...history,
-      { role: "user", text: userMessage },
-    ]);
+    const handleFormSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      const userMessage = inputValue.trim();
+      if (!userMessage || isLoading) return;
 
-    // Show thinking indicator
-    setTimeout(() => {
+      setInputValue("");
+
       setChatHistory((history) => [
         ...history,
-        { role: "model", text: "Đang suy nghĩ..." },
+        { role: "user", text: userMessage },
       ]);
-    }, 100);
 
-    // Generate response
-    generateBotResponse([...chatHistory, { role: "user", text: userMessage }]);
-  };
+      setTimeout(() => {
+        setChatHistory((history) => [
+          ...history,
+          { role: "model", text: "Đang suy nghĩ..." },
+        ]);
+      }, 100);
 
-  return (
-    <form onSubmit={handleFormSubmit} className="chat-form">
-      <Input
-        type="text"
-        className="message-input"
-        placeholder="Nhập tin nhắn..."
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-        disabled={isLoading}
-        onPressEnter={handleFormSubmit}
-      />
-      <Button
-        type="primary"
-        htmlType="submit"
-        icon={<SendOutlined />}
-        loading={isLoading}
-        className="send-button"
-      />
-    </form>
-  );
-};
+      generateBotResponse([
+        ...chatHistory,
+        { role: "user", text: userMessage },
+      ]);
+    };
+
+    return (
+      <form onSubmit={handleFormSubmit} className="chat-form">
+        <Input
+          type="text"
+          className="message-input"
+          placeholder="Nhập tin nhắn..."
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          disabled={isLoading}
+          onPressEnter={handleFormSubmit}
+        />
+        <Button
+          type="primary"
+          htmlType="submit"
+          icon={<SendOutlined />}
+          loading={isLoading}
+          className="send-button"
+        />
+      </form>
+    );
+  },
+);
+
+ChatForm.displayName = "ChatForm";
 
 export default ChatForm;

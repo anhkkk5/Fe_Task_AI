@@ -10,8 +10,10 @@ import {
   MoreOutlined,
   EditOutlined,
   DeleteOutlined,
+  QuestionCircleOutlined,
 } from "@ant-design/icons";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   getConversations,
   getConversationMessages,
@@ -36,8 +38,76 @@ function Chat() {
   } | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  // Track if scroll should happen (only on new messages, not on load)
   const shouldScrollRef = useRef(false);
+  const [selectionPopup, setSelectionPopup] = useState<{
+    show: boolean;
+    x: number;
+    y: number;
+    text: string;
+  }>({ show: false, x: 0, y: 0, text: "" });
+
+  // Listen for text selection in assistant messages
+  useEffect(() => {
+    const handleMouseUp = () => {
+      setTimeout(() => {
+        const selection = window.getSelection();
+        const selectedText = selection?.toString().trim() ?? "";
+        if (!selectedText || selectedText.length < 3) {
+          setSelectionPopup((p) => ({ ...p, show: false }));
+          return;
+        }
+        const range = selection?.getRangeAt(0);
+        if (!range) return;
+        // Only show if inside .msg-bubble of assistant
+        const container = range.commonAncestorContainer;
+        const bubble = (container as Element).closest
+          ? (container as Element).closest?.(".msg-row.assistant .msg-bubble")
+          : null;
+        if (!bubble) return;
+        const rect = range.getBoundingClientRect();
+        setSelectionPopup({
+          show: true,
+          x: rect.left + rect.width / 2,
+          y: rect.top - 8,
+          text: selectedText,
+        });
+      }, 10);
+    };
+
+    const handleMouseDown = (e: MouseEvent) => {
+      const target = e.target as Element;
+      if (!target.closest?.(".chat-selection-popup")) {
+        setSelectionPopup((p) => ({ ...p, show: false }));
+      }
+    };
+
+    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => {
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("mousedown", handleMouseDown);
+    };
+  }, []);
+
+  const handleAskAboutSelection = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!selectionPopup.text) return;
+    const contextMsg = `"${selectionPopup.text}" — `;
+    setInput(contextMsg);
+    setSelectionPopup({ show: false, x: 0, y: 0, text: "" });
+    window.getSelection()?.removeAllRanges();
+    // Focus input
+    setTimeout(() => {
+      const ta = document.querySelector(
+        ".input-wrap textarea",
+      ) as HTMLTextAreaElement;
+      if (ta) {
+        ta.focus();
+        ta.setSelectionRange(contextMsg.length, contextMsg.length);
+      }
+    }, 50);
+  };
 
   useEffect(() => {
     if (shouldScrollRef.current) {
@@ -309,7 +379,9 @@ function Chat() {
                     <div className="msg-body">
                       <div className="msg-bubble">
                         {msg.role === "assistant" ? (
-                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {msg.content}
+                          </ReactMarkdown>
                         ) : (
                           <p>{msg.content}</p>
                         )}
@@ -374,6 +446,26 @@ function Chat() {
           </>
         )}
       </main>
+
+      {/* Selection popup */}
+      {selectionPopup.show && (
+        <div
+          className="chat-selection-popup"
+          style={{
+            position: "fixed",
+            left: selectionPopup.x,
+            top: selectionPopup.y,
+            transform: "translate(-50%, -100%)",
+            zIndex: 9999,
+          }}
+          onMouseDown={handleAskAboutSelection}
+        >
+          <button className="chat-ask-selection-btn">
+            <QuestionCircleOutlined />
+            <span>Hỏi về đoạn này</span>
+          </button>
+        </div>
+      )}
 
       {/* Rename modal */}
       <Modal

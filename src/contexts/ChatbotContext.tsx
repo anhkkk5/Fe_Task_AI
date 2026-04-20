@@ -3,7 +3,13 @@ import type { Subtask } from "../services/taskServices";
 
 export interface SubtaskChatContext {
   subtaskTitle: string;
+  subtaskDescription?: string;
   parentTaskTitle: string;
+  parentTaskDescription?: string;
+  estimatedDuration?: number; // phút cho subtask này
+  parentEstimatedDuration?: number; // tổng phút của task cha
+  dailyTargetDuration?: number; // phút/ngày tối đa
+  dailyTargetMin?: number; // phút/ngày tối thiểu
   difficulty?: string;
   description?: string;
   subtaskKey: string; // `${taskId}:${subtaskIndex}`
@@ -27,6 +33,12 @@ interface ChatbotContextValue {
     parentTaskTitle: string,
     taskId: string,
     index: number,
+    parentTaskInfo?: {
+      description?: string;
+      estimatedDuration?: number;
+      dailyTargetDuration?: number;
+      dailyTargetMin?: number;
+    },
   ) => void;
   openGeneral: () => void;
   close: () => void;
@@ -62,11 +74,23 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({
     parentTaskTitle: string,
     taskId: string,
     index: number,
+    parentTaskInfo?: {
+      description?: string;
+      estimatedDuration?: number;
+      dailyTargetDuration?: number;
+      dailyTargetMin?: number;
+    },
   ) => {
     const subtaskKey = `${taskId}:${index}`;
     const ctx: SubtaskChatContext = {
       subtaskTitle: subtask.title,
+      subtaskDescription: subtask.description,
       parentTaskTitle,
+      parentTaskDescription: parentTaskInfo?.description,
+      estimatedDuration: subtask.estimatedDuration,
+      parentEstimatedDuration: parentTaskInfo?.estimatedDuration,
+      dailyTargetDuration: parentTaskInfo?.dailyTargetDuration,
+      dailyTargetMin: parentTaskInfo?.dailyTargetMin,
       difficulty: subtask.difficulty,
       description: subtask.description,
       subtaskKey,
@@ -96,9 +120,21 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({
               ? "Khó"
               : "";
 
+      const durationStr = subtask.estimatedDuration
+        ? `${subtask.estimatedDuration} phút`
+        : "";
+
       const initialMsg: Message = {
         role: "model",
-        text: `📚 Chào bạn! Tôi sẽ giúp bạn học về **${subtask.title}** trong task "${parentTaskTitle}".\n\n${difficultyLabel ? `Độ khó: **${difficultyLabel}**\n\n` : ""}Bạn muốn bắt đầu từ đâu?\n- 📖 **Lý thuyết** — Giải thích khái niệm cơ bản\n- 🏋️ **Bài tập** — Thực hành ngay\n- 💡 **Ví dụ** — Xem ví dụ thực tế`,
+        text:
+          `📚 Chào bạn! Tôi sẽ hướng dẫn bạn học **${subtask.title}** — một phần trong lộ trình "${parentTaskTitle}".\n\n` +
+          (difficultyLabel ? `🎯 Độ khó: **${difficultyLabel}**\n` : "") +
+          (durationStr ? `⏱️ Thời gian dự kiến: **${durationStr}**\n` : "") +
+          (subtask.description ? `📝 Nội dung: ${subtask.description}\n` : "") +
+          `\nBạn muốn bắt đầu từ đâu?\n` +
+          `- 📖 **Lý thuyết** — Giải thích khái niệm từ đầu\n` +
+          `- 🏋️ **Bài tập** — Thực hành ngay với ví dụ\n` +
+          `- 💡 **Mẹo học** — Cách ghi nhớ nhanh và hiệu quả`,
       };
       setCurrentHistory([initialMsg]);
       setActiveConversationId(null); // new conversation, will be created on first message

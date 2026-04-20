@@ -1,8 +1,9 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useRef } from "react";
 import { Button, Card } from "antd";
 import { CloseOutlined, MessageOutlined } from "@ant-design/icons";
 import ChatMessageComponent from "./ChatMessage";
 import ChatForm from "./ChatForm";
+import type { ChatFormHandle } from "./ChatForm";
 import { useChatbot } from "../../contexts/ChatbotContext";
 import type { Message } from "../../contexts/ChatbotContext";
 import { sendChatMessage } from "../../services/chatServices";
@@ -19,6 +20,21 @@ const Chatbot: React.FC = () => {
     openGeneral,
     close,
   } = useChatbot();
+
+  const chatFormRef = useRef<ChatFormHandle | null>(null);
+
+  // Handle text selection from bot messages → pre-fill input
+  const handleAskAboutSelection = useCallback((selectedText: string) => {
+    const contextMessage = `"${selectedText}" — `;
+    chatFormRef.current?.setInputValue(contextMessage);
+    const input = document.querySelector(".message-input") as HTMLInputElement;
+    if (input) {
+      input.focus();
+      setTimeout(() => {
+        input.setSelectionRange(contextMessage.length, contextMessage.length);
+      }, 0);
+    }
+  }, []);
 
   const generateBotResponse = useCallback(
     async (history: Message[]) => {
@@ -40,13 +56,24 @@ const Chatbot: React.FC = () => {
           .find((m) => m.role === "user");
         if (!lastUserMsg) return;
 
-        // Gọi BE API - tự động lưu vào DB
         const res = await sendChatMessage({
           message: lastUserMsg.text,
           conversationId: activeConversationId ?? undefined,
+          subtaskContext: subtaskContext
+            ? {
+                subtaskTitle: subtaskContext.subtaskTitle,
+                parentTaskTitle: subtaskContext.parentTaskTitle,
+                parentTaskDescription: subtaskContext.parentTaskDescription,
+                estimatedDuration: subtaskContext.estimatedDuration,
+                parentEstimatedDuration: subtaskContext.parentEstimatedDuration,
+                dailyTargetMin: subtaskContext.dailyTargetMin,
+                dailyTargetDuration: subtaskContext.dailyTargetDuration,
+                difficulty: subtaskContext.difficulty,
+                description: subtaskContext.description,
+              }
+            : undefined,
         });
 
-        // Lưu conversationId để các tin nhắn tiếp theo thuộc cùng conversation
         if (!activeConversationId) {
           setActiveConversationId(res.conversationId);
         }
@@ -62,13 +89,17 @@ const Chatbot: React.FC = () => {
         );
       }
     },
-    [activeConversationId, setActiveConversationId, setCurrentHistory],
+    [
+      subtaskContext,
+      activeConversationId,
+      setActiveConversationId,
+      setCurrentHistory,
+    ],
   );
 
   const cardTitle = subtaskContext
     ? `📚 ${subtaskContext.subtaskTitle}`
     : "AI Assistant";
-
   const cardExtra = subtaskContext ? (
     <span style={{ fontSize: 12, opacity: 0.8 }}>
       {subtaskContext.parentTaskTitle}
@@ -109,10 +140,15 @@ const Chatbot: React.FC = () => {
         >
           <div className="chatbot-messages">
             {currentHistory.map((chat, index) => (
-              <ChatMessageComponent key={index} chat={chat} />
+              <ChatMessageComponent
+                key={index}
+                chat={chat}
+                onAskAboutSelection={handleAskAboutSelection}
+              />
             ))}
           </div>
           <ChatForm
+            ref={chatFormRef}
             chatHistory={currentHistory}
             setChatHistory={setCurrentHistory}
             generateBotResponse={generateBotResponse}

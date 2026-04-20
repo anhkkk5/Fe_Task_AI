@@ -961,6 +961,12 @@ function Tasks() {
                   breakdownTask?.title ?? "",
                   breakdownTask?.id ?? "",
                   subtasks.indexOf(subtask),
+                  {
+                    description: breakdownTask?.description,
+                    estimatedDuration: breakdownTask?.estimatedDuration,
+                    dailyTargetDuration: breakdownTask?.dailyTargetDuration,
+                    dailyTargetMin: breakdownTask?.dailyTargetMin,
+                  },
                 )
               }
               onStatusChange={async (index, status: SubtaskStatus) => {

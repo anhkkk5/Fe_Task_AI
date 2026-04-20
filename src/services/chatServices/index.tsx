@@ -42,6 +42,19 @@ export const getConversationMessages = async (
 export const sendChatMessage = async (params: {
   message: string;
   conversationId?: string;
+  systemPrompt?: string;
+  subtaskContext?: {
+    subtaskTitle?: string;
+    parentTaskTitle?: string;
+    parentTaskDescription?: string;
+    estimatedDuration?: number;
+    parentEstimatedDuration?: number;
+    dailyTargetMin?: number;
+    dailyTargetDuration?: number;
+    difficulty?: string;
+    description?: string;
+  };
+  fewShotMessages?: { role: "user" | "assistant"; content: string }[];
 }): Promise<{
   reply: string;
   conversationId: string;
