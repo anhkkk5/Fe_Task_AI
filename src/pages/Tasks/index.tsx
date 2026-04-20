@@ -677,7 +677,7 @@ function Tasks() {
                     <Option value="overdue">Quá hạn</Option>
                   </Select>
                   <Button
-                    type="primary"
+                    className="ai-gradient-btn"
                     icon={<ScheduleOutlined />}
                     onClick={() => setSchedulerVisible(true)}
                   >

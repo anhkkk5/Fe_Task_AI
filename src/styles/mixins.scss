@@ -1,0 +1,79 @@
+// SCSS Mixins for common color patterns
+// Uses CSS variables for all colors
+
+// Primary button styling
+@mixin button-primary {
+  background: var(--color-primary-blue);
+  color: var(--color-white);
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: var(--color-secondary-blue);
+  }
+
+  &:active {
+    background: var(--color-secondary-blue);
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    background: var(--color-light-border-gray);
+    color: var(--color-text-secondary);
+    cursor: not-allowed;
+  }
+}
+
+// Secondary button styling
+@mixin button-secondary {
+  background: var(--color-light-gray);
+  color: var(--color-primary-blue);
+  border: 1px solid var(--color-light-border-gray);
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: var(--color-medium-light-gray);
+  }
+
+  &:active {
+    background: var(--color-medium-light-gray);
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    background: var(--color-light-gray);
+    color: var(--color-text-secondary);
+    cursor: not-allowed;
+  }
+}
+
+// Card surface styling
+@mixin card-surface {
+  background: var(--color-white);
+  border: 1px solid var(--color-light-border-gray);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 16px;
+}
+
+// Primary text styling
+@mixin text-primary {
+  color: var(--color-text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+// Secondary text styling
+@mixin text-secondary {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}

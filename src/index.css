@@ -1,11 +1,115 @@
+/* Import modern fonts */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
+
+/* ============================================
+   TaskMind AI - MongoDB-Style Theme
+   60-30-10 Color Rule
+   60%: #FFFFFF / #F9FAFB (White/Off-white - Background)
+   30%: #0066CC / #E6F0FF (Soft Blue - Accents/Sidebar)
+   10%: #10B981 / #F59E0B / #EF4444 (State colors)
+   ============================================ */
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
+  /* Neutral Colors (60%) */
+  --color-white: #ffffff;
+  --color-off-white: #f9fafb;
+  --color-light-gray: #f5f7fa;
+  --color-medium-light-gray: #e8ecef;
+  --color-light-border-gray: #d1d5db;
+
+  /* Soft Blue Colors (30%) */
+  --color-primary-blue: #0066cc;
+  --color-secondary-blue: #1a73e8;
+  --color-light-blue: #4d94ff;
+  --color-lighter-blue: #b3d9ff;
+  --color-very-light-blue: #e6f0ff;
+
+  /* Accent Colors (10%) */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+
+  /* Text Colors */
+  --color-text-primary: #3c4043;
+  --color-text-secondary: #5f6368;
+  --color-text-tertiary: #70757a;
+  --color-text-inverse: #ffffff;
+
+  /* Component Tokens - Backgrounds */
+  --background-primary: #ffffff;
+  --background-secondary: #f9fafb;
+  --background-tertiary: #f5f7fa;
+
+  /* Component Tokens - Buttons */
+  --button-primary-bg: #0066cc;
+  --button-primary-bg-hover: #1a73e8;
+  --button-primary-text: #ffffff;
+  --button-secondary-bg: #f5f7fa;
+  --button-secondary-bg-hover: #e8ecef;
+  --button-secondary-text: #0066cc;
+  --button-disabled-bg: #e8ecef;
+  --button-disabled-text: #d1d5db;
+
+  /* Component Tokens - Cards */
+  --card-bg: #ffffff;
+  --card-border: #d1d5db;
+  --card-shadow: rgba(0, 0, 0, 0.06);
+
+  /* Component Tokens - Borders */
+  --border-light: #d1d5db;
+  --border-medium: #e8ecef;
+
+  /* Component Tokens - States */
+  --state-success: #10b981;
+  --state-warning: #f59e0b;
+  --state-error: #ef4444;
+  --state-info: #3b82f6;
+
+  /* Legacy aliases for backward compat */
+  --bg-primary: #f5f7fa;
+  --bg-secondary: #ffffff;
+  --bg-elevated: #ffffff;
+  --text-primary: #3c4043;
+  --text-secondary: #5f6368;
+  --text-tertiary: #70757a;
+  --text-white: #ffffff;
+  --border-lighter: #f3f4f6;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md:
+    0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+  --shadow-lg:
+    0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  --shadow-xl:
+    0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+
+  /* Border Radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+  --transition-slow: 350ms ease;
+
+  /* Typography */
+  font-family:
+    "Inter",
+    "Plus Jakarta Sans",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  line-height: 1.6;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color-scheme: light;
+  color: var(--color-text-primary);
+  background-color: var(--background-tertiary);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -13,56 +117,182 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+/* Reset & Base Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
-a:hover {
-  color: #535bf2;
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  background-color: var(--background-tertiary);
+  color: var(--color-text-primary);
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+a {
+  font-weight: 500;
+  color: var(--color-primary-blue);
+  text-decoration: none;
+  transition: color var(--transition-fast);
 }
 
+a:hover {
+  color: var(--color-secondary-blue);
+}
+
+/* Button Base */
 button {
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border: 1px solid transparent;
   padding: 0.6em 1.2em;
-  font-size: 1em;
+  font-size: 0.9rem;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  transition: all var(--transition-fast);
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+/* Primary Button */
+.btn-primary {
+  background: var(--color-primary-blue);
+  color: white;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 102, 204, 0.25);
+}
+
+.btn-primary:hover {
+  background: var(--color-secondary-blue);
+  box-shadow: 0 4px 12px rgba(0, 102, 204, 0.35);
+  transform: translateY(-1px);
+}
+
+/* AI Gradient Button - toned down, MongoDB-style */
+.ai-gradient-btn {
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-blue) 0%,
+    var(--color-secondary-blue) 100%
+  );
+  color: white;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 102, 204, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.ai-gradient-btn:hover {
+  background: linear-gradient(
+    135deg,
+    var(--color-secondary-blue) 0%,
+    var(--color-light-blue) 100%
+  );
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 102, 204, 0.4);
+}
+
+.ai-gradient-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.ai-gradient-btn:hover::before {
+  left: 100%;
+}
+
+/* Card Styles */
+.modern-card {
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--card-border);
+  transition:
+    box-shadow var(--transition-base),
+    transform var(--transition-base);
+}
+
+.modern-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Glassmorphism - subtle */
+.glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+/* Scrollbar Styling - MongoDB style */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-light-gray);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-light-border-gray);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-tertiary);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
   }
-  a:hover {
-    color: #747bff;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
-  button {
-    background-color: #f9f9f9;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
   }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.25s ease-out;
+}
+
+/* Selection */
+::selection {
+  background-color: var(--color-very-light-blue);
+  color: var(--color-primary-blue);
 }

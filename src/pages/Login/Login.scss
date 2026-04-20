@@ -5,7 +5,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f7fa;
+  background: var(--color-light-gray);
   padding: 0;
   box-sizing: border-box;
   overflow: hidden;
@@ -91,7 +91,7 @@
   align-items: center;
   justify-content: center;
   padding: 40px;
-  background: #f8fbff;
+  background: var(--color-off-white);
 }
 
 .login-form-container {
@@ -107,13 +107,13 @@
 .login-title {
   font-size: 32px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
   margin-bottom: 8px;
 }
 
 .login-subtitle {
   font-size: 15px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .password-label {
@@ -140,19 +140,19 @@
 }
 
 .login-button {
-  background: linear-gradient(135deg, #4a90e2 0%, #5fa5f8 100%);
+  background: var(--color-primary-blue);
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   height: 52px;
   font-size: 16px;
   font-weight: 600;
   margin-top: 8px;
-  box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 102, 204, 0.25);
 
   &:hover {
-    background: linear-gradient(135deg, #3a7bc8 0%, #4a90e2 100%);
+    background: var(--color-secondary-blue);
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(74, 144, 226, 0.4);
+    box-shadow: 0 4px 14px rgba(0, 102, 204, 0.35);
   }
 }
 
@@ -212,10 +212,10 @@
   margin-top: 24px;
   text-align: center;
   font-size: 14px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 
   a {
-    color: #4a90e2;
+    color: var(--color-primary-blue);
     text-decoration: none;
     font-weight: 600;
 

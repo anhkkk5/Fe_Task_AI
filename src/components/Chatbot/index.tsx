@@ -1,6 +1,10 @@
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useRef, useState, useEffect } from "react";
 import { Button, Card } from "antd";
-import { CloseOutlined, MessageOutlined } from "@ant-design/icons";
+import {
+  CloseOutlined,
+  MessageOutlined,
+  DragOutlined,
+} from "@ant-design/icons";
 import ChatMessageComponent from "./ChatMessage";
 import ChatForm from "./ChatForm";
 import type { ChatFormHandle } from "./ChatForm";
@@ -23,7 +27,73 @@ const Chatbot: React.FC = () => {
 
   const chatFormRef = useRef<ChatFormHandle | null>(null);
 
-  // Handle text selection from bot messages → pre-fill input
+  // Drag state for chatbot button position
+  const [btnPos, setBtnPos] = useState({ x: 0, y: 0 });
+  const [popupPos, setPopupPos] = useState({ x: 0, y: 0 });
+  const isDragging = useRef(false);
+  const dragStart = useRef({ mouseX: 0, mouseY: 0, elemX: 0, elemY: 0 });
+  const hasDragged = useRef(false);
+
+  // Drag for toggle button
+  const handleBtnMouseDown = (e: React.MouseEvent) => {
+    if (isOpen) return;
+    isDragging.current = true;
+    hasDragged.current = false;
+    dragStart.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      elemX: btnPos.x,
+      elemY: btnPos.y,
+    };
+    e.preventDefault();
+  };
+
+  // Drag for popup header
+  const handlePopupMouseDown = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("button")) return;
+    isDragging.current = true;
+    hasDragged.current = false;
+    dragStart.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      elemX: popupPos.x,
+      elemY: popupPos.y,
+    };
+    e.preventDefault();
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      const dx = e.clientX - dragStart.current.mouseX;
+      const dy = e.clientY - dragStart.current.mouseY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) hasDragged.current = true;
+      const newX = dragStart.current.elemX + dx;
+      const newY = dragStart.current.elemY + dy;
+      if (isOpen) {
+        setPopupPos({ x: newX, y: newY });
+      } else {
+        setBtnPos({ x: newX, y: newY });
+      }
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isOpen]);
+
+  const handleBtnClick = () => {
+    if (!hasDragged.current) openGeneral();
+  };
+
   const handleAskAboutSelection = useCallback((selectedText: string) => {
     const contextMessage = `"${selectedText}" — `;
     chatFormRef.current?.setInputValue(contextMessage);
@@ -109,7 +179,14 @@ const Chatbot: React.FC = () => {
   );
 
   return (
-    <div className="chatbot-container">
+    <div
+      className="chatbot-container"
+      style={{
+        transform: isOpen
+          ? `translate(${popupPos.x}px, ${popupPos.y}px)`
+          : `translate(${btnPos.x}px, ${btnPos.y}px)`,
+      }}
+    >
       {!isOpen && (
         <Button
           type="primary"
@@ -117,14 +194,29 @@ const Chatbot: React.FC = () => {
           size="large"
           className="chatbot-toggle-btn"
           icon={<MessageOutlined />}
-          onClick={openGeneral}
+          onMouseDown={handleBtnMouseDown}
+          onClick={handleBtnClick}
         />
       )}
 
       {isOpen && (
         <Card
           className="chatbot-popup"
-          title={cardTitle}
+          title={
+            <div
+              className="chatbot-drag-handle"
+              onMouseDown={handlePopupMouseDown}
+              style={{
+                cursor: "grab",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <DragOutlined style={{ opacity: 0.5, fontSize: 12 }} />
+              {cardTitle}
+            </div>
+          }
           extra={
             <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {cardExtra}

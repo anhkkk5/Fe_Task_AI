@@ -27,8 +27,8 @@
 }
 
 .calendar-sidebar {
-  background: #fff;
-  border-right: 1px solid #dadce0;
+  background: var(--color-white);
+  border-right: 1px solid var(--color-light-border-gray);
   padding: 8px 12px;
   overflow-y: auto;
   overflow-x: hidden;
@@ -48,12 +48,12 @@
     align-items: center;
     gap: 8px;
     padding: 10px 16px;
-    background: #fff;
-    border: 1px solid #dadce0;
+    background: var(--color-white);
+    border: 1px solid var(--color-light-border-gray);
     border-radius: 16px;
     font-size: 14px;
     font-weight: 500;
-    color: #3c4043;
+    color: var(--color-text-primary);
     cursor: pointer;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     transition: box-shadow 0.2s;
@@ -61,12 +61,12 @@
 
     &:hover {
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-      background: #f8f9fa;
+      background: var(--color-light-gray);
     }
 
     .anticon {
       font-size: 16px;
-      color: #5f6368;
+      color: var(--color-text-secondary);
     }
   }
 
@@ -83,7 +83,7 @@
       .mini-calendar-month {
         font-size: 14px;
         font-weight: 500;
-        color: #3c4043;
+        color: var(--color-text-primary);
       }
 
       .mini-calendar-nav {
@@ -101,10 +101,10 @@
           background: transparent;
           border-radius: 50%;
           cursor: pointer;
-          color: #5f6368;
+          color: var(--color-text-secondary);
 
           &:hover {
-            background: #f1f3f4;
+            background: var(--color-medium-light-gray);
           }
         }
       }
@@ -119,7 +119,7 @@
         text-align: center;
         font-size: 11px;
         font-weight: 500;
-        color: #70757a;
+        color: var(--color-text-tertiary);
         padding: 4px 0;
       }
     }
@@ -138,33 +138,33 @@
         cursor: pointer;
         border-radius: 50%;
         position: relative;
-        color: #3c4043;
+        color: var(--color-text-primary);
         width: 32px;
         height: 32px;
         margin: 1px auto;
 
         &:hover {
-          background: #f1f3f4;
+          background: var(--color-medium-light-gray);
         }
 
         &.other-month {
-          color: #70757a;
+          color: var(--color-text-tertiary);
           opacity: 0.6;
         }
 
         &.today {
-          background: #1a73e8;
-          color: white;
+          background: var(--color-primary-blue);
+          color: var(--color-white);
           font-weight: 500;
 
           &:hover {
-            background: #1557b0;
+            background: var(--color-secondary-blue);
           }
         }
 
         &.selected {
-          background: #d2e3fc;
-          color: #1967d2;
+          background: var(--color-very-light-blue);
+          color: var(--color-primary-blue);
           font-weight: 500;
         }
 
@@ -177,11 +177,11 @@
           width: 4px;
           height: 4px;
           border-radius: 50%;
-          background: #1a73e8;
+          background: var(--color-primary-blue);
         }
 
         &.today.has-events::after {
-          background: white;
+          background: var(--color-white);
         }
       }
     }
@@ -201,20 +201,20 @@
       transition: background 0.15s;
 
       &:hover {
-        background: #f1f3f4;
+        background: var(--color-medium-light-gray);
       }
 
       .section-title {
         font-size: 14px;
         font-weight: 500;
-        color: #3c4043;
+        color: var(--color-text-primary);
         text-transform: uppercase;
         letter-spacing: 0.5px;
       }
 
       .section-toggle {
         font-size: 10px;
-        color: #5f6368;
+        color: var(--color-text-secondary);
       }
     }
 
@@ -234,7 +234,7 @@
     transition: background 0.15s;
 
     &:hover {
-      background: #f1f3f4;
+      background: var(--color-medium-light-gray);
     }
 
     .calendar-checkbox {
@@ -251,14 +251,14 @@
         content: "";
         width: 10px;
         height: 10px;
-        background: white;
+        background: var(--color-white);
         border-radius: 1px;
       }
     }
 
     .calendar-name {
       font-size: 14px;
-      color: #3c4043;
+      color: var(--color-text-primary);
       flex: 1;
     }
   }
@@ -271,7 +271,7 @@
   margin-bottom: 16px;
 
   .ant-card-head {
-    background: #fff;
+    background: var(--color-white);
     border-bottom: none;
     padding: 0 8px;
     min-height: 36px;
@@ -279,7 +279,7 @@
     .ant-card-head-title {
       font-size: 14px;
       font-weight: 500;
-      color: #3c4043;
+      color: var(--color-text-primary);
     }
   }
 
@@ -296,7 +296,7 @@
   transition: background 0.15s;
 
   &:hover {
-    background: #f1f3f4;
+    background: var(--color-medium-light-gray);
   }
 
   .unscheduled-title {
@@ -323,7 +323,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 16px;
-  border-bottom: 1px solid #dadce0;
+  border-bottom: 1px solid var(--color-light-border-gray);
   flex-wrap: wrap;
   gap: 12px;
   flex-shrink: 0;
@@ -337,12 +337,12 @@
       display: flex;
       align-items: center;
       gap: 4px;
-      color: #5f6368;
+      color: var(--color-text-secondary);
       text-decoration: none;
       font-size: 14px;
 
       &:hover {
-        color: #1a73e8;
+        color: var(--color-primary-blue);
       }
     }
 
@@ -352,7 +352,7 @@
       gap: 8px;
       margin: 0;
       font-size: 22px;
-      color: #3c4043;
+      color: var(--color-text-primary);
     }
   }
 
@@ -407,16 +407,16 @@
 .calendar-days-header {
   display: grid;
   grid-template-columns: 50px repeat(7, 1fr);
-  border-bottom: 1px solid #dadce0;
+  border-bottom: 1px solid var(--color-light-border-gray);
   flex-shrink: 0;
   width: 100%;
 
   .time-column-header {
-    border-right: 1px solid #dadce0;
-    background: #fff;
+    border-right: 1px solid var(--color-light-border-gray);
+    background: var(--color-white);
     text-align: center;
     font-size: 10px;
-    color: #70757a;
+    color: var(--color-text-tertiary);
     font-weight: 500;
     display: flex;
     align-items: center;
@@ -426,8 +426,8 @@
 
   .day-header {
     text-align: center;
-    border-right: 1px solid #dadce0;
-    background: #fff;
+    border-right: 1px solid var(--color-light-border-gray);
+    background: var(--color-white);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -439,15 +439,15 @@
     }
 
     &.today {
-      background: #fff;
+      background: var(--color-white);
 
       .day-name {
-        color: #1a73e8;
+        color: var(--color-primary-blue);
       }
 
       .day-number {
-        background: #1a73e8;
-        color: white;
+        background: var(--color-primary-blue);
+        color: var(--color-white);
         width: 32px;
         height: 32px;
         border-radius: 50%;
@@ -461,7 +461,7 @@
 
     .day-name {
       font-size: 11px;
-      color: #70757a;
+      color: var(--color-text-tertiary);
       text-transform: uppercase;
       font-weight: 500;
       letter-spacing: 0.5px;
@@ -470,7 +470,7 @@
     .day-number {
       font-size: 14px;
       font-weight: 400;
-      color: #3c4043;
+      color: var(--color-text-primary);
       margin-top: 4px;
     }
   }
@@ -511,9 +511,9 @@
 
   // Google Calendar style - 48px per hour
   .time-labels {
-    border-right: 1px solid #dadce0;
+    border-right: 1px solid var(--color-light-border-gray);
     position: relative;
-    background: #fff;
+    background: var(--color-white);
     min-height: 1152px;
 
     .time-label {
@@ -522,7 +522,7 @@
       right: 8px;
       text-align: right;
       font-size: 10px;
-      color: #70757a;
+      color: var(--color-text-tertiary);
       transform: translateY(-50%);
       padding: 0;
       font-weight: 500;
@@ -531,8 +531,8 @@
 
   .day-column {
     position: relative;
-    border-right: 1px solid #dadce0;
-    background: white;
+    border-right: 1px solid var(--color-light-border-gray);
+    background: var(--color-white);
     min-height: 1152px;
     overflow: hidden;
 
@@ -541,7 +541,7 @@
     }
 
     &.today {
-      background: #fff;
+      background: var(--color-white);
     }
 
     .hour-cell {
@@ -550,7 +550,7 @@
       box-sizing: border-box;
 
       &:hover {
-        background: #f8f9fa;
+        background: var(--color-light-gray);
       }
     }
 
@@ -669,8 +669,8 @@
 
     .day-column-footer {
       height: 24px;
-      border-top: 1px solid #dadce0;
-      background: #f8f9fa;
+      border-top: 1px solid var(--color-light-border-gray);
+      background: var(--color-light-gray);
     }
   }
 }
@@ -678,19 +678,19 @@
 .calendar-time-grid-footer {
   display: grid;
   grid-template-columns: 50px repeat(7, minmax(0, 1fr));
-  border-top: 1px solid #dadce0;
-  background: #fff;
+  border-top: 1px solid var(--color-light-border-gray);
+  background: var(--color-white);
   flex-shrink: 0;
 
   .time-column-footer {
-    border-right: 1px solid #dadce0;
-    background: #f8f9fa;
+    border-right: 1px solid var(--color-light-border-gray);
+    background: var(--color-light-gray);
     height: 24px;
   }
 
   .day-column-footer-cell {
-    border-right: 1px solid #dadce0;
-    background: #f8f9fa;
+    border-right: 1px solid var(--color-light-border-gray);
+    background: var(--color-light-gray);
     height: 24px;
 
     &:last-child {

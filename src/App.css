@@ -1,39 +1,75 @@
 #root {
   width: 100%;
+  min-height: 100vh;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* Page container */
+.page-container {
+  padding: 24px 32px;
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+/* Modern card */
+.card-modern {
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--card-border);
+  padding: 24px;
+}
+
+.card-modern:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Page header */
+.page-header {
+  margin-bottom: 28px;
+
+  .page-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin-bottom: 6px;
   }
-  to {
-    transform: rotate(360deg);
+
+  .page-subtitle {
+    font-size: 14px;
+    color: var(--color-text-secondary);
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+/* Section title */
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &::before {
+    content: "";
+    width: 3px;
+    height: 18px;
+    background: var(--color-primary-blue);
+    border-radius: 2px;
   }
 }
 
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+/* AI Badge - MongoDB style */
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  background: var(--color-very-light-blue);
+  color: var(--color-primary-blue);
+  border: 1px solid var(--color-lighter-blue);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
 }
