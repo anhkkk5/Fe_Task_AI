@@ -1,250 +1,397 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Button, Input, Spin, Tooltip, Dropdown, Modal, message } from "antd";
+import type { MenuProps } from "antd";
 import {
-  Card,
-  Input,
-  Button,
-  List,
-  Avatar,
-  Typography,
-  Spin,
-  Empty,
-} from "antd";
-import {
+  PlusOutlined,
   SendOutlined,
   RobotOutlined,
   UserOutlined,
+  LoadingOutlined,
+  MoreOutlined,
+  EditOutlined,
   DeleteOutlined,
 } from "@ant-design/icons";
-import { useSelector } from "react-redux";
-import { aiChat } from "../../services/aiServices";
+import ReactMarkdown from "react-markdown";
 import {
-  getChats,
-  createChat,
-  getMessages,
-  sendMessage,
+  getConversations,
+  getConversationMessages,
+  sendChatMessage,
+  deleteConversation,
+  renameConversation,
+  type AiConversation,
+  type AiMessage,
 } from "../../services/chatServices";
 import "./Chat.scss";
 
-const { Text } = Typography;
-
-interface Message {
-  _id?: string;
-  content: string;
-  sender: "user" | "ai";
-  createdAt: string;
-}
-
-interface Chat {
-  _id?: string;
-  id?: string;
-  title: string;
-  lastMessage?: string;
-}
-
 function Chat() {
-  const { user } = useSelector((state: any) => state.auth);
-  const [chats, setChats] = useState<Chat[]>([]);
-  const [activeChat, setActiveChat] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputMessage, setInputMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [conversations, setConversations] = useState<AiConversation[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<AiMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [loadingMsgs, setLoadingMsgs] = useState(false);
+  const [renameModal, setRenameModal] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Track if scroll should happen (only on new messages, not on load)
+  const shouldScrollRef = useRef(false);
 
   useEffect(() => {
-    loadChats();
+    if (shouldScrollRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      shouldScrollRef.current = false;
+    }
+  }, [messages]);
+
+  const loadConversations = useCallback(async () => {
+    try {
+      const res = await getConversations();
+      setConversations(res.conversations || []);
+    } catch {
+      // silent
+    }
   }, []);
 
   useEffect(() => {
-    if (activeChat) {
-      loadMessages(activeChat);
-    }
-  }, [activeChat]);
+    loadConversations();
+  }, [loadConversations]);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const loadChats = async () => {
+  const openConversation = async (id: string) => {
+    if (sending || activeId === id) return;
+    setActiveId(id);
+    setLoadingMsgs(true);
+    shouldScrollRef.current = false; // Don't auto-scroll when loading history
     try {
-      const response = await getChats();
-      setChats(response.chats || []);
-    } catch (error) {
-      console.error("Failed to load chats:", error);
-    }
-  };
-
-  const loadMessages = async (chatId: string) => {
-    setLoading(true);
-    try {
-      const response = await getMessages(chatId);
-      setMessages(response.messages || []);
-    } catch (error) {
-      console.error("Failed to load messages:", error);
+      const res = await getConversationMessages(id);
+      setMessages(res.messages || []);
+    } catch {
+      message.error("Không thể tải tin nhắn");
     } finally {
-      setLoading(false);
+      setLoadingMsgs(false);
     }
   };
 
-  const handleNewChat = async () => {
-    try {
-      const response = await createChat("Cuộc trò chuyện mới");
-      const newChat = response.chat;
-      setChats([newChat, ...chats]);
-      setActiveChat(newChat._id || newChat.id);
-      setMessages([]);
-    } catch (error) {
-      console.error("Failed to create chat:", error);
-    }
+  const handleNewChat = () => {
+    if (sending) return;
+    setActiveId(null);
+    setMessages([]);
+    setInput("");
   };
 
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim() || !activeChat) return;
+  const handleSend = async () => {
+    const text = input.trim();
+    if (!text || sending) return;
 
-    const userMessage: Message = {
-      content: inputMessage,
-      sender: "user",
+    const userMsg: AiMessage = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      content: text,
       createdAt: new Date().toISOString(),
     };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setInputMessage("");
+    shouldScrollRef.current = true;
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
+    setSending(true);
 
     try {
-      // Send to backend
-      await sendMessage(activeChat, userMessage.content);
+      const res = await sendChatMessage({
+        message: text,
+        conversationId: activeId ?? undefined,
+      });
 
-      // Get AI response
-      const aiResponse = await aiChat(userMessage.content);
+      if (!activeId) setActiveId(res.conversationId);
 
-      const aiMessage: Message = {
-        content:
-          aiResponse.message || "Xin lỗi, tôi không thể trả lời ngay bây giờ.",
-        sender: "ai",
+      const aiMsg: AiMessage = {
+        id: `ai-${Date.now()}`,
+        role: "assistant",
+        content: res.reply,
         createdAt: new Date().toISOString(),
       };
-
-      setMessages((prev) => [...prev, aiMessage]);
-    } catch (error) {
-      console.error("Failed to send message:", error);
+      shouldScrollRef.current = true;
+      setMessages((prev) => [...prev, aiMsg]);
+      loadConversations();
+    } catch {
+      message.error("Gửi tin nhắn thất bại");
+      setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
+      setInput(text);
+    } finally {
+      setSending(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      handleSend();
     }
   };
+
+  const handleDelete = async (id: string) => {
+    Modal.confirm({
+      title: "Xóa cuộc trò chuyện?",
+      content: "Hành động này không thể hoàn tác.",
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          await deleteConversation(id);
+          if (activeId === id) {
+            setActiveId(null);
+            setMessages([]);
+          }
+          loadConversations();
+          message.success("Đã xóa");
+        } catch {
+          message.error("Xóa thất bại");
+        }
+      },
+    });
+  };
+
+  const handleRenameOpen = (conv: AiConversation) => {
+    setRenameModal({ id: conv.id, title: conv.title });
+    setRenameValue(conv.title);
+  };
+
+  const handleRenameConfirm = async () => {
+    if (!renameModal || !renameValue.trim()) return;
+    try {
+      await renameConversation(renameModal.id, renameValue.trim());
+      loadConversations();
+      setRenameModal(null);
+      message.success("Đã đổi tên");
+    } catch {
+      message.error("Đổi tên thất bại");
+    }
+  };
+
+  const getConvMenu = (conv: AiConversation): MenuProps => ({
+    items: [
+      {
+        key: "rename",
+        icon: <EditOutlined />,
+        label: "Đổi tên",
+        onClick: ({ domEvent }) => {
+          domEvent.stopPropagation();
+          handleRenameOpen(conv);
+        },
+      },
+      { type: "divider" },
+      {
+        key: "delete",
+        icon: <DeleteOutlined />,
+        label: "Xóa",
+        danger: true,
+        onClick: ({ domEvent }) => {
+          domEvent.stopPropagation();
+          handleDelete(conv.id);
+        },
+      },
+    ],
+  });
+
+  const formatTime = (iso: string) =>
+    new Date(iso).toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  const formatDate = (iso: string) => {
+    const diff = Date.now() - new Date(iso).getTime();
+    if (diff < 86400000) return "Hôm nay";
+    if (diff < 172800000) return "Hôm qua";
+    return new Date(iso).toLocaleDateString("vi-VN");
+  };
+
+  const isNewChat = !activeId && messages.length === 0;
 
   return (
     <div className="chat-page">
-      {/* Chat Sidebar */}
-      <div className="chat-sidebar">
-        <Button
-          type="primary"
-          icon={<SendOutlined />}
-          onClick={handleNewChat}
-          className="new-chat-btn"
-        >
-          Cuộc trò chuyện mới
-        </Button>
+      {/* Sidebar */}
+      <aside className="chat-sidebar">
+        <div className="sidebar-top">
+          <button className="new-chat-btn" onClick={handleNewChat}>
+            <PlusOutlined />
+            <span>Đoạn chat mới</span>
+          </button>
+        </div>
 
-        <List
-          dataSource={chats}
-          renderItem={(chat) => (
-            <List.Item
-              className={`chat-item ${activeChat === (chat._id || chat.id) ? "active" : ""}`}
-              onClick={() => setActiveChat((chat._id || chat.id) as string)}
-              actions={[
-                <Button
-                  key="delete"
-                  type="text"
-                  danger
-                  icon={<DeleteOutlined />}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // Handle delete
-                  }}
-                />,
-              ]}
-            >
-              <div className="chat-info">
-                <Text strong>{chat.title}</Text>
-                <Text type="secondary" className="chat-preview">
-                  {chat.lastMessage || "Chưa có tin nhắn"}
-                </Text>
+        <div className="sidebar-section-label">Gần đây</div>
+
+        <nav className="conversation-list">
+          {conversations.length === 0 ? (
+            <div className="no-convs">Chưa có cuộc trò chuyện nào</div>
+          ) : (
+            conversations.map((conv) => (
+              <div
+                key={conv.id}
+                className={`conv-item ${activeId === conv.id ? "active" : ""}`}
+                onClick={() => openConversation(conv.id)}
+              >
+                <div className="conv-info">
+                  <span className="conv-title">{conv.title}</span>
+                  <span className="conv-date">
+                    {formatDate(conv.updatedAt)}
+                  </span>
+                </div>
+                <Dropdown
+                  menu={getConvMenu(conv)}
+                  trigger={["click"]}
+                  placement="bottomRight"
+                >
+                  <button
+                    className="conv-more-btn"
+                    onClick={(e) => e.stopPropagation()}
+                    title="Tùy chọn"
+                  >
+                    <MoreOutlined />
+                  </button>
+                </Dropdown>
               </div>
-            </List.Item>
+            ))
           )}
-        />
-      </div>
+        </nav>
+      </aside>
 
-      {/* Chat Main Content */}
-      <div className="chat-main">
-        {!activeChat ? (
-          <div className="empty-chat">
-            <Empty
-              description="Chọn cuộc trò chuyện hoặc tạo mới"
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-            />
-          </div>
-        ) : (
-          <>
-            <div className="messages-container">
-              <Spin spinning={loading}>
-                <List
-                  dataSource={messages}
-                  renderItem={(message) => (
-                    <List.Item className={`message-item ${message.sender}`}>
-                      <div className="message-content">
-                        <Avatar
-                          icon={
-                            message.sender === "user" ? (
-                              <UserOutlined />
-                            ) : (
-                              <RobotOutlined />
-                            )
-                          }
-                          className={message.sender}
-                        />
-                        <div className="message-bubble">
-                          <Text>{message.content}</Text>
-                          <Text type="secondary" className="message-time">
-                            {new Date(message.createdAt).toLocaleTimeString(
-                              "vi-VN",
-                            )}
-                          </Text>
-                        </div>
-                      </div>
-                    </List.Item>
-                  )}
-                />
-                <div ref={messagesEndRef} />
-              </Spin>
+      {/* Main */}
+      <main className="chat-main">
+        {isNewChat ? (
+          <div className="chat-welcome">
+            <div className="welcome-icon">
+              <RobotOutlined />
             </div>
-
-            <div className="input-container">
+            <h2>Bạn đang làm về cái gì?</h2>
+            <p>Hỏi bất kỳ điều gì về công việc, lịch trình, hoặc năng suất.</p>
+            <div className="welcome-input-wrap">
               <Input.TextArea
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Nhập tin nhắn..."
-                autoSize={{ minRows: 1, maxRows: 4 }}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Hỏi bất kỳ điều gì..."
+                autoSize={{ minRows: 1, maxRows: 6 }}
+                disabled={sending}
               />
               <Button
                 type="primary"
-                icon={<SendOutlined />}
-                onClick={handleSendMessage}
-                disabled={!inputMessage.trim()}
+                shape="circle"
+                icon={sending ? <LoadingOutlined /> : <SendOutlined />}
+                onClick={handleSend}
+                disabled={!input.trim() || sending}
+                className="send-btn"
               />
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="messages-area">
+              {loadingMsgs ? (
+                <div className="loading-center">
+                  <Spin size="large" />
+                </div>
+              ) : (
+                messages.map((msg) => (
+                  <div key={msg.id} className={`msg-row ${msg.role}`}>
+                    <div className="msg-avatar">
+                      <div
+                        className={`avatar ${msg.role === "user" ? "user-avatar" : "ai-avatar"}`}
+                      >
+                        {msg.role === "user" ? (
+                          <UserOutlined />
+                        ) : (
+                          <RobotOutlined />
+                        )}
+                      </div>
+                    </div>
+                    <div className="msg-body">
+                      <div className="msg-bubble">
+                        {msg.role === "assistant" ? (
+                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        ) : (
+                          <p>{msg.content}</p>
+                        )}
+                      </div>
+                      <Tooltip
+                        title={new Date(msg.createdAt).toLocaleString("vi-VN")}
+                      >
+                        <span className="msg-time">
+                          {formatTime(msg.createdAt)}
+                        </span>
+                      </Tooltip>
+                    </div>
+                  </div>
+                ))
+              )}
+
+              {sending && (
+                <div className="msg-row assistant">
+                  <div className="msg-avatar">
+                    <div className="avatar ai-avatar">
+                      <RobotOutlined />
+                    </div>
+                  </div>
+                  <div className="msg-body">
+                    <div className="msg-bubble">
+                      <div className="typing">
+                        <span />
+                        <span />
+                        <span />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+
+            <div className="input-bar">
+              <div className="input-wrap">
+                <Input.TextArea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Nhập tin nhắn... (Enter để gửi, Shift+Enter xuống dòng)"
+                  autoSize={{ minRows: 1, maxRows: 6 }}
+                  disabled={sending}
+                />
+                <Button
+                  type="primary"
+                  shape="circle"
+                  icon={sending ? <LoadingOutlined /> : <SendOutlined />}
+                  onClick={handleSend}
+                  disabled={!input.trim() || sending}
+                  className="send-btn"
+                />
+              </div>
+              <span className="input-hint">
+                TaskMind AI có thể mắc lỗi. Hãy kiểm tra thông tin quan trọng.
+              </span>
             </div>
           </>
         )}
-      </div>
+      </main>
+
+      {/* Rename modal */}
+      <Modal
+        title="Đổi tên cuộc trò chuyện"
+        open={!!renameModal}
+        onOk={handleRenameConfirm}
+        onCancel={() => setRenameModal(null)}
+        okText="Lưu"
+        cancelText="Hủy"
+      >
+        <Input
+          value={renameValue}
+          onChange={(e) => setRenameValue(e.target.value)}
+          onPressEnter={handleRenameConfirm}
+          maxLength={100}
+          autoFocus
+        />
+      </Modal>
     </div>
   );
 }
