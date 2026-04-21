@@ -18,6 +18,7 @@ export interface Task {
   description?: string;
   status: "todo" | "scheduled" | "in_progress" | "completed" | "cancelled";
   priority: "low" | "medium" | "high" | "urgent";
+  startAt?: string;
   deadline?: string;
   tags?: string[];
   reminderAt?: string;
@@ -45,6 +46,7 @@ export interface UpdateTaskData {
   description?: string;
   status?: "todo" | "scheduled" | "in_progress" | "completed" | "cancelled";
   priority?: "low" | "medium" | "high" | "urgent";
+  startAt?: string;
   deadline?: string;
   tags?: string[];
   reminderAt?: string;
@@ -100,6 +102,7 @@ export const createTask = async (data: {
   description?: string;
   status?: string;
   priority?: string;
+  startAt?: string;
   deadline?: string;
   tags?: string[];
   reminderAt?: string;

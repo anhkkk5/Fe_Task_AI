@@ -188,6 +188,7 @@ interface TaskItem {
   description: string;
   status: "todo" | "scheduled" | "in_progress" | "completed" | "cancelled";
   priority: "low" | "medium" | "high" | "urgent";
+  startAt?: string;
   dueDate: string;
   deadline?: string;
   scheduledTime?: {
@@ -330,6 +331,27 @@ function Tasks() {
       },
     },
     {
+      title: "Ngày bắt đầu",
+      dataIndex: "startAt",
+      key: "startAt",
+      width: 140,
+      render: (date?: string) => {
+        if (!date) return <Text type="secondary">-</Text>;
+        return (
+          <Text>
+            <CalendarOutlined style={{ marginRight: 4 }} />
+            {new Date(date).toLocaleString("vi-VN", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </Text>
+        );
+      },
+    },
+    {
       title: "Hạn chót",
       dataIndex: "dueDate",
       key: "dueDate",
@@ -339,7 +361,13 @@ function Tasks() {
         return (
           <Text>
             <CalendarOutlined style={{ marginRight: 4 }} />
-            {new Date(date).toLocaleDateString("vi-VN")}
+            {new Date(date).toLocaleString("vi-VN", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
           </Text>
         );
       },
@@ -391,6 +419,7 @@ function Tasks() {
       title: task.title,
       description: task.description,
       priority: task.priority,
+      startAt: task.startAt ? dayjs(task.startAt) : null,
       deadline: task.deadline ? dayjs(task.deadline) : null,
       tags: task.tags?.join(", "),
       estimatedDuration: task.estimatedDuration
@@ -423,6 +452,7 @@ function Tasks() {
       title: values.title,
       description: values.description,
       priority: values.priority,
+      startAt: values.startAt?.toISOString(),
       deadline: values.deadline?.toISOString(),
       tags:
         values.tags
@@ -519,6 +549,7 @@ function Tasks() {
         | "medium"
         | "high"
         | "urgent",
+      startAt: t.startAt || t.teamAssignment?.startAt,
       dueDate: t.deadline || t.dueDate || undefined,
       deadline: t.deadline,
       scheduledTime: t.scheduledTime ?? null,
@@ -741,6 +772,7 @@ function Tasks() {
                 title: values.title,
                 description: values.description,
                 priority: values.priority,
+                startAt: values.startAt?.toISOString(),
                 deadline: values.deadline?.toISOString(),
                 tags:
                   values.tags
@@ -792,6 +824,13 @@ function Tasks() {
                 <Option value="medium">Trung bình</Option>
                 <Option value="high">Cao</Option>
               </Select>
+            </Form.Item>
+            <Form.Item name="startAt" label="Ngày bắt đầu">
+              <DatePicker
+                style={{ width: "100%" }}
+                showTime
+                format="DD/MM/YYYY HH:mm"
+              />
             </Form.Item>
             <Form.Item name="deadline" label="Hạn chót">
               <DatePicker
@@ -873,6 +912,13 @@ function Tasks() {
                 <Option value="medium">Trung bình</Option>
                 <Option value="high">Cao</Option>
               </Select>
+            </Form.Item>
+            <Form.Item name="startAt" label="Ngày bắt đầu">
+              <DatePicker
+                style={{ width: "100%" }}
+                showTime
+                format="DD/MM/YYYY HH:mm"
+              />
             </Form.Item>
             <Form.Item name="deadline" label="Hạn chót">
               <DatePicker
