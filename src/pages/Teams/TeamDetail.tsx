@@ -56,6 +56,8 @@ export default function TeamDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const currentUser = useSelector((s: any) => s.auth.user);
+  const currentUserId =
+    currentUser?._id || currentUser?.id || currentUser?.userId;
   const [team, setTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(true);
   const [inviteModal, setInviteModal] = useState(false);
@@ -64,7 +66,6 @@ export default function TeamDetail() {
   const [pendingInvites, setPendingInvites] = useState<any[]>([]);
   const [board, setBoard] = useState<any>(null);
   // User lookup state
-  const [lookupEmail, setLookupEmail] = useState("");
   const [lookupResult, setLookupResult] = useState<{
     name: string;
     email: string;
@@ -73,12 +74,11 @@ export default function TeamDetail() {
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
 
-  const myRole = team?.members.find((m) => m.userId === currentUser?._id)?.role;
+  const myRole = team?.members.find((m) => m.userId === currentUserId)?.role;
   const isAdmin = myRole === "owner" || myRole === "admin";
 
   // Debounced email lookup
   const handleEmailChange = useCallback((email: string) => {
-    setLookupEmail(email);
     setLookupResult(null);
     setLookupError(null);
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
@@ -113,7 +113,13 @@ export default function TeamDetail() {
       ]);
       setTeam(teamData);
       setBoard(boardData);
-      if (isAdmin) {
+      const myRoleInTeam = teamData.members.find(
+        (m) => m.userId === currentUserId,
+      )?.role;
+      const canManageInvites =
+        myRoleInTeam === "owner" || myRoleInTeam === "admin";
+
+      if (canManageInvites) {
         const invites = await listPendingInvites(id!);
         setPendingInvites(invites);
       }
@@ -447,7 +453,6 @@ export default function TeamDetail() {
           inviteForm.resetFields();
           setLookupResult(null);
           setLookupError(null);
-          setLookupEmail("");
         }}
         footer={null}
       >
@@ -459,7 +464,7 @@ export default function TeamDetail() {
         >
           <Form.Item
             name="email"
-            label="Tên hoặc email"
+            label="Email người được mời"
             rules={[
               {
                 required: true,
@@ -469,7 +474,7 @@ export default function TeamDetail() {
             ]}
           >
             <Input
-              placeholder="Ví dụ: Nam, nam@acb.com"
+              placeholder="Ví dụ: baoawm1@gmail.com (không cần có tài khoản sẵn)"
               onChange={(e) => handleEmailChange(e.target.value)}
               suffix={
                 lookupLoading ? (
@@ -574,7 +579,6 @@ export default function TeamDetail() {
                 inviteForm.resetFields();
                 setLookupResult(null);
                 setLookupError(null);
-                setLookupEmail("");
               }}
             >
               Huỷ

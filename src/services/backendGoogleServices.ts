@@ -66,10 +66,15 @@ export const getGoogleStatus = async (): Promise<GoogleStatus> => {
 };
 
 // Redirect to Google OAuth
-export const redirectToGoogleAuth = (): void => {
+export const redirectToGoogleAuth = (redirectPath?: string): void => {
   // Clear old tokens before OAuth to prevent mixing sessions
   localStorage.removeItem("token");
   clearAccessToken(); // Clear memory token
+
+  if (redirectPath) {
+    sessionStorage.setItem("post_login_redirect", redirectPath);
+  }
+
   window.location.href = `${API_BASE_URL}/auth/google`;
 };
 

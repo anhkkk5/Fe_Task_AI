@@ -46,7 +46,20 @@ export default function AcceptInvite() {
       setDone("accepted");
       setTimeout(() => navigate(`/teams/${res.teamId}`), 1500);
     } catch (err: any) {
-      message.error(err?.response?.data?.message || "Không thể tham gia nhóm");
+      const status = err?.response?.status;
+      const errorMessage =
+        err?.response?.data?.message || "Không thể tham gia nhóm";
+
+      if (status === 401) {
+        const redirect = encodeURIComponent(
+          `/teams/invite/accept?token=${token}`,
+        );
+        message.info("Vui lòng đăng nhập để tham gia nhóm");
+        navigate(`/login?redirect=${redirect}`);
+        return;
+      }
+
+      message.error(errorMessage);
     } finally {
       setProcessing(false);
     }
@@ -68,6 +81,49 @@ export default function AcceptInvite() {
     return (
       <div style={{ display: "flex", justifyContent: "center", padding: 80 }}>
         <Spin size="large" />
+      </div>
+    );
+
+  if (info?.status === "accepted")
+    return (
+      <div style={{ display: "flex", justifyContent: "center", padding: 80 }}>
+        <Result
+          status="success"
+          title="Lời mời đã được chấp nhận"
+          subTitle="Tài khoản này đã ở trong nhóm."
+          extra={
+            <Button
+              type="primary"
+              onClick={() => navigate(`/teams/${info.teamId}`)}
+            >
+              Vào nhóm
+            </Button>
+          }
+        />
+      </div>
+    );
+
+  if (info?.status === "expired")
+    return (
+      <div style={{ display: "flex", justifyContent: "center", padding: 80 }}>
+        <Result
+          status="warning"
+          title="Lời mời đã hết hạn"
+          subTitle="Vui lòng yêu cầu quản trị viên gửi lại lời mời mới."
+          extra={
+            <Button onClick={() => navigate("/teams")}>Về trang nhóm</Button>
+          }
+        />
+      </div>
+    );
+
+  if (info?.status === "declined")
+    return (
+      <div style={{ display: "flex", justifyContent: "center", padding: 80 }}>
+        <Result
+          title="Lời mời đã bị từ chối"
+          extra={<Button onClick={() => navigate("/")}>Về trang chủ</Button>}
+        />
       </div>
     );
 

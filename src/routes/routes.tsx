@@ -39,6 +39,10 @@ export const routes = [
   },
   // Public invite accept route (no layout)
   {
+    path: "/teams/invite",
+    element: <AcceptInvite />,
+  },
+  {
     path: "/teams/invite/accept",
     element: <AcceptInvite />,
   },

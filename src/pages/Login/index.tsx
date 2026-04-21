@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Form, Input, Button, message, Divider } from "antd";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import {
   EyeInvisibleOutlined,
@@ -25,7 +25,9 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const dispatch = useDispatch();
+  const redirectPath = searchParams.get("redirect");
 
   const onFinish = async (values: LoginFormData) => {
     setLoading(true);
@@ -42,7 +44,7 @@ function Login() {
 
       messageApi.success("Đăng nhập thành công!");
       setTimeout(() => {
-        navigate("/");
+        navigate(redirectPath || "/");
       }, 1000);
     } catch (error: any) {
       const errorMsg =
@@ -155,7 +157,7 @@ function Login() {
                 size="large"
                 className="social-button google"
                 icon={<GoogleOutlined />}
-                onClick={redirectToGoogleAuth}
+                onClick={() => redirectToGoogleAuth(redirectPath || undefined)}
               >
                 Tiếp tục với Google
               </Button>

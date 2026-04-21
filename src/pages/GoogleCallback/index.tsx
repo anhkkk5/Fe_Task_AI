@@ -37,6 +37,13 @@ function GoogleCallback() {
 
           dispatch(checkLogin({ status: true, user: userData }));
           message.success("Đăng nhập Google thành công!");
+          const redirectPath = sessionStorage.getItem("post_login_redirect");
+          if (redirectPath) {
+            sessionStorage.removeItem("post_login_redirect");
+            navigate(redirectPath, { replace: true });
+            return;
+          }
+
           navigate("/tasks", { replace: true });
         })
         .catch((err) => {
