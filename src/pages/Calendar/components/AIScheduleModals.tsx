@@ -11,16 +11,70 @@ import {
   Typography,
   Tooltip,
   Space,
+  Progress,
 } from "antd";
 import {
   BulbOutlined,
   SyncOutlined,
   RobotOutlined,
   CheckCircleOutlined,
+  ExperimentOutlined,
+  WarningOutlined,
+  ClockCircleOutlined,
 } from "@ant-design/icons";
-import type { AIScheduleResponse } from "../../../services/aiServices";
+import type {
+  AIScheduleResponse,
+  TaskEstimationMeta,
+} from "../../../services/aiServices";
 
 const { Text } = Typography;
+
+const methodLabel: Record<string, { text: string; color: string }> = {
+  user: { text: "Người dùng", color: "green" },
+  ai: { text: "AI", color: "purple" },
+  heuristic: { text: "Heuristic", color: "orange" },
+  hybrid: { text: "AI + Heuristic", color: "blue" },
+  default: { text: "Mặc định", color: "default" },
+};
+
+const difficultyLabel: Record<string, { text: string; color: string }> = {
+  easy: { text: "Dễ", color: "green" },
+  medium: { text: "Trung bình", color: "orange" },
+  hard: { text: "Khó", color: "red" },
+};
+
+const EstimationBadge: React.FC<{ meta: TaskEstimationMeta }> = ({ meta }) => {
+  const ml = methodLabel[meta.method] || methodLabel.default;
+  return (
+    <Tooltip
+      title={
+        <div>
+          <div>Phương pháp: {ml.text}</div>
+          <div>Độ tin cậy: {Math.round(meta.confidence * 100)}%</div>
+          <div>Thời lượng: {meta.finalDuration} phút</div>
+          <div>Mục tiêu/ngày: {meta.finalDailyTarget} phút</div>
+          {meta.aiDifficulty && (
+            <div>
+              AI đánh giá: {difficultyLabel[meta.aiDifficulty]?.text} (×
+              {meta.aiMultiplier})
+            </div>
+          )}
+          {meta.estimatedFields.length > 0 && (
+            <div>Tự động ước tính: {meta.estimatedFields.join(", ")}</div>
+          )}
+        </div>
+      }
+    >
+      <Tag
+        color={ml.color}
+        icon={<ExperimentOutlined />}
+        style={{ fontSize: 11, cursor: "pointer" }}
+      >
+        {ml.text} ({Math.round(meta.confidence * 100)}%)
+      </Tag>
+    </Tooltip>
+  );
+};
 
 interface AISuggestionsPanelProps {
   aiSchedule: AIScheduleResponse | null;
@@ -138,6 +192,79 @@ export const AIScheduleModal: React.FC<AIScheduleModalProps> = ({
             showIcon
             style={{ marginBottom: 16 }}
           />
+
+          {/* Estimation metadata summary */}
+          {aiSchedule.estimationMetadata &&
+            aiSchedule.estimationMetadata.length > 0 && (
+              <Alert
+                type="info"
+                showIcon
+                icon={<ExperimentOutlined />}
+                style={{ marginBottom: 16 }}
+                message={
+                  <div>
+                    <Text strong>
+                      Đã tự động ước tính thời lượng cho{" "}
+                      {aiSchedule.estimationMetadata.length} task:
+                    </Text>
+                    <div style={{ marginTop: 8 }}>
+                      {aiSchedule.estimationMetadata.map((meta) => (
+                        <div
+                          key={meta.taskId}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            marginBottom: 4,
+                          }}
+                        >
+                          <ClockCircleOutlined />
+                          <Text style={{ minWidth: 120 }}>
+                            {meta.finalDuration} phút
+                          </Text>
+                          <EstimationBadge meta={meta} />
+                          <Progress
+                            percent={Math.round(meta.confidence * 100)}
+                            size="small"
+                            style={{ width: 80 }}
+                            strokeColor={
+                              meta.confidence >= 0.7
+                                ? "#52c41a"
+                                : meta.confidence >= 0.5
+                                  ? "#faad14"
+                                  : "#f5222d"
+                            }
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                }
+              />
+            )}
+
+          {/* Feasibility warnings */}
+          {aiSchedule.warnings && aiSchedule.warnings.length > 0 && (
+            <Alert
+              type="warning"
+              showIcon
+              icon={<WarningOutlined />}
+              style={{ marginBottom: 16 }}
+              message={
+                <div>
+                  <Text strong>Cảnh báo khả thi:</Text>
+                  {aiSchedule.warnings.map((w, i) => (
+                    <div key={i} style={{ marginTop: 4 }}>
+                      <Text type="warning">
+                        ⚠ {w.title}: {w.message}
+                      </Text>
+                    </div>
+                  ))}
+                </div>
+              }
+            />
+          )}
+
           {aiSchedule.schedule.map((day, idx) => (
             <div key={idx} className="ai-day-card">
               <Divider>
@@ -150,20 +277,26 @@ export const AIScheduleModal: React.FC<AIScheduleModalProps> = ({
                 </Text>
               </Divider>
               <div className="ai-tasks-list">
-                {day.tasks.map((task, tidx) => (
-                  <div key={tidx} className="ai-task-item">
-                    <Tag color="blue">{task.suggestedTime}</Tag>
-                    <Text strong>{task.title}</Text>
-                    <Tag color={getPriorityColor(task.priority)}>
-                      {task.priority}
-                    </Tag>
-                    <Tooltip title={task.reason}>
-                      <BulbOutlined
-                        style={{ color: "#faad14", marginLeft: 8 }}
-                      />
-                    </Tooltip>
-                  </div>
-                ))}
+                {day.tasks.map((task, tidx) => {
+                  const estMeta = aiSchedule.estimationMetadata?.find(
+                    (m) => m.taskId === task.taskId,
+                  );
+                  return (
+                    <div key={tidx} className="ai-task-item">
+                      <Tag color="blue">{task.suggestedTime}</Tag>
+                      <Text strong>{task.title}</Text>
+                      <Tag color={getPriorityColor(task.priority)}>
+                        {task.priority}
+                      </Tag>
+                      {estMeta && <EstimationBadge meta={estMeta} />}
+                      <Tooltip title={task.reason}>
+                        <BulbOutlined
+                          style={{ color: "#faad14", marginLeft: 8 }}
+                        />
+                      </Tooltip>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}

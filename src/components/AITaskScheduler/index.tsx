@@ -17,6 +17,7 @@ import {
   Tooltip,
   DatePicker,
   message,
+  Progress,
 } from "antd";
 import {
   RobotOutlined,
@@ -24,11 +25,17 @@ import {
   ClockCircleOutlined,
   CheckCircleOutlined,
   InfoCircleOutlined,
+  ExperimentOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
+import type {
+  TaskEstimationMeta,
+  ScheduleWarning,
+} from "../../services/aiServices";
 import "./AITaskScheduler.scss";
 
-const { Title, Text, Paragraph } = Typography;
+const { Text } = Typography;
 
 interface Task {
   id: string;
@@ -65,6 +72,8 @@ interface ScheduleResult {
   totalTasks: number;
   suggestedOrder: string[];
   personalizationNote?: string;
+  warnings?: ScheduleWarning[];
+  estimationMetadata?: TaskEstimationMeta[];
 }
 
 interface AITaskSchedulerProps {
@@ -85,6 +94,12 @@ export default function AITaskScheduler({
   const [loading, setLoading] = useState(false);
   const [schedule, setSchedule] = useState<ScheduleResult | null>(null);
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+  const [schedulingStrategy, setSchedulingStrategy] = useState<
+    "sequential" | "parallel" | "balanced"
+  >("balanced");
+  const [distributionPattern, setDistributionPattern] = useState<
+    "front-load" | "even" | "adaptive"
+  >("adaptive");
 
   const [applying, setApplying] = useState(false);
 
@@ -122,6 +137,8 @@ export default function AITaskScheduler({
       const response = await aiSchedulePlan({
         taskIds: selectedTasks,
         startDate: startDate?.format("YYYY-MM-DD"),
+        schedulingStrategy,
+        distributionPattern,
       });
       setSchedule(response);
       setCurrentStep(2);
@@ -160,6 +177,8 @@ export default function AITaskScheduler({
     setSchedule(null);
     setCurrentStep(1);
     setStartDate(dayjs());
+    setSchedulingStrategy("balanced");
+    setDistributionPattern("adaptive");
     onClose();
   };
 
@@ -277,6 +296,110 @@ export default function AITaskScheduler({
             )}
           </Card>
 
+          {/* Chiến lược sắp xếp */}
+          {selectedTasks.length > 1 && (
+            <Card
+              size="small"
+              title={<Text strong>Chiến lược sắp xếp</Text>}
+              style={{ marginTop: 12 }}
+            >
+              <Space direction="vertical" style={{ width: "100%" }} size={8}>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Khi có nhiều công việc cùng lúc:
+                  </Text>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      marginTop: 8,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <Button
+                      type={
+                        schedulingStrategy === "sequential"
+                          ? "primary"
+                          : "default"
+                      }
+                      size="small"
+                      onClick={() => setSchedulingStrategy("sequential")}
+                    >
+                      Tuần tự (xong 1 rồi làm tiếp)
+                    </Button>
+                    <Button
+                      type={
+                        schedulingStrategy === "parallel"
+                          ? "primary"
+                          : "default"
+                      }
+                      size="small"
+                      onClick={() => setSchedulingStrategy("parallel")}
+                    >
+                      Song song (làm cùng lúc)
+                    </Button>
+                    <Button
+                      type={
+                        schedulingStrategy === "balanced"
+                          ? "primary"
+                          : "default"
+                      }
+                      size="small"
+                      onClick={() => setSchedulingStrategy("balanced")}
+                    >
+                      Cân bằng (AI gợi ý)
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Phân bổ thời gian:
+                  </Text>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      marginTop: 8,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <Button
+                      type={
+                        distributionPattern === "adaptive"
+                          ? "primary"
+                          : "default"
+                      }
+                      size="small"
+                      onClick={() => setDistributionPattern("adaptive")}
+                    >
+                      Thích ứng (tự động tăng khi gấp)
+                    </Button>
+                    <Button
+                      type={
+                        distributionPattern === "front-load"
+                          ? "primary"
+                          : "default"
+                      }
+                      size="small"
+                      onClick={() => setDistributionPattern("front-load")}
+                    >
+                      Dồn đầu (làm nhiều ngày đầu)
+                    </Button>
+                    <Button
+                      type={
+                        distributionPattern === "even" ? "primary" : "default"
+                      }
+                      size="small"
+                      onClick={() => setDistributionPattern("even")}
+                    >
+                      Chia đều
+                    </Button>
+                  </div>
+                </div>
+              </Space>
+            </Card>
+          )}
+
           <div className="modal-footer">
             <Button onClick={handleClose}>Hủy</Button>
             <Button
@@ -302,6 +425,99 @@ export default function AITaskScheduler({
                 icon={<CheckCircleOutlined />}
                 style={{ marginBottom: 16 }}
               />
+
+              {/* Estimation metadata */}
+              {schedule.estimationMetadata &&
+                schedule.estimationMetadata.length > 0 && (
+                  <Alert
+                    type="info"
+                    showIcon
+                    icon={<ExperimentOutlined />}
+                    style={{ marginBottom: 16 }}
+                    message={
+                      <div>
+                        <Text strong>
+                          Tự động ước tính cho{" "}
+                          {schedule.estimationMetadata.length} task thiếu dữ
+                          liệu:
+                        </Text>
+                        <div style={{ marginTop: 8 }}>
+                          {schedule.estimationMetadata.map((meta) => {
+                            const task = tasks.find(
+                              (t) => t.id === meta.taskId,
+                            );
+                            return (
+                              <div
+                                key={meta.taskId}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 8,
+                                  marginBottom: 4,
+                                }}
+                              >
+                                <Text style={{ minWidth: 160 }}>
+                                  {task?.title || meta.taskId}
+                                </Text>
+                                <Tag color="blue">
+                                  {meta.finalDuration} phút
+                                </Tag>
+                                <Tag color="cyan">
+                                  {meta.finalDailyTarget} phút/ngày
+                                </Tag>
+                                <Tooltip
+                                  title={`Phương pháp: ${meta.method} | Độ tin cậy: ${Math.round(meta.confidence * 100)}%${meta.aiDifficulty ? ` | AI: ${meta.aiDifficulty}` : ""}`}
+                                >
+                                  <Progress
+                                    percent={Math.round(meta.confidence * 100)}
+                                    size="small"
+                                    style={{ width: 80 }}
+                                    strokeColor={
+                                      meta.confidence >= 0.7
+                                        ? "#52c41a"
+                                        : meta.confidence >= 0.5
+                                          ? "#faad14"
+                                          : "#f5222d"
+                                    }
+                                  />
+                                </Tooltip>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <Text
+                          type="secondary"
+                          style={{ fontSize: 12, marginTop: 4 }}
+                        >
+                          Bạn có thể chỉnh sửa thời gian dự kiến và mục
+                          tiêu/ngày trong trang Công việc.
+                        </Text>
+                      </div>
+                    }
+                  />
+                )}
+
+              {/* Feasibility warnings */}
+              {schedule.warnings && schedule.warnings.length > 0 && (
+                <Alert
+                  type="warning"
+                  showIcon
+                  icon={<WarningOutlined />}
+                  style={{ marginBottom: 16 }}
+                  message={
+                    <div>
+                      <Text strong>Cảnh báo:</Text>
+                      {schedule.warnings.map((w, i) => (
+                        <div key={i} style={{ marginTop: 4 }}>
+                          <Text type="warning">
+                            ⚠ <strong>{w.title}</strong>: {w.message}
+                          </Text>
+                        </div>
+                      ))}
+                    </div>
+                  }
+                />
+              )}
 
               <div className="schedule-container">
                 {schedule.schedule.map((day, index) => (

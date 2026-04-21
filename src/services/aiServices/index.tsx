@@ -15,6 +15,32 @@ export interface AIBreakdownResponse {
 export interface AIScheduleRequest {
   taskIds: string[];
   startDate?: string;
+  schedulingStrategy?: "sequential" | "parallel" | "balanced";
+  distributionPattern?: "front-load" | "even" | "adaptive";
+}
+
+export interface TaskEstimationMeta {
+  taskId: string;
+  method: "user" | "ai" | "heuristic" | "hybrid" | "default";
+  confidence: number;
+  estimatedFields: string[];
+  heuristicDuration?: number;
+  aiDifficulty?: "easy" | "medium" | "hard";
+  aiMultiplier?: number;
+  finalDuration: number;
+  finalDailyTarget: number;
+  finalDailyMin: number;
+}
+
+export interface ScheduleWarning {
+  taskId: string;
+  title: string;
+  feasible: boolean;
+  daysLeft: number;
+  maxPossibleHours: number;
+  requiredHours: number;
+  shortfallHours: number;
+  message: string;
 }
 
 export interface AIScheduleResponse {
@@ -41,6 +67,8 @@ export interface AIScheduleResponse {
   totalEstimatedTime?: string;
   splitStrategy?: string;
   confidenceScore?: number;
+  warnings?: ScheduleWarning[];
+  estimationMetadata?: TaskEstimationMeta[];
 }
 
 // Schedule Template interfaces
