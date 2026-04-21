@@ -12,9 +12,11 @@ import {
   Form,
   Input,
   Select,
+  DatePicker,
   Popconfirm,
   Empty,
   Badge,
+  Space,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -34,9 +36,11 @@ import {
   revokeInvite,
   removeMember,
   getTeamBoard,
+  createTeamTask,
   lookupUserByEmail,
 } from "../../services/teamServices";
 import "./TeamDetail.scss";
+import dayjs from "dayjs";
 
 const roleColors: Record<TeamRole, string> = {
   owner: "gold",
@@ -65,6 +69,19 @@ export default function TeamDetail() {
   const [inviting, setInviting] = useState(false);
   const [pendingInvites, setPendingInvites] = useState<any[]>([]);
   const [board, setBoard] = useState<any>(null);
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [taskForm] = Form.useForm();
+  const [creatingTask, setCreatingTask] = useState(false);
+  const [taskKeyword, setTaskKeyword] = useState("");
+  const [taskStatusFilter, setTaskStatusFilter] = useState<string>("all");
+  const [taskAssigneeFilter, setTaskAssigneeFilter] = useState<string>("all");
+  const [taskReporterFilter, setTaskReporterFilter] = useState<string>("all");
+  const [taskStartRange, setTaskStartRange] = useState<
+    [dayjs.Dayjs | null, dayjs.Dayjs | null] | null
+  >(null);
+  const [taskDeadlineRange, setTaskDeadlineRange] = useState<
+    [dayjs.Dayjs | null, dayjs.Dayjs | null] | null
+  >(null);
   // User lookup state
   const [lookupResult, setLookupResult] = useState<{
     name: string;
@@ -127,6 +144,33 @@ export default function TeamDetail() {
       message.error("Không thể tải thông tin nhóm");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateTeamTask = async (values: {
+    title: string;
+    status: "todo" | "in_progress" | "completed" | "cancelled";
+    assigneeId: string;
+    startAt?: dayjs.Dayjs;
+    deadline?: dayjs.Dayjs;
+  }) => {
+    try {
+      setCreatingTask(true);
+      await createTeamTask(id!, {
+        title: values.title,
+        status: values.status,
+        assigneeId: values.assigneeId,
+        startAt: values.startAt?.toISOString(),
+        deadline: values.deadline?.toISOString(),
+      });
+      message.success("Tạo công việc nhóm thành công");
+      setTaskModalOpen(false);
+      taskForm.resetFields();
+      await loadTeam();
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || "Không thể tạo công việc");
+    } finally {
+      setCreatingTask(false);
     }
   };
 
@@ -242,6 +286,54 @@ export default function TeamDetail() {
       ]
     : [];
 
+  const membersById = new Map(team.members.map((m) => [m.userId, m]));
+
+  const filteredTasks = allTasks.filter((task: any) => {
+    const matchesKeyword =
+      !taskKeyword.trim() ||
+      String(task.title || "")
+        .toLowerCase()
+        .includes(taskKeyword.trim().toLowerCase());
+
+    const matchesStatus =
+      taskStatusFilter === "all" || task.status === taskStatusFilter;
+
+    const assigneeId = String(task.teamAssignment?.assigneeId || "");
+    const matchesAssignee =
+      taskAssigneeFilter === "all" || assigneeId === taskAssigneeFilter;
+
+    const reporterId = String(task.teamAssignment?.assignedBy || "");
+    const matchesReporter =
+      taskReporterFilter === "all" || reporterId === taskReporterFilter;
+
+    const taskStartRaw =
+      task?.teamAssignment?.startAt || task?.scheduledTime?.start;
+    const taskStart = taskStartRaw ? dayjs(taskStartRaw) : null;
+    const matchesStartRange =
+      !taskStartRange ||
+      (!taskStartRange[0] && !taskStartRange[1]) ||
+      (!!taskStart &&
+        (!taskStartRange[0] || taskStart.isAfter(taskStartRange[0])) &&
+        (!taskStartRange[1] || taskStart.isBefore(taskStartRange[1])));
+
+    const taskDeadline = task?.deadline ? dayjs(task.deadline) : null;
+    const matchesDeadlineRange =
+      !taskDeadlineRange ||
+      (!taskDeadlineRange[0] && !taskDeadlineRange[1]) ||
+      (!!taskDeadline &&
+        (!taskDeadlineRange[0] || taskDeadline.isAfter(taskDeadlineRange[0])) &&
+        (!taskDeadlineRange[1] || taskDeadline.isBefore(taskDeadlineRange[1])));
+
+    return (
+      matchesKeyword &&
+      matchesStatus &&
+      matchesAssignee &&
+      matchesReporter &&
+      matchesStartRange &&
+      matchesDeadlineRange
+    );
+  });
+
   const taskColumns = [
     {
       title: "Công việc",
@@ -281,6 +373,15 @@ export default function TeamDetail() {
         ),
     },
     {
+      title: "Người giao",
+      key: "reporter",
+      render: (task: any) => {
+        const reporterId = String(task.teamAssignment?.assignedBy || "");
+        const reporter = membersById.get(reporterId);
+        return reporter ? reporter.name : "-";
+      },
+    },
+    {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
@@ -313,6 +414,22 @@ export default function TeamDetail() {
         };
         return <Tag color={colors[p]}>{p}</Tag>;
       },
+    },
+    {
+      title: "Bắt đầu",
+      key: "startAt",
+      render: (task: any) =>
+        task?.teamAssignment?.startAt || task?.scheduledTime?.start
+          ? dayjs(
+              task?.teamAssignment?.startAt || task?.scheduledTime?.start,
+            ).format("DD/MM/YYYY HH:mm")
+          : "-",
+    },
+    {
+      title: "Deadline",
+      key: "deadline",
+      render: (task: any) =>
+        task?.deadline ? dayjs(task.deadline).format("DD/MM/YYYY HH:mm") : "-",
     },
   ];
 
@@ -427,23 +544,193 @@ export default function TeamDetail() {
               key: "tasks",
               label: `Công việc (${allTasks.length})`,
               children: (
-                <Table
-                  dataSource={allTasks}
-                  columns={taskColumns}
-                  rowKey="_id"
-                  size="middle"
-                  pagination={{ pageSize: 10 }}
-                  locale={{
-                    emptyText: (
-                      <Empty description="Chưa có công việc nào được phân công" />
-                    ),
-                  }}
-                />
+                <>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      marginBottom: 16,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <Space wrap>
+                      <Input
+                        placeholder="Tìm theo tên công việc"
+                        value={taskKeyword}
+                        onChange={(e) => setTaskKeyword(e.target.value)}
+                        style={{ width: 220 }}
+                      />
+                      <Select
+                        value={taskStatusFilter}
+                        onChange={setTaskStatusFilter}
+                        style={{ width: 150 }}
+                      >
+                        <Select.Option value="all">
+                          Tất cả trạng thái
+                        </Select.Option>
+                        <Select.Option value="todo">Chờ</Select.Option>
+                        <Select.Option value="in_progress">
+                          Đang làm
+                        </Select.Option>
+                        <Select.Option value="completed">
+                          Hoàn thành
+                        </Select.Option>
+                        <Select.Option value="cancelled">Huỷ</Select.Option>
+                      </Select>
+                      <Select
+                        value={taskAssigneeFilter}
+                        onChange={setTaskAssigneeFilter}
+                        style={{ width: 170 }}
+                      >
+                        <Select.Option value="all">
+                          Tất cả người làm
+                        </Select.Option>
+                        {team.members.map((m) => (
+                          <Select.Option key={m.userId} value={m.userId}>
+                            {m.name}
+                          </Select.Option>
+                        ))}
+                      </Select>
+                      <Select
+                        value={taskReporterFilter}
+                        onChange={setTaskReporterFilter}
+                        style={{ width: 170 }}
+                      >
+                        <Select.Option value="all">
+                          Tất cả người giao
+                        </Select.Option>
+                        {team.members.map((m) => (
+                          <Select.Option key={m.userId} value={m.userId}>
+                            {m.name}
+                          </Select.Option>
+                        ))}
+                      </Select>
+                      <DatePicker.RangePicker
+                        showTime
+                        value={taskStartRange as any}
+                        onChange={(value) => setTaskStartRange(value as any)}
+                        format="DD/MM/YYYY HH:mm"
+                        placeholder={["Bắt đầu từ", "Bắt đầu đến"]}
+                      />
+                      <DatePicker.RangePicker
+                        showTime
+                        value={taskDeadlineRange as any}
+                        onChange={(value) => setTaskDeadlineRange(value as any)}
+                        format="DD/MM/YYYY HH:mm"
+                        placeholder={["Deadline từ", "Deadline đến"]}
+                      />
+                    </Space>
+
+                    <Button
+                      type="primary"
+                      onClick={() => setTaskModalOpen(true)}
+                    >
+                      Thêm công việc nhóm
+                    </Button>
+                  </div>
+
+                  <Table
+                    dataSource={filteredTasks}
+                    columns={taskColumns}
+                    rowKey="_id"
+                    size="middle"
+                    pagination={{ pageSize: 10 }}
+                    locale={{
+                      emptyText: (
+                        <Empty description="Chưa có công việc nào được phân công" />
+                      ),
+                    }}
+                  />
+                </>
               ),
             },
           ]}
         />
       </div>
+
+      <Modal
+        title="Tạo công việc nhóm"
+        open={taskModalOpen}
+        onCancel={() => {
+          setTaskModalOpen(false);
+          taskForm.resetFields();
+        }}
+        onOk={() => taskForm.submit()}
+        confirmLoading={creatingTask}
+        okText="Tạo"
+        cancelText="Huỷ"
+      >
+        <Form
+          form={taskForm}
+          layout="vertical"
+          onFinish={handleCreateTeamTask}
+          initialValues={{
+            status: "todo",
+            assigneeId: currentUserId,
+          }}
+        >
+          <Form.Item
+            name="title"
+            label="Tên công việc"
+            rules={[{ required: true, message: "Vui lòng nhập tên công việc" }]}
+          >
+            <Input placeholder="Ví dụ: Chuẩn bị báo cáo sprint" />
+          </Form.Item>
+
+          <Form.Item
+            name="status"
+            label="Trạng thái"
+            rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
+          >
+            <Select>
+              <Select.Option value="todo">Chờ</Select.Option>
+              <Select.Option value="in_progress">Đang làm</Select.Option>
+              <Select.Option value="completed">Hoàn thành</Select.Option>
+              <Select.Option value="cancelled">Huỷ</Select.Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="assigneeId"
+            label="Người thực hiện"
+            rules={[
+              { required: true, message: "Vui lòng chọn người thực hiện" },
+            ]}
+          >
+            <Select>
+              {team.members.map((m) => (
+                <Select.Option key={m.userId} value={m.userId}>
+                  {m.name} ({m.email})
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item label="Người giao việc">
+            <Input
+              value={currentUser?.name || currentUser?.email || "Bạn"}
+              disabled
+            />
+          </Form.Item>
+
+          <Form.Item name="startAt" label="Thời gian bắt đầu">
+            <DatePicker
+              showTime
+              style={{ width: "100%" }}
+              format="DD/MM/YYYY HH:mm"
+            />
+          </Form.Item>
+
+          <Form.Item name="deadline" label="Deadline">
+            <DatePicker
+              showTime
+              style={{ width: "100%" }}
+              format="DD/MM/YYYY HH:mm"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       <Modal
         title="Mời thành viên"

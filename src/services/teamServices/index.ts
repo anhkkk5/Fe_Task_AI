@@ -39,6 +39,14 @@ export interface MemberWorkload {
   scheduledMinutes: number;
 }
 
+export interface TeamTaskCreatePayload {
+  title: string;
+  status: "todo" | "in_progress" | "completed" | "cancelled";
+  assigneeId: string;
+  startAt?: string;
+  deadline?: string;
+}
+
 // Team CRUD
 export const listTeams = () =>
   axiosInstance.get<Team[]>("/teams").then((r) => r.data);
@@ -94,11 +102,23 @@ export const declineInvite = (token: string) =>
 // Tasks
 export const getTeamTasks = (
   teamId: string,
-  filters?: { status?: string; assigneeId?: string; priority?: string },
+  filters?: {
+    status?: string;
+    assigneeId?: string;
+    priority?: string;
+    reporterId?: string;
+    keyword?: string;
+    startFrom?: string;
+    startTo?: string;
+    deadlineFrom?: string;
+    deadlineTo?: string;
+  },
 ) =>
   axiosInstance
     .get(`/teams/${teamId}/tasks`, { params: filters })
     .then((r) => r.data);
+export const createTeamTask = (teamId: string, data: TeamTaskCreatePayload) =>
+  axiosInstance.post(`/teams/${teamId}/tasks`, data).then((r) => r.data);
 export const getTeamBoard = (teamId: string) =>
   axiosInstance.get(`/teams/${teamId}/board`).then((r) => r.data);
 export const assignTask = (

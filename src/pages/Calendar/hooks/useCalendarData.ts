@@ -29,6 +29,14 @@ export const useCalendarData = (tasks: any[], activeSchedule: any) => {
         const taskId = String(t._id || t.id);
         if (taskIdsWithParent.has(taskId)) return false;
         if (t.parentTaskId && t.scheduledTime?.aiPlanned) return false;
+
+        const isLegacyTeamAutoSlot =
+          !!t.teamAssignment &&
+          !t.scheduledTime?.aiPlanned &&
+          String(t.scheduledTime?.reason || "").toLowerCase() ===
+            "team task start time";
+        if (isLegacyTeamAutoSlot) return false;
+
         return true;
       })
       .map((t: any) => {
