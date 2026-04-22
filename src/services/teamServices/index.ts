@@ -1,6 +1,7 @@
 import axiosInstance from "../../utils/axios/request";
 
 export type TeamRole = "owner" | "admin" | "member" | "viewer";
+export type TeamType = "student" | "company";
 
 export interface TeamMember {
   userId: string;
@@ -8,6 +9,10 @@ export interface TeamMember {
   name: string;
   avatar?: string;
   role: TeamRole;
+  /** Vị trí công việc, tham chiếu catalog (vd: "backend") */
+  position?: string;
+  /** Level năng lực, tham chiếu catalog (vd: "intern", "middle") */
+  level?: string;
   joinedAt: string;
 }
 
@@ -16,6 +21,8 @@ export interface Team {
   name: string;
   description?: string;
   ownerId: string;
+  teamType: TeamType;
+  industry?: string;
   members: TeamMember[];
   isArchived: boolean;
   createdAt: string;
@@ -52,11 +59,20 @@ export const listTeams = () =>
   axiosInstance.get<Team[]>("/teams").then((r) => r.data);
 export const getTeam = (id: string) =>
   axiosInstance.get<Team>(`/teams/${id}`).then((r) => r.data);
-export const createTeam = (data: { name: string; description?: string }) =>
-  axiosInstance.post<Team>("/teams", data).then((r) => r.data);
+export const createTeam = (data: {
+  name: string;
+  description?: string;
+  teamType?: TeamType;
+  industry?: string;
+}) => axiosInstance.post<Team>("/teams", data).then((r) => r.data);
 export const updateTeam = (
   id: string,
-  data: { name?: string; description?: string },
+  data: {
+    name?: string;
+    description?: string;
+    teamType?: TeamType;
+    industry?: string;
+  },
 ) => axiosInstance.put<Team>(`/teams/${id}`, data).then((r) => r.data);
 export const deleteTeam = (id: string) =>
   axiosInstance.delete(`/teams/${id}`).then((r) => r.data);
@@ -73,6 +89,14 @@ export const updateMemberRole = (
 ) =>
   axiosInstance
     .patch<Team>(`/teams/${teamId}/members/${memberId}/role`, { role })
+    .then((r) => r.data);
+export const updateMemberProfile = (
+  teamId: string,
+  memberId: string,
+  data: { position?: string | null; level?: string | null },
+) =>
+  axiosInstance
+    .patch<Team>(`/teams/${teamId}/members/${memberId}/profile`, data)
     .then((r) => r.data);
 export const getMemberWorkload = (teamId: string, memberId: string) =>
   axiosInstance

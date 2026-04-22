@@ -7,6 +7,8 @@ import {
   Input,
   Spin,
   message,
+  Radio,
+  Select,
   Input as AntInput,
 } from "antd";
 import {
@@ -21,7 +23,12 @@ import {
   createTeam,
   type Team,
   type TeamMember,
+  type TeamType,
 } from "../../services/teamServices";
+import {
+  getCatalog,
+  type CatalogResponse,
+} from "../../services/catalogServices";
 import "./Teams.scss";
 
 // Generate consistent color from string
@@ -88,9 +95,15 @@ export default function TeamsPage() {
   const [creating, setCreating] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>("for-you");
   const [search, setSearch] = useState("");
+  const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
 
   useEffect(() => {
     loadTeams();
+    getCatalog()
+      .then(setCatalog)
+      .catch(() => {
+        /* silent: catalog chỉ cần khi mở modal */
+      });
   }, []);
 
   const loadTeams = async () => {
@@ -108,10 +121,17 @@ export default function TeamsPage() {
   const handleCreate = async (values: {
     name: string;
     description?: string;
+    teamType?: TeamType;
+    industry?: string;
   }) => {
     try {
       setCreating(true);
-      const team = await createTeam(values);
+      const team = await createTeam({
+        name: values.name,
+        description: values.description,
+        teamType: values.teamType || "company",
+        industry: values.industry || undefined,
+      });
       message.success("Tạo nhóm thành công!");
       setModalOpen(false);
       form.resetFields();
@@ -375,6 +395,7 @@ export default function TeamsPage() {
           layout="vertical"
           onFinish={handleCreate}
           style={{ marginTop: 16 }}
+          initialValues={{ teamType: "company" }}
         >
           <Form.Item
             name="name"
@@ -388,6 +409,32 @@ export default function TeamsPage() {
           </Form.Item>
           <Form.Item name="description" label="Mô tả (tuỳ chọn)">
             <Input.TextArea rows={3} placeholder="Mô tả ngắn về nhóm..." />
+          </Form.Item>
+          <Form.Item
+            name="teamType"
+            label="Loại nhóm"
+            rules={[{ required: true, message: "Chọn loại nhóm" }]}
+          >
+            <Radio.Group>
+              <Radio.Button value="company">Nhóm công ty</Radio.Button>
+              <Radio.Button value="student">Nhóm sinh viên</Radio.Button>
+            </Radio.Group>
+          </Form.Item>
+          <Form.Item
+            name="industry"
+            label="Ngành nghề (giúp AI xếp lịch chính xác hơn)"
+          >
+            <Select
+              showSearch
+              allowClear
+              optionFilterProp="label"
+              placeholder="Chọn ngành nghề chính của nhóm"
+              loading={!catalog}
+              options={(catalog?.industries || []).map((i) => ({
+                label: i.label,
+                value: i.code,
+              }))}
+            />
           </Form.Item>
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
             <Button

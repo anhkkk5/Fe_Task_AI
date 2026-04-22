@@ -38,7 +38,14 @@ import {
   getTeamBoard,
   createTeamTask,
   lookupUserByEmail,
+  updateMemberProfile,
 } from "../../services/teamServices";
+import {
+  getCatalog,
+  getIndustryInfo,
+  type CatalogResponse,
+  type IndustryInfo,
+} from "../../services/catalogServices";
 import "./TeamDetail.scss";
 import dayjs from "dayjs";
 
@@ -93,6 +100,33 @@ export default function TeamDetail() {
 
   const myRole = team?.members.find((m) => m.userId === currentUserId)?.role;
   const isAdmin = myRole === "owner" || myRole === "admin";
+
+  const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
+  useEffect(() => {
+    getCatalog()
+      .then(setCatalog)
+      .catch(() => {
+        /* silent */
+      });
+  }, []);
+  const industryInfo: IndustryInfo | null = catalog
+    ? getIndustryInfo(catalog, team?.industry)
+    : null;
+
+  const handleUpdateMemberProfile = async (
+    memberId: string,
+    patch: { position?: string | null; level?: string | null },
+  ) => {
+    try {
+      const updated = await updateMemberProfile(id!, memberId, patch);
+      setTeam(updated);
+      message.success("Đã cập nhật vị trí / level");
+    } catch (err: any) {
+      message.error(
+        err?.response?.data?.message || "Không thể cập nhật vị trí / level",
+      );
+    }
+  };
 
   // Debounced email lookup
   const handleEmailChange = useCallback((email: string) => {
@@ -245,6 +279,77 @@ export default function TeamDetail() {
       render: (m: TeamMember) => (
         <Tag color={roleColors[m.role]}>{roleLabels[m.role]}</Tag>
       ),
+    },
+    {
+      title: "Vị trí",
+      key: "position",
+      render: (m: TeamMember) => {
+        const canEdit = isAdmin || m.userId === currentUserId;
+        const positionLabel =
+          industryInfo?.positions.find((p) => p.code === m.position)?.label ||
+          m.position ||
+          "-";
+        if (!team?.industry) {
+          return (
+            <span style={{ color: "var(--color-text-secondary)" }}>
+              Team chưa chọn ngành
+            </span>
+          );
+        }
+        if (!canEdit) {
+          return <span>{positionLabel}</span>;
+        }
+        return (
+          <Select
+            size="small"
+            style={{ minWidth: 160 }}
+            allowClear
+            value={m.position || undefined}
+            placeholder="Chọn vị trí"
+            onChange={(val) =>
+              handleUpdateMemberProfile(m.userId, {
+                position: val || null,
+              })
+            }
+            options={(industryInfo?.positions || []).map((p) => ({
+              label: p.label,
+              value: p.code,
+            }))}
+          />
+        );
+      },
+    },
+    {
+      title: "Level",
+      key: "level",
+      render: (m: TeamMember) => {
+        const canEdit = isAdmin || m.userId === currentUserId;
+        const levelLabel =
+          catalog?.levels.find((l) => l.code === m.level)?.label ||
+          m.level ||
+          "-";
+        if (!team?.industry) return <span>-</span>;
+        if (!canEdit) return <span>{levelLabel}</span>;
+        const availableLevels = industryInfo?.availableLevels || [];
+        return (
+          <Select
+            size="small"
+            style={{ minWidth: 130 }}
+            allowClear
+            value={m.level || undefined}
+            placeholder="Chọn level"
+            onChange={(val) =>
+              handleUpdateMemberProfile(m.userId, {
+                level: val || null,
+              })
+            }
+            options={availableLevels.map((code) => {
+              const info = catalog?.levels.find((l) => l.code === code);
+              return { label: info?.label || code, value: code };
+            })}
+          />
+        );
+      },
     },
     {
       title: "Tham gia",
