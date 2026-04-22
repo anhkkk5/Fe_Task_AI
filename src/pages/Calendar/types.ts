@@ -6,6 +6,12 @@ export interface GuestWithAvatar {
   avatar?: string;
 }
 
+export interface CalendarSessionTaskItem {
+  title: string;
+  minutes: number;
+  description?: string;
+}
+
 export interface CalendarEvent {
   id: string;
   title: string;
@@ -17,6 +23,7 @@ export interface CalendarEvent {
   reason?: string;
   scheduleId?: string;
   sessionId?: string;
+  sessionTasks?: CalendarSessionTaskItem[];
   originalStart?: dayjs.Dayjs;
   originalEnd?: dayjs.Dayjs;
 }

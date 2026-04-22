@@ -136,14 +136,30 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
               </div>
             </Space>
           </div>
-          {event.reason && (
-            <div style={{ marginTop: 8 }}>
-              <strong>Lý do:</strong> {event.reason}
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontWeight: 600, marginBottom: 6 }}>
+              Nhiệm vụ trong phiên
             </div>
-          )}
-          <div style={{ marginTop: 8 }}>
-            <strong>Nguồn:</strong>{" "}
-            {event.sessionId ? "AI" : event.aiScheduled ? "AI (Task)" : "Task"}
+            <div style={{ display: "grid", gap: 4 }}>
+              {(event.sessionTasks && event.sessionTasks.length > 0
+                ? event.sessionTasks
+                : [
+                    {
+                      title: event.title,
+                      minutes: Math.max(
+                        1,
+                        event.end.diff(event.start, "minute"),
+                      ),
+                    },
+                  ]
+              ).map((item, index) => (
+                <div key={`${item.title}-${index}`} style={{ fontSize: 13 }}>
+                  • {item.title}
+                  {item.minutes ? ` (${item.minutes} phút)` : ""}
+                  {item.description ? ` - ${item.description}` : ""}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}

@@ -89,6 +89,24 @@ interface AITaskSchedulerProps {
   onScheduleCreate?: (schedule: ScheduleResult) => void;
 }
 
+type SessionBreakdownItem = {
+  title: string;
+  description?: string;
+  minutes: number;
+};
+
+const parseSessionDuration = (suggestedTime: string): number => {
+  const match = suggestedTime.match(
+    /(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/,
+  );
+  if (!match) return 60;
+
+  const startMinutes = Number(match[1]) * 60 + Number(match[2]);
+  const endMinutes = Number(match[3]) * 60 + Number(match[4]);
+  const diff = endMinutes - startMinutes;
+  return diff > 0 ? diff : 60;
+};
+
 export default function AITaskScheduler({
   visible,
   onClose,
@@ -208,34 +226,32 @@ export default function AITaskScheduler({
     return map[priority] || priority;
   };
 
-  const getScheduleTaskTooltip = (sessionTask: {
-    taskId: string;
-    reason: string;
-  }) => {
-    const sourceTask = tasks.find((t) => t.id === sessionTask.taskId);
-    const steps = (sourceTask?.aiBreakdown || []).filter((s) => s?.title);
+  const getScheduleTaskTooltip = (
+    sessionTask: { reason: string },
+    sessionItems: SessionBreakdownItem[],
+    slotDuration: number,
+  ) => {
+    if (sessionItems.length === 0) return sessionTask.reason;
 
-    if (!steps.length) {
-      return sessionTask.reason;
-    }
+    const sessionTotal = sessionItems.reduce(
+      (sum, item) => sum + item.minutes,
+      0,
+    );
 
     return (
-      <div style={{ maxWidth: 380 }}>
+      <div style={{ maxWidth: 360 }}>
         <Text strong style={{ color: "#fff" }}>
-          Gợi ý chi tiết từ AI Breakdown
+          Việc cần làm trong phiên này ({sessionTotal}/{slotDuration} phút)
         </Text>
-        <div style={{ marginTop: 6 }}>
-          {steps.slice(0, 4).map((step, idx) => (
-            <div key={`${step.title}-${idx}`} style={{ marginBottom: 6 }}>
+        <div style={{ marginTop: 6, display: "grid", gap: 8 }}>
+          {sessionItems.map((item, index) => (
+            <div key={`${item.title}-${index}`}>
               <div>
-                {idx + 1}. {step.title}
-                {step.estimatedDuration
-                  ? ` (${step.estimatedDuration} phút)`
-                  : ""}
+                • {item.title} ({item.minutes} phút)
               </div>
-              {step.description && (
-                <div style={{ opacity: 0.85, fontSize: 12 }}>
-                  {step.description}
+              {item.description && (
+                <div style={{ marginTop: 2, opacity: 0.88, fontSize: 12 }}>
+                  {item.description}
                 </div>
               )}
             </div>
@@ -571,41 +587,188 @@ export default function AITaskScheduler({
               )}
 
               <div className="schedule-container">
-                {schedule.schedule.map((day, index) => (
-                  <Card
-                    key={index}
-                    className="day-card"
-                    title={
-                      <Space>
-                        <Badge
-                          count={index + 1}
-                          style={{ backgroundColor: "#4a90e2" }}
-                        />
-                        <Text strong>{day.day}</Text>
-                        <Text type="secondary">{day.date}</Text>
-                      </Space>
-                    }
-                  >
-                    <Timeline mode="left">
-                      {day.tasks.map((task, taskIndex) => (
-                        <Timeline.Item
-                          key={taskIndex}
-                          label={<Tag color="blue">{task.suggestedTime}</Tag>}
-                        >
-                          <div className="schedule-task">
-                            <Text strong>{task.title}</Text>
-                            <Tag color={getPriorityColor(task.priority)}>
-                              {getPriorityLabel(task.priority)}
-                            </Tag>
-                            <Tooltip title={getScheduleTaskTooltip(task)}>
-                              <InfoCircleOutlined className="info-icon" />
-                            </Tooltip>
-                          </div>
-                        </Timeline.Item>
-                      ))}
-                    </Timeline>
-                  </Card>
-                ))}
+                {(() => {
+                  const sessionItemsByKey: Record<
+                    string,
+                    SessionBreakdownItem[]
+                  > = {};
+                  const sessionsByTaskId: Record<
+                    string,
+                    { sessionKey: string; duration: number }[]
+                  > = {};
+
+                  schedule.schedule.forEach((day, dayIndex) => {
+                    day.tasks.forEach((task, taskIndex) => {
+                      const sessionKey =
+                        task.sessionId ||
+                        `${day.date}-${dayIndex}-${taskIndex}-${task.taskId}`;
+                      if (!sessionsByTaskId[task.taskId]) {
+                        sessionsByTaskId[task.taskId] = [];
+                      }
+                      sessionsByTaskId[task.taskId].push({
+                        sessionKey,
+                        duration: parseSessionDuration(task.suggestedTime),
+                      });
+                    });
+                  });
+
+                  Object.entries(sessionsByTaskId).forEach(
+                    ([taskId, sessions]) => {
+                      const sourceTask = tasks.find((t) => t.id === taskId);
+                      const breakdown = sourceTask?.aiBreakdown ?? [];
+                      if (!breakdown.length || !sessions.length) return;
+
+                      let stepIndex = 0;
+                      let remainingStepMinutes = Math.max(
+                        1,
+                        breakdown[0]?.estimatedDuration ?? 30,
+                      );
+
+                      for (const session of sessions) {
+                        let remainingSessionMinutes = session.duration;
+                        const packedItems: SessionBreakdownItem[] = [];
+
+                        while (
+                          remainingSessionMinutes > 0 &&
+                          stepIndex < breakdown.length
+                        ) {
+                          const currentStep = breakdown[stepIndex];
+                          const assignedMinutes = Math.min(
+                            remainingSessionMinutes,
+                            remainingStepMinutes,
+                          );
+
+                          packedItems.push({
+                            title: currentStep.title,
+                            description: currentStep.description,
+                            minutes: assignedMinutes,
+                          });
+
+                          remainingSessionMinutes -= assignedMinutes;
+                          remainingStepMinutes -= assignedMinutes;
+
+                          if (remainingStepMinutes <= 0) {
+                            stepIndex += 1;
+                            remainingStepMinutes =
+                              stepIndex < breakdown.length
+                                ? Math.max(
+                                    1,
+                                    breakdown[stepIndex]?.estimatedDuration ??
+                                      30,
+                                  )
+                                : 0;
+                          }
+                        }
+
+                        sessionItemsByKey[session.sessionKey] = packedItems;
+                      }
+
+                      if (stepIndex < breakdown.length) {
+                        const lastSessionKey =
+                          sessions[sessions.length - 1].sessionKey;
+                        const overflowItems =
+                          sessionItemsByKey[lastSessionKey] || [];
+
+                        while (stepIndex < breakdown.length) {
+                          const currentStep = breakdown[stepIndex];
+                          overflowItems.push({
+                            title: currentStep.title,
+                            description: currentStep.description,
+                            minutes: remainingStepMinutes,
+                          });
+                          stepIndex += 1;
+                          remainingStepMinutes =
+                            stepIndex < breakdown.length
+                              ? Math.max(
+                                  1,
+                                  breakdown[stepIndex]?.estimatedDuration ?? 30,
+                                )
+                              : 0;
+                        }
+
+                        sessionItemsByKey[lastSessionKey] = overflowItems;
+                      }
+                    },
+                  );
+
+                  return schedule.schedule.map((day, index) => (
+                    <Card
+                      key={index}
+                      className="day-card"
+                      title={
+                        <Space>
+                          <Badge
+                            count={index + 1}
+                            style={{ backgroundColor: "#4a90e2" }}
+                          />
+                          <Text strong>{day.day}</Text>
+                          <Text type="secondary">{day.date}</Text>
+                        </Space>
+                      }
+                    >
+                      <Timeline mode="left">
+                        {day.tasks.map((task, taskIndex) => {
+                          const sessionKey =
+                            task.sessionId ||
+                            `${day.date}-${index}-${taskIndex}-${task.taskId}`;
+                          const sessionItems =
+                            sessionItemsByKey[sessionKey] || [];
+                          const slotDuration = parseSessionDuration(
+                            task.suggestedTime,
+                          );
+                          const sessionTitle =
+                            sessionItems.length > 0
+                              ? sessionItems[0].title
+                              : task.title;
+
+                          return (
+                            <Timeline.Item
+                              key={taskIndex}
+                              label={
+                                <Tag color="blue">{task.suggestedTime}</Tag>
+                              }
+                            >
+                              <div className="schedule-task">
+                                <Text strong>{sessionTitle}</Text>
+                                <Tag color={getPriorityColor(task.priority)}>
+                                  {getPriorityLabel(task.priority)}
+                                </Tag>
+                                <Tooltip
+                                  title={getScheduleTaskTooltip(
+                                    task,
+                                    sessionItems,
+                                    slotDuration,
+                                  )}
+                                >
+                                  <InfoCircleOutlined className="info-icon" />
+                                </Tooltip>
+                              </div>
+                              {sessionItems.length > 0 && (
+                                <div
+                                  style={{
+                                    marginTop: 4,
+                                    display: "grid",
+                                    gap: 2,
+                                  }}
+                                >
+                                  {sessionItems.map((item, itemIndex) => (
+                                    <Text
+                                      key={`${item.title}-${itemIndex}`}
+                                      type="secondary"
+                                      style={{ fontSize: 12, display: "block" }}
+                                    >
+                                      • {item.title} ({item.minutes} phút)
+                                    </Text>
+                                  ))}
+                                </div>
+                              )}
+                            </Timeline.Item>
+                          );
+                        })}
+                      </Timeline>
+                    </Card>
+                  ));
+                })()}
               </div>
 
               <Divider />
