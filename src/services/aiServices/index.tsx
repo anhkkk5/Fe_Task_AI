@@ -165,6 +165,7 @@ export const updateAISessionTime = async (
   scheduleId: string,
   sessionId: string,
   suggestedTime: string,
+  targetDate?: string,
 ): Promise<{
   success: boolean;
   data: AIScheduleResponse | null;
@@ -172,6 +173,7 @@ export const updateAISessionTime = async (
   return await patch(`/ai-schedules/${scheduleId}/sessions/time`, {
     sessionId,
     suggestedTime,
+    targetDate,
   });
 };
 

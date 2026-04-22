@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { Card, Row, Col, Statistic, Tooltip } from "antd";
 import {
   CalendarOutlined,
@@ -28,6 +28,12 @@ interface CalendarGridProps {
     columnEl: HTMLElement,
   ) => void;
   onEventClick: (event: CalendarEvent) => void;
+  onEventMove: (
+    event: CalendarEvent,
+    nextStart: dayjs.Dayjs,
+    nextEnd: dayjs.Dayjs,
+  ) => void | Promise<void>;
+  onMoveBlocked?: (event: CalendarEvent, reason: string) => void;
 }
 
 export const CalendarGrid: React.FC<CalendarGridProps> = ({
@@ -36,7 +42,16 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
   weekDays,
   onGridClick,
   onEventClick,
+  onEventMove,
+  onMoveBlocked,
 }) => {
+  const [draggingEventId, setDraggingEventId] = useState<string | null>(null);
+
+  const eventById = useMemo(
+    () => new Map(events.map((e) => [e.id, e] as const)),
+    [events],
+  );
+
   // Stats calculations
   const weekTasks = events.filter(
     (e) =>
@@ -113,6 +128,38 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     return eventPositions;
   };
 
+  const isMovableEvent = (event: CalendarEvent) => event.start.isAfter(dayjs());
+
+  const snapMinutes = (minutes: number, step: number) =>
+    Math.round(minutes / step) * step;
+
+  const clamp = (value: number, min: number, max: number) =>
+    Math.max(min, Math.min(max, value));
+
+  const buildDroppedTime = (
+    day: dayjs.Dayjs,
+    clientY: number,
+    columnEl: HTMLElement,
+    durationMinutes: number,
+  ) => {
+    const rect = columnEl.getBoundingClientRect();
+    const y = clientY - rect.top;
+    const rawMinutes = y / 0.8;
+    const startMinutes = clamp(
+      snapMinutes(rawMinutes, 30),
+      0,
+      24 * 60 - Math.max(30, durationMinutes),
+    );
+    const nextStart = day
+      .clone()
+      .hour(Math.floor(startMinutes / 60))
+      .minute(startMinutes % 60)
+      .second(0)
+      .millisecond(0);
+    const nextEnd = nextStart.clone().add(durationMinutes, "minute");
+    return { nextStart, nextEnd };
+  };
+
   return (
     <section className="calendar-content">
       <Row gutter={16} className="calendar-stats">
@@ -184,6 +231,38 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
             <div
               key={dayIndex}
               className={`day-column ${day.isSame(dayjs(), "day") ? "today" : ""}`}
+              onDragOver={(e) => {
+                if (!draggingEventId) return;
+                e.preventDefault();
+              }}
+              onDrop={(e) => {
+                if (!draggingEventId) return;
+                e.preventDefault();
+                e.stopPropagation();
+
+                const event = eventById.get(draggingEventId);
+                setDraggingEventId(null);
+                if (!event) return;
+                if (!isMovableEvent(event)) {
+                  onMoveBlocked?.(
+                    event,
+                    "Chỉ được di chuyển phiên chưa đến giờ thực hiện.",
+                  );
+                  return;
+                }
+
+                const duration = Math.max(
+                  30,
+                  event.end.diff(event.start, "minute"),
+                );
+                const { nextStart, nextEnd } = buildDroppedTime(
+                  day,
+                  e.clientY,
+                  e.currentTarget as HTMLElement,
+                  duration,
+                );
+                onEventMove(event, nextStart, nextEnd);
+              }}
               onClick={(e) =>
                 onGridClick(day, e.clientY, e.currentTarget as HTMLElement)
               }
@@ -232,8 +311,25 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                               event.status === "done"
                                 ? 0.6
                                 : 1,
-                            cursor: "pointer",
+                            cursor: isMovableEvent(event)
+                              ? "grab"
+                              : "not-allowed",
                           }}
+                          draggable={isMovableEvent(event)}
+                          onDragStart={(e) => {
+                            if (!isMovableEvent(event)) {
+                              e.preventDefault();
+                              onMoveBlocked?.(
+                                event,
+                                "Không thể di chuyển phiên đã tới giờ hoặc đã qua.",
+                              );
+                              return;
+                            }
+                            setDraggingEventId(event.id);
+                            e.dataTransfer.effectAllowed = "move";
+                            e.dataTransfer.setData("text/plain", event.id);
+                          }}
+                          onDragEnd={() => setDraggingEventId(null)}
                           onClick={(e) => {
                             e.stopPropagation();
                             onEventClick(event);

@@ -31,6 +31,7 @@ import { CalendarSidebar } from "./components/CalendarSidebar";
 import { CalendarGrid, WEEK_DAYS } from "./components/CalendarGrid";
 import { CreateEventModal } from "./components/CreateEventModal";
 import { EventDetailModal } from "./components/EventDetailModal";
+import { AvailabilitySettingsModal } from "./components/AvailabilitySettingsModal";
 import {
   AISuggestionsPanel,
   AIScheduleModal,
@@ -76,6 +77,7 @@ function Calendar() {
   const [aiScheduleLocal, setAiScheduleLocal] =
     useState<AIScheduleResponse | null>(null);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [availabilityModalOpen, setAvailabilityModalOpen] = useState(false);
 
   // Custom data hook to process all events and AI tasks
   const { events, hideEvent, unhideEvent } = useCalendarData(
@@ -174,6 +176,61 @@ function Calendar() {
   const openEventModal = (event: CalendarEvent) => {
     setSelectedEvent(event);
     setEventModalOpen(true);
+  };
+
+  const handleEventMove = async (
+    event: CalendarEvent,
+    nextStart: dayjs.Dayjs,
+    nextEnd: dayjs.Dayjs,
+  ) => {
+    const now = dayjs();
+
+    if (!event.start.isAfter(now)) {
+      message.warning("Chỉ có thể di chuyển phiên chưa tới giờ thực hiện.");
+      return;
+    }
+
+    if (nextStart.isBefore(now)) {
+      message.warning("Không thể di chuyển phiên về thời gian trong quá khứ.");
+      return;
+    }
+
+    try {
+      if (event.aiScheduled && event.scheduleId && event.sessionId) {
+        const newTime = `${nextStart.format("HH:mm")} - ${nextEnd.format("HH:mm")}`;
+        const targetDate = nextStart.format("YYYY-MM-DD");
+        await updateAISessionTime(
+          event.scheduleId,
+          event.sessionId,
+          newTime,
+          targetDate,
+        );
+        await fetchAISchedule();
+        message.success("Đã di chuyển phiên lịch AI");
+        return;
+      }
+
+      const ok = await handleUpdate(event.id, {
+        scheduledTime: {
+          start: nextStart.toISOString(),
+          end: nextEnd.toISOString(),
+          aiPlanned: false,
+          reason: "Người dùng kéo thả lịch",
+        },
+        status: "scheduled",
+      });
+      if (ok) {
+        message.success("Đã di chuyển lịch công việc");
+      }
+    } catch (error: any) {
+      message.error(
+        error?.message || "Không thể di chuyển lịch vào vị trí này",
+      );
+    }
+  };
+
+  const handleMoveBlocked = (_event: CalendarEvent, reason: string) => {
+    message.warning(reason || "Không thể di chuyển phiên lịch này");
   };
 
   // Event handlers
@@ -339,6 +396,7 @@ function Calendar() {
               setCreateEnd(end);
               setCreateModalOpen(true);
             }}
+            onOpenAvailabilitySettings={() => setAvailabilityModalOpen(true)}
           />
 
           <CalendarGrid
@@ -347,6 +405,8 @@ function Calendar() {
             weekDays={weekDays}
             onGridClick={openCreateTaskModalFromClick}
             onEventClick={openEventModal}
+            onEventMove={handleEventMove}
+            onMoveBlocked={handleMoveBlocked}
           />
         </div>
 
@@ -385,6 +445,11 @@ function Calendar() {
         aiSchedule={aiScheduleLocal}
         onApply={applyAiSchedule}
         aiApplying={aiApplying}
+      />
+
+      <AvailabilitySettingsModal
+        open={availabilityModalOpen}
+        onCancel={() => setAvailabilityModalOpen(false)}
       />
     </div>
   );
