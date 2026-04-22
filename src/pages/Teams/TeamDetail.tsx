@@ -52,6 +52,8 @@ import dayjs from "dayjs";
 const roleColors: Record<TeamRole, string> = {
   owner: "gold",
   admin: "blue",
+  student_leader: "geekblue",
+  lecturer_leader: "purple",
   member: "default",
   viewer: "default",
 };
@@ -59,9 +61,30 @@ const roleColors: Record<TeamRole, string> = {
 const roleLabels: Record<TeamRole, string> = {
   owner: "Owner",
   admin: "Admin",
+  student_leader: "Nhóm trưởng (SV)",
+  lecturer_leader: "Nhóm trưởng (GV)",
   member: "Thành viên",
   viewer: "Xem",
 };
+
+const STUDENT_MANAGER_ROLES: TeamRole[] = [
+  "owner",
+  "admin",
+  "student_leader",
+  "lecturer_leader",
+];
+
+const COMPANY_MANAGER_ROLES: TeamRole[] = ["owner", "admin"];
+
+function canManageByRole(
+  teamType: "student" | "company" | undefined,
+  role: TeamRole | undefined,
+): boolean {
+  if (!teamType || !role) return false;
+  const allowed =
+    teamType === "student" ? STUDENT_MANAGER_ROLES : COMPANY_MANAGER_ROLES;
+  return allowed.includes(role);
+}
 
 export default function TeamDetail() {
   const { id } = useParams<{ id: string }>();
@@ -99,7 +122,7 @@ export default function TeamDetail() {
   const [lookupError, setLookupError] = useState<string | null>(null);
 
   const myRole = team?.members.find((m) => m.userId === currentUserId)?.role;
-  const isAdmin = myRole === "owner" || myRole === "admin";
+  const isAdmin = canManageByRole(team?.teamType, myRole);
 
   const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
   useEffect(() => {
@@ -167,8 +190,7 @@ export default function TeamDetail() {
       const myRoleInTeam = teamData.members.find(
         (m) => m.userId === currentUserId,
       )?.role;
-      const canManageInvites =
-        myRoleInTeam === "owner" || myRoleInTeam === "admin";
+      const canManageInvites = canManageByRole(teamData.teamType, myRoleInTeam);
 
       if (canManageInvites) {
         const invites = await listPendingInvites(id!);
@@ -946,6 +968,16 @@ export default function TeamDetail() {
               <Select.Option value="admin">
                 Admin — Có thể quản lý nhóm
               </Select.Option>
+              {team.teamType === "student" && (
+                <Select.Option value="student_leader">
+                  Nhóm trưởng (sinh viên)
+                </Select.Option>
+              )}
+              {team.teamType === "student" && (
+                <Select.Option value="lecturer_leader">
+                  Nhóm trưởng (giảng viên)
+                </Select.Option>
+              )}
               <Select.Option value="member">
                 Thành viên — Có thể xem và làm việc
               </Select.Option>

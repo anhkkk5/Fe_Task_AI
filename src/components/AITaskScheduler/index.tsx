@@ -51,6 +51,12 @@ interface Task {
     aiPlanned?: boolean;
     reason?: string;
   } | null;
+  aiBreakdown?: {
+    title: string;
+    estimatedDuration?: number;
+    difficulty?: "easy" | "medium" | "hard";
+    description?: string;
+  }[];
 }
 
 interface ScheduleDay {
@@ -200,6 +206,47 @@ export default function AITaskScheduler({
       urgent: "Khẩn cấp",
     };
     return map[priority] || priority;
+  };
+
+  const getScheduleTaskTooltip = (sessionTask: {
+    taskId: string;
+    reason: string;
+  }) => {
+    const sourceTask = tasks.find((t) => t.id === sessionTask.taskId);
+    const steps = (sourceTask?.aiBreakdown || []).filter((s) => s?.title);
+
+    if (!steps.length) {
+      return sessionTask.reason;
+    }
+
+    return (
+      <div style={{ maxWidth: 380 }}>
+        <Text strong style={{ color: "#fff" }}>
+          Gợi ý chi tiết từ AI Breakdown
+        </Text>
+        <div style={{ marginTop: 6 }}>
+          {steps.slice(0, 4).map((step, idx) => (
+            <div key={`${step.title}-${idx}`} style={{ marginBottom: 6 }}>
+              <div>
+                {idx + 1}. {step.title}
+                {step.estimatedDuration
+                  ? ` (${step.estimatedDuration} phút)`
+                  : ""}
+              </div>
+              {step.description && (
+                <div style={{ opacity: 0.85, fontSize: 12 }}>
+                  {step.description}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        <Divider
+          style={{ margin: "8px 0", borderColor: "rgba(255,255,255,0.2)" }}
+        />
+        <div style={{ opacity: 0.9, fontSize: 12 }}>{sessionTask.reason}</div>
+      </div>
+    );
   };
 
   const incompleteTasks = tasks
@@ -462,9 +509,13 @@ export default function AITaskScheduler({
                                 <Tag color="blue">
                                   {meta.finalDuration} phút
                                 </Tag>
-                                <Tag color="cyan">
-                                  {meta.finalDailyTarget} phút/ngày
-                                </Tag>
+                                {!meta.estimatedFields?.includes(
+                                  "dailyTargetDuration",
+                                ) && (
+                                  <Tag color="cyan">
+                                    {meta.finalDailyTarget} phút/ngày
+                                  </Tag>
+                                )}
                                 <Tooltip
                                   title={`Phương pháp: ${meta.method} | Độ tin cậy: ${Math.round(meta.confidence * 100)}%${meta.aiDifficulty ? ` | AI: ${meta.aiDifficulty}` : ""}`}
                                 >
@@ -546,7 +597,7 @@ export default function AITaskScheduler({
                             <Tag color={getPriorityColor(task.priority)}>
                               {getPriorityLabel(task.priority)}
                             </Tag>
-                            <Tooltip title={task.reason}>
+                            <Tooltip title={getScheduleTaskTooltip(task)}>
                               <InfoCircleOutlined className="info-icon" />
                             </Tooltip>
                           </div>

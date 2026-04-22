@@ -1,6 +1,12 @@
 import axiosInstance from "../../utils/axios/request";
 
-export type TeamRole = "owner" | "admin" | "member" | "viewer";
+export type TeamRole =
+  | "owner"
+  | "admin"
+  | "student_leader"
+  | "lecturer_leader"
+  | "member"
+  | "viewer";
 export type TeamType = "student" | "company";
 
 export interface TeamMember {

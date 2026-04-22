@@ -41,6 +41,29 @@ export interface TaskListResponse {
   total: number;
 }
 
+export interface TaskEstimationExplanation {
+  taskId: string;
+  title: string;
+  method: "user" | "ai" | "heuristic" | "hybrid" | "default";
+  confidence: number;
+  estimatedFields: string[];
+  difficulty?: "easy" | "medium" | "hard";
+  factors: {
+    baseEstimate?: number;
+    priorityMultiplier?: number;
+    keywordMultiplier?: number;
+    aiMultiplier?: number;
+    levelMultiplier?: number;
+    historyMultiplier?: number;
+  };
+  result: {
+    estimatedDuration: number;
+    dailyTargetDuration: number;
+    dailyTargetMin: number;
+  };
+  task: Task;
+}
+
 export interface UpdateTaskData {
   title?: string;
   description?: string;
@@ -124,6 +147,12 @@ export const triggerAiBreakdown = async (
   taskId: string,
 ): Promise<{ task: Task }> => {
   return await post(`/tasks/${taskId}/ai-breakdown`, {});
+};
+
+export const getTaskEstimationExplanation = async (
+  taskId: string,
+): Promise<{ explanation: TaskEstimationExplanation }> => {
+  return await get(`/tasks/${taskId}/explain-estimation`);
 };
 
 // Update subtask statuses

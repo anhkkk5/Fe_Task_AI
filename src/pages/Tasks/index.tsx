@@ -39,8 +39,15 @@ import StatusDropdown from "../../components/StatusDropdown";
 import { AIBreakdownButton } from "../../components/AIBreakdownButton";
 import { SubtaskList } from "../../components/SubtaskList";
 import { useChatbot } from "../../contexts/ChatbotContext";
-import { updateSubtaskStatus } from "../../services/taskServices";
-import type { Subtask, SubtaskStatus } from "../../services/taskServices";
+import {
+  getTaskEstimationExplanation,
+  updateSubtaskStatus,
+} from "../../services/taskServices";
+import type {
+  Subtask,
+  SubtaskStatus,
+  TaskEstimationExplanation,
+} from "../../services/taskServices";
 import { useTasks } from "../../hooks/useTasks";
 import dayjs from "dayjs";
 import {
@@ -237,6 +244,9 @@ function Tasks() {
   const [breakdownTask, setBreakdownTask] = useState<TaskItem | null>(null);
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [breakdownLoading, setBreakdownLoading] = useState(false);
+  const [explainLoading, setExplainLoading] = useState(false);
+  const [estimationExplain, setEstimationExplain] =
+    useState<TaskEstimationExplanation | null>(null);
   const { openWithSubtask } = useChatbot();
 
   // Delete confirmation
@@ -478,7 +488,16 @@ function Tasks() {
   const onBreakdownClick = async (task: TaskItem) => {
     setBreakdownTask(task);
     setSubtasks((task.aiBreakdown as Subtask[]) ?? []);
+    setEstimationExplain(null);
     setIsBreakdownModalOpen(true);
+
+    setExplainLoading(true);
+    getTaskEstimationExplanation(task.id)
+      .then((res) => setEstimationExplain(res.explanation))
+      .catch(() => {
+        // silent: không chặn flow breakdown nếu explain fail
+      })
+      .finally(() => setExplainLoading(false));
 
     // Nếu chưa có breakdown, tự động trigger luôn
     if (!task.aiBreakdown?.length) {
@@ -508,6 +527,12 @@ function Tasks() {
         await import("../../services/taskServices");
       const res = await triggerAiBreakdown(breakdownTask.id);
       setSubtasks((res.task.aiBreakdown as Subtask[]) ?? []);
+      try {
+        const explain = await getTaskEstimationExplanation(breakdownTask.id);
+        setEstimationExplain(explain.explanation);
+      } catch {
+        // silent
+      }
       fetchTasks();
       message.success("Đã tạo lại AI Breakdown!");
     } catch (err: any) {
@@ -990,6 +1015,60 @@ function Tasks() {
           }
           width={600}
         >
+          {estimationExplain && (
+            <Card size="small" style={{ marginBottom: 16 }}>
+              <Space direction="vertical" size={4} style={{ width: "100%" }}>
+                <Text strong>AI tính thời lượng như sau</Text>
+                <Text type="secondary">
+                  Method: {estimationExplain.method} • Confidence:{" "}
+                  {Math.round(estimationExplain.confidence * 100)}%
+                  {estimationExplain.difficulty
+                    ? ` • Difficulty: ${estimationExplain.difficulty}`
+                    : ""}
+                </Text>
+                <Space wrap>
+                  {estimationExplain.factors.baseEstimate != null && (
+                    <Tag>Base: {estimationExplain.factors.baseEstimate}m</Tag>
+                  )}
+                  {estimationExplain.factors.priorityMultiplier != null && (
+                    <Tag color="orange">
+                      Priority ×{estimationExplain.factors.priorityMultiplier}
+                    </Tag>
+                  )}
+                  {estimationExplain.factors.keywordMultiplier != null && (
+                    <Tag color="gold">
+                      Keyword ×{estimationExplain.factors.keywordMultiplier}
+                    </Tag>
+                  )}
+                  {estimationExplain.factors.aiMultiplier != null && (
+                    <Tag color="blue">
+                      AI ×{estimationExplain.factors.aiMultiplier}
+                    </Tag>
+                  )}
+                  {estimationExplain.factors.levelMultiplier != null && (
+                    <Tag color="cyan">
+                      Level ×{estimationExplain.factors.levelMultiplier}
+                    </Tag>
+                  )}
+                  {estimationExplain.factors.historyMultiplier != null && (
+                    <Tag color="purple">
+                      History ×{estimationExplain.factors.historyMultiplier}
+                    </Tag>
+                  )}
+                </Space>
+                <Text>
+                  Kết quả: {estimationExplain.result.estimatedDuration} phút •
+                  Mục tiêu/ngày {estimationExplain.result.dailyTargetMin}-
+                  {estimationExplain.result.dailyTargetDuration} phút
+                </Text>
+              </Space>
+            </Card>
+          )}
+
+          {explainLoading && !estimationExplain && (
+            <Text type="secondary">Đang tải giải thích ước lượng...</Text>
+          )}
+
           {breakdownLoading && !subtasks.length ? (
             <div style={{ textAlign: "center", padding: "40px 0" }}>
               <Space direction="vertical">

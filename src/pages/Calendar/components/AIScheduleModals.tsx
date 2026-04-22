@@ -52,7 +52,9 @@ const EstimationBadge: React.FC<{ meta: TaskEstimationMeta }> = ({ meta }) => {
           <div>Phương pháp: {ml.text}</div>
           <div>Độ tin cậy: {Math.round(meta.confidence * 100)}%</div>
           <div>Thời lượng: {meta.finalDuration} phút</div>
-          <div>Mục tiêu/ngày: {meta.finalDailyTarget} phút</div>
+          {!meta.estimatedFields?.includes("dailyTargetDuration") && (
+            <div>Mục tiêu/ngày: {meta.finalDailyTarget} phút</div>
+          )}
           {meta.aiDifficulty && (
             <div>
               AI đánh giá: {difficultyLabel[meta.aiDifficulty]?.text} (×

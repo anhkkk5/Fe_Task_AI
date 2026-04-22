@@ -61,10 +61,9 @@ interface AvailabilitySettingsModalProps {
 const normalizeSlots = (slots: AvailableTimeSlot[]) =>
   [...slots].sort((a, b) => a.start.localeCompare(b.start));
 
-export const AvailabilitySettingsModal: React.FC<AvailabilitySettingsModalProps> = ({
-  open,
-  onCancel,
-}) => {
+export const AvailabilitySettingsModal: React.FC<
+  AvailabilitySettingsModalProps
+> = ({ open, onCancel }) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [weeklyPattern, setWeeklyPattern] =
@@ -72,7 +71,9 @@ export const AvailabilitySettingsModal: React.FC<AvailabilitySettingsModalProps>
   const [timezone, setTimezone] = useState("Asia/Ho_Chi_Minh");
 
   const [customDate, setCustomDate] = useState<dayjs.Dayjs | null>(null);
-  const [customDateSlots, setCustomDateSlots] = useState<AvailableTimeSlot[]>([]);
+  const [customDateSlots, setCustomDateSlots] = useState<AvailableTimeSlot[]>(
+    [],
+  );
   const [customDateLoading, setCustomDateLoading] = useState(false);
 
   const customDateKey = useMemo(
@@ -85,7 +86,9 @@ export const AvailabilitySettingsModal: React.FC<AvailabilitySettingsModalProps>
     try {
       const res = await getMyAvailability();
       if (res.availability) {
-        setWeeklyPattern(res.availability.weeklyPattern || EMPTY_WEEKLY_PATTERN);
+        setWeeklyPattern(
+          res.availability.weeklyPattern || EMPTY_WEEKLY_PATTERN,
+        );
         setTimezone(res.availability.timezone || "Asia/Ho_Chi_Minh");
       } else {
         setWeeklyPattern(EMPTY_WEEKLY_PATTERN);
@@ -125,7 +128,9 @@ export const AvailabilitySettingsModal: React.FC<AvailabilitySettingsModalProps>
     defaultEnd = "21:00",
   ) => {
     if (target === "custom") {
-      setCustomDateSlots((prev) => normalizeSlots([...prev, { start: defaultStart, end: defaultEnd }]));
+      setCustomDateSlots((prev) =>
+        normalizeSlots([...prev, { start: defaultStart, end: defaultEnd }]),
+      );
       return;
     }
     setWeeklyPattern((prev) => ({
@@ -137,7 +142,10 @@ export const AvailabilitySettingsModal: React.FC<AvailabilitySettingsModalProps>
     }));
   };
 
-  const removeSlot = (target: keyof WeeklyPattern | "custom", index: number) => {
+  const removeSlot = (
+    target: keyof WeeklyPattern | "custom",
+    index: number,
+  ) => {
     if (target === "custom") {
       setCustomDateSlots((prev) => prev.filter((_, i) => i !== index));
       return;
@@ -223,7 +231,10 @@ export const AvailabilitySettingsModal: React.FC<AvailabilitySettingsModalProps>
   ) => (
     <Space direction="vertical" style={{ width: "100%" }}>
       {slots.map((slot, idx) => (
-        <Space key={`${target}-${idx}`} style={{ width: "100%", justifyContent: "space-between" }}>
+        <Space
+          key={`${target}-${idx}`}
+          style={{ width: "100%", justifyContent: "space-between" }}
+        >
           <Space>
             <TimePicker
               value={dayjs(slot.start, "HH:mm")}
@@ -294,7 +305,14 @@ export const AvailabilitySettingsModal: React.FC<AvailabilitySettingsModalProps>
                 <Divider style={{ margin: "12px 0" }} />
                 <Space direction="vertical" style={{ width: "100%" }} size={12}>
                   {DAY_KEYS.map((day) => (
-                    <div key={day} style={{ border: "1px solid #f0f0f0", borderRadius: 8, padding: 12 }}>
+                    <div
+                      key={day}
+                      style={{
+                        border: "1px solid #f0f0f0",
+                        borderRadius: 8,
+                        padding: 12,
+                      }}
+                    >
                       <Text strong>{DAY_LABELS[day]}</Text>
                       <div style={{ marginTop: 8 }}>
                         {renderSlots(weeklyPattern[day] || [], day)}
@@ -304,7 +322,11 @@ export const AvailabilitySettingsModal: React.FC<AvailabilitySettingsModalProps>
                 </Space>
 
                 <div style={{ marginTop: 16, textAlign: "right" }}>
-                  <Button loading={saving || loading} type="primary" onClick={handleSaveWeekly}>
+                  <Button
+                    loading={saving || loading}
+                    type="primary"
+                    onClick={handleSaveWeekly}
+                  >
                     Lưu lịch tuần
                   </Button>
                 </div>
@@ -319,28 +341,45 @@ export const AvailabilitySettingsModal: React.FC<AvailabilitySettingsModalProps>
                 <Space direction="vertical" style={{ width: "100%" }} size={12}>
                   <Space>
                     <Text>Chọn ngày:</Text>
-                    <DatePicker value={customDate} onChange={setCustomDate} format="DD/MM/YYYY" />
+                    <DatePicker
+                      value={customDate}
+                      onChange={setCustomDate}
+                      format="DD/MM/YYYY"
+                    />
                   </Space>
 
                   {customDateKey ? (
                     <>
                       <Text type="secondary">
-                        Ngày {customDate?.format("DD/MM/YYYY")} sẽ ghi đè lịch tuần.
+                        Ngày {customDate?.format("DD/MM/YYYY")} sẽ ghi đè lịch
+                        tuần.
                       </Text>
                       <div style={{ opacity: customDateLoading ? 0.6 : 1 }}>
                         {renderSlots(customDateSlots, "custom")}
                       </div>
-                      <Space style={{ justifyContent: "flex-end", width: "100%" }}>
-                        <Button danger onClick={handleDeleteCustomDate} loading={saving}>
+                      <Space
+                        style={{ justifyContent: "flex-end", width: "100%" }}
+                      >
+                        <Button
+                          danger
+                          onClick={handleDeleteCustomDate}
+                          loading={saving}
+                        >
                           Xóa override ngày
                         </Button>
-                        <Button type="primary" onClick={handleSaveCustomDate} loading={saving}>
+                        <Button
+                          type="primary"
+                          onClick={handleSaveCustomDate}
+                          loading={saving}
+                        >
                           Lưu override ngày
                         </Button>
                       </Space>
                     </>
                   ) : (
-                    <Text type="secondary">Chọn ngày để chỉnh sửa khung giờ rảnh.</Text>
+                    <Text type="secondary">
+                      Chọn ngày để chỉnh sửa khung giờ rảnh.
+                    </Text>
                   )}
                 </Space>
               </div>
