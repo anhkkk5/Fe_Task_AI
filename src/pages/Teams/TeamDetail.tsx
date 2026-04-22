@@ -205,7 +205,9 @@ export default function TeamDetail() {
 
   const handleCreateTeamTask = async (values: {
     title: string;
+    description?: string;
     status: "todo" | "in_progress" | "completed" | "cancelled";
+    priority?: "low" | "medium" | "high" | "urgent";
     assigneeId: string;
     startAt?: dayjs.Dayjs;
     deadline?: dayjs.Dayjs;
@@ -214,7 +216,9 @@ export default function TeamDetail() {
       setCreatingTask(true);
       await createTeamTask(id!, {
         title: values.title,
+        description: values.description?.trim() || undefined,
         status: values.status,
+        priority: values.priority,
         assigneeId: values.assigneeId,
         startAt: values.startAt?.toISOString(),
         deadline: values.deadline?.toISOString(),
@@ -346,13 +350,22 @@ export default function TeamDetail() {
       key: "level",
       render: (m: TeamMember) => {
         const canEdit = isAdmin || m.userId === currentUserId;
+        const industryLevels = industryInfo?.levels || [];
         const levelLabel =
+          industryLevels.find((l) => l.code === m.level)?.label ||
           catalog?.levels.find((l) => l.code === m.level)?.label ||
           m.level ||
           "-";
         if (!team?.industry) return <span>-</span>;
         if (!canEdit) return <span>{levelLabel}</span>;
         const availableLevels = industryInfo?.availableLevels || [];
+        const levelOptions =
+          industryLevels.length > 0
+            ? industryLevels.map((l) => ({ label: l.label, value: l.code }))
+            : availableLevels.map((code) => {
+                const info = catalog?.levels.find((l) => l.code === code);
+                return { label: info?.label || code, value: code };
+              });
         return (
           <Select
             size="small"
@@ -365,10 +378,7 @@ export default function TeamDetail() {
                 level: val || null,
               })
             }
-            options={availableLevels.map((code) => {
-              const info = catalog?.levels.find((l) => l.code === code);
-              return { label: info?.label || code, value: code };
-            })}
+            options={levelOptions}
           />
         );
       },
@@ -794,6 +804,7 @@ export default function TeamDetail() {
           onFinish={handleCreateTeamTask}
           initialValues={{
             status: "todo",
+            priority: "medium",
             assigneeId: currentUserId,
           }}
         >
@@ -803,6 +814,13 @@ export default function TeamDetail() {
             rules={[{ required: true, message: "Vui lòng nhập tên công việc" }]}
           >
             <Input placeholder="Ví dụ: Chuẩn bị báo cáo sprint" />
+          </Form.Item>
+
+          <Form.Item name="description" label="Mô tả">
+            <Input.TextArea
+              rows={3}
+              placeholder="Mô tả output mong đợi, phạm vi và tiêu chí hoàn thành"
+            />
           </Form.Item>
 
           <Form.Item
@@ -815,6 +833,15 @@ export default function TeamDetail() {
               <Select.Option value="in_progress">Đang làm</Select.Option>
               <Select.Option value="completed">Hoàn thành</Select.Option>
               <Select.Option value="cancelled">Huỷ</Select.Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item name="priority" label="Độ ưu tiên">
+            <Select>
+              <Select.Option value="low">Thấp</Select.Option>
+              <Select.Option value="medium">Trung bình</Select.Option>
+              <Select.Option value="high">Cao</Select.Option>
+              <Select.Option value="urgent">Khẩn cấp</Select.Option>
             </Select>
           </Form.Item>
 

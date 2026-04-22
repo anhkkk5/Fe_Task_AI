@@ -29,6 +29,7 @@ export interface IndustryInfo {
   label: string;
   positions: PositionInfo[];
   availableLevels: LevelCode[];
+  levels?: LevelInfo[];
 }
 
 export interface CatalogResponse {

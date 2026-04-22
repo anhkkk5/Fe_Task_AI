@@ -54,7 +54,9 @@ export interface MemberWorkload {
 
 export interface TeamTaskCreatePayload {
   title: string;
+  description?: string;
   status: "todo" | "in_progress" | "completed" | "cancelled";
+  priority?: "low" | "medium" | "high" | "urgent";
   assigneeId: string;
   startAt?: string;
   deadline?: string;
