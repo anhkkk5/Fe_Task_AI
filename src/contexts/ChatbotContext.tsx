@@ -1,18 +1,24 @@
 import React, { createContext, useContext, useRef, useState } from "react";
 import type { Subtask } from "../services/taskServices";
+import {
+  getOrCreateConversationByParent,
+  type AiMessage,
+} from "../services/chatServices";
 
 export interface SubtaskChatContext {
+  parentTaskId: string;
   subtaskTitle: string;
   subtaskDescription?: string;
   parentTaskTitle: string;
   parentTaskDescription?: string;
-  estimatedDuration?: number; // phút cho subtask này
-  parentEstimatedDuration?: number; // tổng phút của task cha
-  dailyTargetDuration?: number; // phút/ngày tối đa
-  dailyTargetMin?: number; // phút/ngày tối thiểu
+  estimatedDuration?: number;
+  parentEstimatedDuration?: number;
+  dailyTargetDuration?: number;
+  dailyTargetMin?: number;
   difficulty?: string;
   description?: string;
   subtaskKey: string; // `${taskId}:${subtaskIndex}`
+  subtaskIndex: number;
 }
 
 export interface Message {
@@ -25,7 +31,6 @@ interface ChatbotContextValue {
   subtaskContext: SubtaskChatContext | null;
   currentHistory: Message[];
   setCurrentHistory: React.Dispatch<React.SetStateAction<Message[]>>;
-  // conversationId đang active (dùng để lưu lịch sử vào BE)
   activeConversationId: string | null;
   setActiveConversationId: React.Dispatch<React.SetStateAction<string | null>>;
   openWithSubtask: (
@@ -51,6 +56,57 @@ const DEFAULT_WELCOME: Message = {
   text: "👋 Xin chào! Tôi là AI Assistant của Task Management. Tôi có thể giúp bạn:\n\n- **Quản lý công việc** - Gợi ý cách tổ chức và phân loại task\n- **Lập kế hoạch** - Hỗ trợ lên lịch và đặt deadline hợp lý\n- **Phân tích** - Đưa ra nhận xét về thói quen làm việc\n\nBạn cần hỗ trợ gì?",
 };
 
+const GENERAL_KEY = "__general__";
+
+const messagesToHistory = (messages: AiMessage[]): Message[] =>
+  messages
+    .filter((m) => m.role === "user" || m.role === "assistant")
+    .map((m) => ({
+      role: m.role === "assistant" ? ("model" as const) : ("user" as const),
+      text: m.content,
+    }));
+
+const buildIntroMessage = (
+  subtask: Subtask,
+  parentTaskTitle: string,
+): Message => {
+  const difficultyLabel =
+    subtask.difficulty === "easy"
+      ? "Dễ"
+      : subtask.difficulty === "medium"
+        ? "Trung bình"
+        : subtask.difficulty === "hard"
+          ? "Khó"
+          : "";
+
+  const durationStr = subtask.estimatedDuration
+    ? `${subtask.estimatedDuration} phút`
+    : "";
+
+  return {
+    role: "model",
+    text:
+      `📚 Chào bạn! Tôi sẽ hướng dẫn bạn làm **${subtask.title}** — một bước trong "${parentTaskTitle}".\n\n` +
+      (difficultyLabel ? `🎯 Độ khó: **${difficultyLabel}**\n` : "") +
+      (durationStr ? `⏱️ Thời gian dự kiến: **${durationStr}**\n` : "") +
+      (subtask.description ? `📝 Nội dung: ${subtask.description}\n` : "") +
+      `\nĐể hỗ trợ tốt nhất, bạn cho mình biết:\n` +
+      `- 🧩 Bạn muốn tiếp cận theo hướng nào (lý thuyết, thực hành, hay tôi code/làm mẫu hộ)?\n` +
+      `- 🛠️ Có công cụ/công nghệ/ngôn ngữ cụ thể nào bạn muốn dùng không?`,
+  };
+};
+
+const buildTransitionMessage = (
+  subtask: Subtask,
+  parentTaskTitle: string,
+): Message => ({
+  role: "model",
+  text:
+    `🔀 Chuyển sang bước tiếp theo: **${subtask.title}** (trong "${parentTaskTitle}").\n` +
+    (subtask.description ? `📝 ${subtask.description}\n` : "") +
+    `\nMình vẫn giữ ngữ cảnh và lựa chọn trước đó của bạn. Bạn muốn tiếp tục hướng cũ hay đổi cách tiếp cận?`,
+});
+
 export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -64,10 +120,19 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({
     string | null
   >(null);
 
-  // Map lưu history + conversationId riêng cho từng subtask/general
+  // Cache by parent task id (or __general__). All subtasks of the same parent
+  // share ONE thread, so we only need to key by parentTaskId on the FE side.
   const conversationMap = useRef<
     Map<string, { history: Message[]; convId: string | null }>
   >(new Map());
+
+  const persistCurrent = (key: string | null) => {
+    if (!key) return;
+    conversationMap.current.set(key, {
+      history: currentHistory,
+      convId: activeConversationId,
+    });
+  };
 
   const openWithSubtask = (
     subtask: Subtask,
@@ -83,6 +148,7 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({
   ) => {
     const subtaskKey = `${taskId}:${index}`;
     const ctx: SubtaskChatContext = {
+      parentTaskId: taskId,
       subtaskTitle: subtask.title,
       subtaskDescription: subtask.description,
       parentTaskTitle,
@@ -94,68 +160,79 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({
       difficulty: subtask.difficulty,
       description: subtask.description,
       subtaskKey,
+      subtaskIndex: index,
     };
 
-    // Lưu history + convId hiện tại
-    const currentKey = subtaskContext
-      ? subtaskContext.subtaskKey
-      : "__general__";
-    conversationMap.current.set(currentKey, {
-      history: currentHistory,
-      convId: activeConversationId,
-    });
+    // Persist whatever is currently on screen before switching
+    const previousKey = subtaskContext
+      ? subtaskContext.parentTaskId
+      : GENERAL_KEY;
+    persistCurrent(previousKey);
 
-    // Load history của subtask mới (hoặc tạo initial message)
-    const existing = conversationMap.current.get(subtaskKey);
-    if (existing) {
-      setCurrentHistory(existing.history);
-      setActiveConversationId(existing.convId);
-    } else {
-      const difficultyLabel =
-        subtask.difficulty === "easy"
-          ? "Dễ"
-          : subtask.difficulty === "medium"
-            ? "Trung bình"
-            : subtask.difficulty === "hard"
-              ? "Khó"
-              : "";
+    const switchingWithinSameParent =
+      !!subtaskContext && subtaskContext.parentTaskId === taskId;
 
-      const durationStr = subtask.estimatedDuration
-        ? `${subtask.estimatedDuration} phút`
-        : "";
+    const cached = conversationMap.current.get(taskId);
 
-      const initialMsg: Message = {
-        role: "model",
-        text:
-          `📚 Chào bạn! Tôi sẽ hướng dẫn bạn học **${subtask.title}** — một phần trong lộ trình "${parentTaskTitle}".\n\n` +
-          (difficultyLabel ? `🎯 Độ khó: **${difficultyLabel}**\n` : "") +
-          (durationStr ? `⏱️ Thời gian dự kiến: **${durationStr}**\n` : "") +
-          (subtask.description ? `📝 Nội dung: ${subtask.description}\n` : "") +
-          `\nBạn muốn bắt đầu từ đâu?\n` +
-          `- 📖 **Lý thuyết** — Giải thích khái niệm từ đầu\n` +
-          `- 🏋️ **Bài tập** — Thực hành ngay với ví dụ\n` +
-          `- 💡 **Mẹo học** — Cách ghi nhớ nhanh và hiệu quả`,
-      };
-      setCurrentHistory([initialMsg]);
-      setActiveConversationId(null); // new conversation, will be created on first message
+    if (cached) {
+      // Same parent → same conversation. Append a transition notice if
+      // the user is jumping to another subtask inside that parent.
+      if (
+        switchingWithinSameParent &&
+        subtaskContext?.subtaskKey !== subtaskKey
+      ) {
+        setCurrentHistory([
+          ...cached.history,
+          buildTransitionMessage(subtask, parentTaskTitle),
+        ]);
+      } else {
+        setCurrentHistory(cached.history);
+      }
+      setActiveConversationId(cached.convId);
+      setSubtaskContext(ctx);
+      setIsOpen(true);
+      return;
     }
 
+    // First time opening chat for this parent task → hydrate from BE if exists
     setSubtaskContext(ctx);
     setIsOpen(true);
+    setCurrentHistory([buildIntroMessage(subtask, parentTaskTitle)]);
+    setActiveConversationId(null);
+
+    (async () => {
+      try {
+        const { conversation, messages } = await getOrCreateConversationByParent(
+          taskId,
+          parentTaskTitle,
+        );
+        const history = messagesToHistory(messages);
+        // Prepend our local intro if BE thread is empty so UX feels warm.
+        const nextHistory =
+          history.length === 0
+            ? [buildIntroMessage(subtask, parentTaskTitle)]
+            : history;
+        conversationMap.current.set(taskId, {
+          history: nextHistory,
+          convId: conversation.id,
+        });
+        setCurrentHistory(nextHistory);
+        setActiveConversationId(conversation.id);
+      } catch (err) {
+        // Silent fail — keep the local intro. BE will still create a thread
+        // when the user sends the first message (parentTaskId resolves it).
+        console.warn("[Chatbot] getOrCreateConversationByParent failed", err);
+      }
+    })();
   };
 
   const openGeneral = () => {
-    // Lưu history subtask hiện tại nếu có
-    const currentKey = subtaskContext
-      ? subtaskContext.subtaskKey
-      : "__general__";
-    conversationMap.current.set(currentKey, {
-      history: currentHistory,
-      convId: activeConversationId,
-    });
+    const previousKey = subtaskContext
+      ? subtaskContext.parentTaskId
+      : GENERAL_KEY;
+    persistCurrent(previousKey);
 
-    // Load general history
-    const existing = conversationMap.current.get("__general__");
+    const existing = conversationMap.current.get(GENERAL_KEY);
     if (existing && existing.history.length > 1) {
       setCurrentHistory(existing.history);
       setActiveConversationId(existing.convId);
@@ -169,14 +246,10 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const close = () => {
-    // Lưu history trước khi đóng
-    const currentKey = subtaskContext
-      ? subtaskContext.subtaskKey
-      : "__general__";
-    conversationMap.current.set(currentKey, {
-      history: currentHistory,
-      convId: activeConversationId,
-    });
+    const previousKey = subtaskContext
+      ? subtaskContext.parentTaskId
+      : GENERAL_KEY;
+    persistCurrent(previousKey);
     setIsOpen(false);
   };
 

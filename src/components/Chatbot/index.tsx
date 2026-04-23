@@ -129,6 +129,7 @@ const Chatbot: React.FC = () => {
         const res = await sendChatMessage({
           message: lastUserMsg.text,
           conversationId: activeConversationId ?? undefined,
+          parentTaskId: subtaskContext?.parentTaskId,
           subtaskContext: subtaskContext
             ? {
                 subtaskTitle: subtaskContext.subtaskTitle,
@@ -140,6 +141,8 @@ const Chatbot: React.FC = () => {
                 dailyTargetDuration: subtaskContext.dailyTargetDuration,
                 difficulty: subtaskContext.difficulty,
                 description: subtaskContext.description,
+                subtaskKey: subtaskContext.subtaskKey,
+                subtaskIndex: subtaskContext.subtaskIndex,
               }
             : undefined,
         });

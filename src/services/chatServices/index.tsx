@@ -42,6 +42,7 @@ export const getConversationMessages = async (
 export const sendChatMessage = async (params: {
   message: string;
   conversationId?: string;
+  parentTaskId?: string;
   systemPrompt?: string;
   subtaskContext?: {
     subtaskTitle?: string;
@@ -53,6 +54,8 @@ export const sendChatMessage = async (params: {
     dailyTargetDuration?: number;
     difficulty?: string;
     description?: string;
+    subtaskKey?: string;
+    subtaskIndex?: number;
   };
   fewShotMessages?: { role: "user" | "assistant"; content: string }[];
 }): Promise<{
@@ -60,6 +63,21 @@ export const sendChatMessage = async (params: {
   conversationId: string;
 }> => {
   return await post("/ai/chat", params);
+};
+
+// Get or create conversation by parent task (shared thread across subtasks)
+export const getOrCreateConversationByParent = async (
+  parentTaskId: string,
+  title?: string,
+): Promise<{
+  conversation: AiConversation;
+  messages: AiMessage[];
+  created: boolean;
+}> => {
+  const query = title ? `?title=${encodeURIComponent(title)}` : "";
+  return await get(
+    `/ai/conversations/by-parent/${encodeURIComponent(parentTaskId)}${query}`,
+  );
 };
 
 // Delete conversation
