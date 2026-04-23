@@ -13,6 +13,7 @@ import AcceptInvite from "../pages/Teams/AcceptInvite";
 import Calendar from "../pages/Calendar";
 import Notifications from "../pages/Notifications";
 import Chat from "../pages/Chat";
+import Messenger from "../pages/Messenger";
 import GoogleCallback from "../pages/GoogleCallback";
 
 export const routes = [
@@ -86,6 +87,10 @@ export const routes = [
           {
             path: "chat",
             element: <Chat />,
+          },
+          {
+            path: "messenger",
+            element: <Messenger />,
           },
         ],
       },

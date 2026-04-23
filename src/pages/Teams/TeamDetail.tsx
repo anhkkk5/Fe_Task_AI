@@ -20,6 +20,7 @@ import {
 } from "antd";
 import {
   ArrowLeftOutlined,
+  MessageOutlined,
   UserAddOutlined,
   DeleteOutlined,
   EditOutlined,
@@ -779,6 +780,26 @@ export default function TeamDetail() {
             {myRole && (
               <Tag color={roleColors[myRole]}>{roleLabels[myRole]}</Tag>
             )}
+            <Button
+              icon={<MessageOutlined />}
+              type="primary"
+              onClick={async () => {
+                try {
+                  const { getOrCreateTeamConversation } =
+                    await import("../../services/messengerServices");
+                  const res = await getOrCreateTeamConversation(team.id);
+                  window.dispatchEvent(
+                    new CustomEvent("messenger:openChat", {
+                      detail: { conversationId: res.conversation.id },
+                    }),
+                  );
+                } catch {
+                  message.error("Không thể mở chat nhóm");
+                }
+              }}
+            >
+              Chat nhóm
+            </Button>
             {isOwner && (
               <Popconfirm
                 title="Xóa nhóm này?"

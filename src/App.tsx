@@ -4,6 +4,8 @@ import AllRoute from "./routes";
 import { ConfigProvider } from "antd";
 import Chatbot from "./components/Chatbot";
 import { ChatbotProvider } from "./contexts/ChatbotContext";
+import { MessengerProvider } from "./contexts/MessengerContext";
+import MessengerRoot from "./components/Messenger/MessengerRoot";
 
 // MongoDB-Style Theme - 60-30-10 Rule
 // 60%: #FFFFFF / #F5F7FA (White/Light Gray - Background)
@@ -89,8 +91,11 @@ function App() {
   return (
     <ConfigProvider theme={mongoTheme}>
       <ChatbotProvider>
-        <AllRoute />
-        <Chatbot />
+        <MessengerProvider>
+          <AllRoute />
+          <Chatbot />
+          <MessengerRoot />
+        </MessengerProvider>
       </ChatbotProvider>
     </ConfigProvider>
   );
