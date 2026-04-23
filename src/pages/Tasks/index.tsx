@@ -33,7 +33,7 @@ import {
   ArrowLeftOutlined,
   ScheduleOutlined,
 } from "@ant-design/icons";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import AITaskScheduler from "../../components/AITaskScheduler";
 import StatusDropdown from "../../components/StatusDropdown";
 import { AIBreakdownButton } from "../../components/AIBreakdownButton";
@@ -215,9 +215,11 @@ interface TaskItem {
   parentTaskId?: string;
   subtasks?: TaskItem[];
   isSubtask?: boolean;
+  teamId?: string;
 }
 
 function Tasks() {
+  const navigate = useNavigate();
   const {
     tasks: apiTasks,
     loading,
@@ -252,6 +254,18 @@ function Tasks() {
   // Delete confirmation
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingTask, setDeletingTask] = useState<TaskItem | null>(null);
+
+  const redirectToTeamTask = (
+    task: TaskItem,
+    action: "sửa" | "xóa" | "đổi trạng thái",
+  ) => {
+    if (!task.teamId) return false;
+    message.warning(
+      `Task này thuộc team. Vui lòng vào trang Team để ${action}. Đang chuyển hướng...`,
+    );
+    navigate(`/teams/${task.teamId}`);
+    return true;
+  };
 
   // Handle status change from dropdown
   const handleStatusChange = (taskId: string, newStatus: string) => {
@@ -305,6 +319,10 @@ function Tasks() {
       key: "status",
       width: 140,
       render: (status: string, record: TaskItem) => {
+        if (record.teamId) {
+          return <Tag color="geekblue">Quản lý ở Team</Tag>;
+        }
+
         // status is already normalized in tasks mapping
         // Just convert to dropdown format (only "todo" or "scheduled")
         const dropdownStatus: "todo" | "scheduled" =
@@ -424,6 +442,8 @@ function Tasks() {
 
   // Handle edit click
   const onEditClick = (task: TaskItem) => {
+    if (redirectToTeamTask(task, "sửa")) return;
+
     setEditingTask(task);
     editForm.setFieldsValue({
       title: task.title,
@@ -546,6 +566,8 @@ function Tasks() {
 
   // Handle delete click
   const onDeleteClick = (task: TaskItem) => {
+    if (redirectToTeamTask(task, "xóa")) return;
+
     setDeletingTask(task);
     setIsDeleteModalOpen(true);
   };
@@ -588,6 +610,7 @@ function Tasks() {
       dailyTargetMin: t.dailyTargetMin,
       parentTaskId: t.parentTaskId,
       isSubtask: !!t.parentTaskId,
+      teamId: t.teamAssignment?.teamId,
     }));
 
   // Group subtasks under parent tasks

@@ -62,6 +62,16 @@ export interface TeamTaskCreatePayload {
   deadline?: string;
 }
 
+export interface TeamTaskUpdatePayload {
+  title?: string;
+  description?: string;
+  status?: "todo" | "scheduled" | "in_progress" | "completed" | "cancelled";
+  priority?: "low" | "medium" | "high" | "urgent";
+  assigneeId?: string;
+  startAt?: string;
+  deadline?: string;
+}
+
 // Team CRUD
 export const listTeams = () =>
   axiosInstance.get<Team[]>("/teams").then((r) => r.data);
@@ -151,6 +161,24 @@ export const getTeamTasks = (
     .then((r) => r.data);
 export const createTeamTask = (teamId: string, data: TeamTaskCreatePayload) =>
   axiosInstance.post(`/teams/${teamId}/tasks`, data).then((r) => r.data);
+export const updateTeamTask = (
+  teamId: string,
+  taskId: string,
+  data: TeamTaskUpdatePayload,
+) =>
+  axiosInstance
+    .patch(`/teams/${teamId}/tasks/${taskId}`, data)
+    .then((r) => r.data);
+export const updateTeamTaskStatus = (
+  teamId: string,
+  taskId: string,
+  status: "todo" | "scheduled" | "in_progress" | "completed" | "cancelled",
+) =>
+  axiosInstance
+    .patch(`/teams/${teamId}/tasks/${taskId}/status`, { status })
+    .then((r) => r.data);
+export const deleteTeamTask = (teamId: string, taskId: string) =>
+  axiosInstance.delete(`/teams/${teamId}/tasks/${taskId}`).then((r) => r.data);
 export const getTeamBoard = (teamId: string) =>
   axiosInstance.get(`/teams/${teamId}/board`).then((r) => r.data);
 export const assignTask = (

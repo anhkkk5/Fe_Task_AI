@@ -22,6 +22,7 @@ import {
   ArrowLeftOutlined,
   UserAddOutlined,
   DeleteOutlined,
+  EditOutlined,
   CheckCircleFilled,
   LoadingOutlined,
 } from "@ant-design/icons";
@@ -31,12 +32,16 @@ import {
   type Team,
   type TeamMember,
   type TeamRole,
+  deleteTeam,
   inviteMember,
   listPendingInvites,
   revokeInvite,
   removeMember,
   getTeamBoard,
   createTeamTask,
+  updateTeamTask,
+  updateTeamTaskStatus,
+  deleteTeamTask,
   lookupUserByEmail,
   updateMemberProfile,
 } from "../../services/teamServices";
@@ -102,6 +107,12 @@ export default function TeamDetail() {
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [taskForm] = Form.useForm();
   const [creatingTask, setCreatingTask] = useState(false);
+  const [taskEditModalOpen, setTaskEditModalOpen] = useState(false);
+  const [taskEditForm] = Form.useForm();
+  const [editingTask, setEditingTask] = useState<any>(null);
+  const [updatingTask, setUpdatingTask] = useState(false);
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
+  const [deletingTeam, setDeletingTeam] = useState(false);
   const [taskKeyword, setTaskKeyword] = useState("");
   const [taskStatusFilter, setTaskStatusFilter] = useState<string>("all");
   const [taskAssigneeFilter, setTaskAssigneeFilter] = useState<string>("all");
@@ -123,6 +134,8 @@ export default function TeamDetail() {
 
   const myRole = team?.members.find((m) => m.userId === currentUserId)?.role;
   const isAdmin = canManageByRole(team?.teamType, myRole);
+  const isOwner = team?.ownerId === currentUserId;
+  const canCreateTeamTask = !!myRole && myRole !== "viewer";
 
   const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
   useEffect(() => {
@@ -148,6 +161,119 @@ export default function TeamDetail() {
       message.error(
         err?.response?.data?.message || "Không thể cập nhật vị trí / level",
       );
+    }
+  };
+
+  const handleDeleteTeam = async () => {
+    try {
+      setDeletingTeam(true);
+      await deleteTeam(id!);
+      message.success("Đã xóa nhóm");
+      navigate("/teams");
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || "Không thể xóa nhóm");
+    } finally {
+      setDeletingTeam(false);
+    }
+  };
+
+  const canManageTask = (task: any) => {
+    const assignerId = String(task?.teamAssignment?.assignedBy || "");
+    return Boolean(isOwner || assignerId === String(currentUserId));
+  };
+
+  const canUpdateTaskStatus = (task: any) => {
+    const assigneeId = String(task?.teamAssignment?.assigneeId || "");
+    return canManageTask(task) || assigneeId === String(currentUserId);
+  };
+
+  const openEditTaskModal = (task: any) => {
+    if (!canManageTask(task)) {
+      message.warning(
+        "Chỉ người giao việc hoặc owner mới có thể chỉnh sửa task",
+      );
+      return;
+    }
+    setEditingTask(task);
+    taskEditForm.setFieldsValue({
+      title: task.title,
+      description: task.description,
+      priority: task.priority || "medium",
+      assigneeId: task?.teamAssignment?.assigneeId,
+      status: task.status || "todo",
+      startAt: task?.teamAssignment?.startAt
+        ? dayjs(task.teamAssignment.startAt)
+        : null,
+      deadline: task?.deadline ? dayjs(task.deadline) : null,
+    });
+    setTaskEditModalOpen(true);
+  };
+
+  const handleEditTeamTask = async (values: any) => {
+    if (!editingTask) return;
+
+    try {
+      setUpdatingTask(true);
+      await updateTeamTask(id!, String(editingTask._id || editingTask.id), {
+        title: values.title,
+        description: values.description?.trim() || undefined,
+        priority: values.priority,
+        assigneeId: values.assigneeId,
+        status: values.status,
+        startAt: values.startAt?.toISOString(),
+        deadline: values.deadline?.toISOString(),
+      });
+      message.success("Đã cập nhật công việc nhóm");
+      setTaskEditModalOpen(false);
+      setEditingTask(null);
+      taskEditForm.resetFields();
+      await loadTeam();
+    } catch (err: any) {
+      message.error(
+        err?.response?.data?.message || "Không thể cập nhật công việc",
+      );
+    } finally {
+      setUpdatingTask(false);
+    }
+  };
+
+  const handleUpdateTaskStatus = async (task: any, status: string) => {
+    if (!canUpdateTaskStatus(task)) {
+      message.warning("Bạn không có quyền cập nhật trạng thái task này");
+      return;
+    }
+
+    try {
+      await updateTeamTaskStatus(
+        id!,
+        String(task._id || task.id),
+        status as
+          | "todo"
+          | "scheduled"
+          | "in_progress"
+          | "completed"
+          | "cancelled",
+      );
+      message.success("Đã cập nhật trạng thái");
+      await loadTeam();
+    } catch (err: any) {
+      message.error(
+        err?.response?.data?.message || "Không thể cập nhật trạng thái",
+      );
+    }
+  };
+
+  const handleDeleteTask = async (task: any) => {
+    const taskId = String(task._id || task.id);
+    try {
+      setDeletingTaskId(taskId);
+      await deleteTeamTask(id!, taskId);
+      message.success("Đã xóa công việc nhóm");
+      await loadTeam();
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || "Không thể xóa công việc");
+    } finally {
+      setDeletingTaskId(null);
     }
   };
 
@@ -522,20 +648,41 @@ export default function TeamDetail() {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      render: (s: string) => {
+      render: (s: string, task: any) => {
         const map: Record<string, string> = {
           todo: "default",
+          scheduled: "processing",
           in_progress: "processing",
           completed: "success",
           cancelled: "error",
         };
         const labels: Record<string, string> = {
           todo: "Chờ",
+          scheduled: "Đã lên lịch",
           in_progress: "Đang làm",
           completed: "Hoàn thành",
           cancelled: "Huỷ",
         };
-        return <Badge status={map[s] as any} text={labels[s] || s} />;
+
+        if (!canUpdateTaskStatus(task)) {
+          return <Badge status={map[s] as any} text={labels[s] || s} />;
+        }
+
+        return (
+          <Select
+            value={s}
+            size="small"
+            style={{ width: 140 }}
+            onChange={(nextStatus) => handleUpdateTaskStatus(task, nextStatus)}
+            options={[
+              { value: "todo", label: "Chờ" },
+              { value: "scheduled", label: "Đã lên lịch" },
+              { value: "in_progress", label: "Đang làm" },
+              { value: "completed", label: "Hoàn thành" },
+              { value: "cancelled", label: "Huỷ" },
+            ]}
+          />
+        );
       },
     },
     {
@@ -568,6 +715,48 @@ export default function TeamDetail() {
       render: (task: any) =>
         task?.deadline ? dayjs(task.deadline).format("DD/MM/YYYY HH:mm") : "-",
     },
+    {
+      title: "Thao tác",
+      key: "actions",
+      render: (task: any) => {
+        if (!canManageTask(task)) {
+          return (
+            <span style={{ color: "var(--color-text-tertiary)", fontSize: 12 }}>
+              Chỉ người giao/owner
+            </span>
+          );
+        }
+
+        return (
+          <Space>
+            <Button
+              type="text"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => openEditTaskModal(task)}
+            >
+              Sửa
+            </Button>
+            <Popconfirm
+              title="Xóa công việc này?"
+              okText="Xóa"
+              cancelText="Hủy"
+              onConfirm={() => handleDeleteTask(task)}
+            >
+              <Button
+                type="text"
+                danger
+                size="small"
+                icon={<DeleteOutlined />}
+                loading={deletingTaskId === String(task._id || task.id)}
+              >
+                Xóa
+              </Button>
+            </Popconfirm>
+          </Space>
+        );
+      },
+    },
   ];
 
   return (
@@ -589,6 +778,20 @@ export default function TeamDetail() {
             <Tag color="blue">{team.members.length} thành viên</Tag>
             {myRole && (
               <Tag color={roleColors[myRole]}>{roleLabels[myRole]}</Tag>
+            )}
+            {isOwner && (
+              <Popconfirm
+                title="Xóa nhóm này?"
+                description="Toàn bộ dữ liệu nhóm và công việc nhóm sẽ bị ẩn khỏi hệ thống."
+                okText="Xóa nhóm"
+                cancelText="Hủy"
+                okButtonProps={{ danger: true, loading: deletingTeam }}
+                onConfirm={handleDeleteTeam}
+              >
+                <Button danger size="small" loading={deletingTeam}>
+                  Xóa nhóm
+                </Button>
+              </Popconfirm>
             )}
           </div>
         </div>
@@ -761,7 +964,15 @@ export default function TeamDetail() {
 
                     <Button
                       type="primary"
-                      onClick={() => setTaskModalOpen(true)}
+                      onClick={() => {
+                        if (!canCreateTeamTask) {
+                          message.warning(
+                            "Viewer không thể tạo công việc nhóm",
+                          );
+                          return;
+                        }
+                        setTaskModalOpen(true);
+                      }}
                     >
                       Thêm công việc nhóm
                     </Button>
@@ -869,6 +1080,83 @@ export default function TeamDetail() {
           </Form.Item>
 
           <Form.Item name="startAt" label="Thời gian bắt đầu">
+            <DatePicker
+              showTime
+              style={{ width: "100%" }}
+              format="DD/MM/YYYY HH:mm"
+            />
+          </Form.Item>
+
+          <Form.Item name="deadline" label="Deadline">
+            <DatePicker
+              showTime
+              style={{ width: "100%" }}
+              format="DD/MM/YYYY HH:mm"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Chỉnh sửa công việc nhóm"
+        open={taskEditModalOpen}
+        onCancel={() => {
+          setTaskEditModalOpen(false);
+          setEditingTask(null);
+          taskEditForm.resetFields();
+        }}
+        onOk={() => taskEditForm.submit()}
+        confirmLoading={updatingTask}
+        okText="Lưu"
+        cancelText="Huỷ"
+      >
+        <Form
+          form={taskEditForm}
+          layout="vertical"
+          onFinish={handleEditTeamTask}
+        >
+          <Form.Item
+            name="title"
+            label="Tên công việc"
+            rules={[{ required: true, message: "Vui lòng nhập tên công việc" }]}
+          >
+            <Input />
+          </Form.Item>
+
+          <Form.Item name="description" label="Mô tả">
+            <Input.TextArea rows={3} />
+          </Form.Item>
+
+          <Form.Item name="status" label="Trạng thái">
+            <Select>
+              <Select.Option value="todo">Chờ</Select.Option>
+              <Select.Option value="scheduled">Đã lên lịch</Select.Option>
+              <Select.Option value="in_progress">Đang làm</Select.Option>
+              <Select.Option value="completed">Hoàn thành</Select.Option>
+              <Select.Option value="cancelled">Huỷ</Select.Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item name="priority" label="Độ ưu tiên">
+            <Select>
+              <Select.Option value="low">Thấp</Select.Option>
+              <Select.Option value="medium">Trung bình</Select.Option>
+              <Select.Option value="high">Cao</Select.Option>
+              <Select.Option value="urgent">Khẩn cấp</Select.Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item name="assigneeId" label="Người thực hiện">
+            <Select>
+              {team.members.map((m) => (
+                <Select.Option key={m.userId} value={m.userId}>
+                  {m.name} ({m.email})
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item name="startAt" label="Bắt đầu">
             <DatePicker
               showTime
               style={{ width: "100%" }}
