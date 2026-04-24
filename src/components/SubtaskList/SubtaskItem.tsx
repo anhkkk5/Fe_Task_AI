@@ -1,5 +1,5 @@
 import React from "react";
-import { Badge, Select, Tag, Typography, Space } from "antd";
+import { Select, Tag, Typography, Space } from "antd";
 import { MessageOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import type { Subtask, SubtaskStatus } from "../../services/taskServices";
 
@@ -44,7 +44,7 @@ const SubtaskItem: React.FC<SubtaskItemProps> = ({
         marginBottom: 8,
       }}
     >
-      <Space direction="vertical" size={4} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={4} style={{ width: "100%" }}>
         {/* Title row */}
         <Space style={{ width: "100%", justifyContent: "space-between" }}>
           <Text

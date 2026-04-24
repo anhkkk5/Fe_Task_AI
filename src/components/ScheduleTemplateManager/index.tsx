@@ -172,7 +172,7 @@ export default function ScheduleTemplateManager({
                   </Space>
                 }
                 description={
-                  <Space direction="vertical" size="small">
+                  <Space orientation="vertical" size="small">
                     {template.description && (
                       <Text type="secondary">{template.description}</Text>
                     )}

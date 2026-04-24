@@ -14,10 +14,10 @@ import {
   Badge,
   Avatar,
   Tooltip,
-  message,
   Modal,
   Form,
   DatePicker,
+  App,
 } from "antd";
 import {
   PlusOutlined,
@@ -219,6 +219,7 @@ interface TaskItem {
 }
 
 function Tasks() {
+  const { message } = App.useApp();
   const navigate = useNavigate();
   const {
     tasks: apiTasks,
@@ -268,7 +269,7 @@ function Tasks() {
   };
 
   // Handle status change from dropdown
-  const handleStatusChange = (taskId: string, newStatus: string) => {
+  const handleStatusChange = () => {
     // Refresh tasks list after status change
     fetchTasks();
   };
@@ -279,23 +280,31 @@ function Tasks() {
       title: "Công việc",
       dataIndex: "title",
       key: "title",
+      width: 260,
       render: (text: string, record: TaskItem) => (
         <div className="task-title-cell">
           <div className="task-title-row">
-            <Text strong>{text}</Text>
+            <Tooltip
+              title={record.description || "Không có mô tả"}
+              placement="topLeft"
+            >
+              <Text strong className="task-title-text">
+                {text}
+              </Text>
+            </Tooltip>
             {record.aiAssisted && (
               <Tooltip title="AI đã hỗ trợ">
                 <RobotOutlined className="ai-badge" />
               </Tooltip>
             )}
           </div>
-          <Text type="secondary" className="task-desc">
-            {record.description}
-          </Text>
           <div className="task-tags">
-            {record.tags.map((tag) => (
+            {record.tags.slice(0, 2).map((tag) => (
               <Tag key={tag}>{tag}</Tag>
             ))}
+            {record.tags.length > 2 && (
+              <Tag>{`+${record.tags.length - 2}`}</Tag>
+            )}
           </div>
         </div>
       ),
@@ -304,12 +313,13 @@ function Tasks() {
       title: "Người thực hiện",
       dataIndex: "assignee",
       key: "assignee",
+      width: 140,
       render: (assignee: string) => (
         <div className="assignee-cell">
           <Avatar size="small" style={{ backgroundColor: "#4a90e2" }}>
             {assignee?.charAt(0) || "?"}
           </Avatar>
-          <Text>{assignee || "Chưa gán"}</Text>
+          <Text className="assignee-name">{assignee || "Chưa gán"}</Text>
         </div>
       ),
     },
@@ -318,9 +328,27 @@ function Tasks() {
       dataIndex: "status",
       key: "status",
       width: 140,
-      render: (status: string, record: TaskItem) => {
+      render: (_: string, record: TaskItem) => {
         if (record.teamId) {
           return <Tag color="geekblue">Quản lý ở Team</Tag>;
+        }
+
+        return <Tag color="default">Cá nhân</Tag>;
+      },
+    },
+    {
+      title: "Lên lịch",
+      dataIndex: "status",
+      key: "scheduleStatus",
+      width: 130,
+      render: (status: string, record: TaskItem) => {
+        if (record.teamId) {
+          const isScheduled = status === "scheduled";
+          return (
+            <Tag color={isScheduled ? "green" : "orange"}>
+              {isScheduled ? "Đã lên lịch" : "Chưa xử lý"}
+            </Tag>
+          );
         }
 
         // status is already normalized in tasks mapping
@@ -328,17 +356,11 @@ function Tasks() {
         const dropdownStatus: "todo" | "scheduled" =
           status === "scheduled" ? "scheduled" : "todo";
 
-        console.log(
-          `[StatusDropdown] Task: ${record.title}, DB Status: ${status}, Dropdown Status: ${dropdownStatus}`,
-        );
-
         return (
           <StatusDropdown
             taskId={record.id}
             currentStatus={dropdownStatus}
-            onStatusChange={(newStatus) =>
-              handleStatusChange(record.id, newStatus)
-            }
+            onStatusChange={handleStatusChange}
           />
         );
       },
@@ -362,19 +384,13 @@ function Tasks() {
       title: "Ngày bắt đầu",
       dataIndex: "startAt",
       key: "startAt",
-      width: 140,
+      width: 120,
       render: (date?: string) => {
         if (!date) return <Text type="secondary">-</Text>;
         return (
           <Text>
             <CalendarOutlined style={{ marginRight: 4 }} />
-            {new Date(date).toLocaleString("vi-VN", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+            {new Date(date).toLocaleDateString("vi-VN")}
           </Text>
         );
       },
@@ -389,13 +405,7 @@ function Tasks() {
         return (
           <Text>
             <CalendarOutlined style={{ marginRight: 4 }} />
-            {new Date(date).toLocaleString("vi-VN", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+            {new Date(date).toLocaleDateString("vi-VN")}
           </Text>
         );
       },
@@ -529,9 +539,22 @@ function Tasks() {
         setSubtasks((res.task.aiBreakdown as Subtask[]) ?? []);
         fetchTasks();
       } catch (err: any) {
-        message.error(
-          err?.response?.data?.message || "Không thể tạo AI Breakdown",
+        console.error(
+          "[AI Breakdown] error:",
+          err?.response?.status,
+          err?.response?.data,
+          err?.message,
         );
+        const errMsg =
+          err?.response?.data?.message ||
+          (err?.response?.status === 429
+            ? "AI đang bị giới hạn request. Vui lòng thử lại sau."
+            : err?.message === "Network Error"
+              ? "Không thể kết nối đến server."
+              : err?.code === "ECONNABORTED"
+                ? "Request bị timeout. Vui lòng thử lại."
+                : "Không thể tạo AI Breakdown. Kiểm tra console để xem chi tiết.");
+        message.error(errMsg);
       } finally {
         setBreakdownLoading(false);
       }
@@ -556,9 +579,22 @@ function Tasks() {
       fetchTasks();
       message.success("Đã tạo lại AI Breakdown!");
     } catch (err: any) {
-      message.error(
-        err?.response?.data?.message || "Không thể tạo lại AI Breakdown",
+      console.error(
+        "[AI Breakdown Regen] error:",
+        err?.response?.status,
+        err?.response?.data,
+        err?.message,
       );
+      const errMsg =
+        err?.response?.data?.message ||
+        (err?.response?.status === 429
+          ? "AI đang bị giới hạn request. Vui lòng thử lại sau."
+          : err?.message === "Network Error"
+            ? "Không thể kết nối đến server."
+            : err?.code === "ECONNABORTED"
+              ? "Request bị timeout. Vui lòng thử lại."
+              : "Không thể tạo lại AI Breakdown. Kiểm tra console để xem chi tiết.");
+      message.error(errMsg);
     } finally {
       setBreakdownLoading(false);
     }
@@ -778,6 +814,8 @@ function Tasks() {
                 loading={loading}
                 pagination={{ pageSize: 10 }}
                 rowKey="id"
+                tableLayout="fixed"
+                scroll={{ x: 1380 }}
               />
             </Card>
           </Col>
@@ -1040,7 +1078,7 @@ function Tasks() {
         >
           {estimationExplain && (
             <Card size="small" style={{ marginBottom: 16 }}>
-              <Space direction="vertical" size={4} style={{ width: "100%" }}>
+              <Space orientation="vertical" size={4} style={{ width: "100%" }}>
                 <Text strong>AI tính thời lượng như sau</Text>
                 <Text type="secondary">
                   Method: {estimationExplain.method} • Confidence:{" "}
@@ -1094,7 +1132,7 @@ function Tasks() {
 
           {breakdownLoading && !subtasks.length ? (
             <div style={{ textAlign: "center", padding: "40px 0" }}>
-              <Space direction="vertical">
+              <Space orientation="vertical">
                 <RobotOutlined style={{ fontSize: 32, color: "#1677ff" }} />
                 <Text>AI đang phân tích công việc...</Text>
               </Space>
@@ -1131,7 +1169,7 @@ function Tasks() {
             />
           ) : (
             <div style={{ textAlign: "center", padding: "40px 0" }}>
-              <Space direction="vertical">
+              <Space orientation="vertical">
                 <RobotOutlined style={{ fontSize: 32, color: "#d9d9d9" }} />
                 <Text type="secondary">Chưa có AI Breakdown</Text>
                 <Button

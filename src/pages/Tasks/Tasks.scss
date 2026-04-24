@@ -39,11 +39,35 @@
 }
 
 .tasks-table-card {
+  .ant-table {
+    font-size: 13px;
+  }
+
+  .ant-table-cell {
+    vertical-align: top;
+  }
+
+  .ant-table-thead > tr > th {
+    white-space: nowrap;
+  }
+
   .task-title-cell {
+    min-width: 0;
+
     .task-title-row {
       display: flex;
       align-items: center;
       gap: 8px;
+      min-width: 0;
+
+      .task-title-text {
+        display: block;
+        min-width: 0;
+        max-width: 190px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
 
       .ai-badge {
         color: var(--color-primary-blue);
@@ -51,18 +75,15 @@
       }
     }
 
-    .task-desc {
-      font-size: 13px;
-      color: var(--color-text-secondary);
-      display: block;
-      margin-top: 4px;
-    }
-
     .task-tags {
-      margin-top: 8px;
+      margin-top: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
 
       .ant-tag {
         font-size: 12px;
+        margin-inline-end: 0;
         background: var(--color-very-light-blue);
         border-color: var(--color-lighter-blue);
         color: var(--color-primary-blue);
@@ -74,6 +95,14 @@
     display: flex;
     align-items: center;
     gap: 8px;
+
+    .assignee-name {
+      display: inline-block;
+      max-width: 72px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   }
 }
 

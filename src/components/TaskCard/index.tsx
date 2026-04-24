@@ -115,7 +115,11 @@ export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
             header={`AI Breakdown (${task.aiBreakdown.length} bước)`}
             key="1"
           >
-            <Space direction="vertical" size="small" style={{ width: "100%" }}>
+            <Space
+              orientation="vertical"
+              size="small"
+              style={{ width: "100%" }}
+            >
               {task.aiBreakdown.map((step, index) => (
                 <div key={index} className="breakdown-step">
                   <Text>

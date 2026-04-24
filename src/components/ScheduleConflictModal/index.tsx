@@ -130,7 +130,7 @@ export default function ScheduleConflictModal({
                     key={item.id}
                     dot={<ClockCircleOutlined style={{ color: "#ff4d4f" }} />}
                   >
-                    <Space direction="vertical" size="small">
+                    <Space orientation="vertical" size="small">
                       <Text>{item.title}</Text>
                       <Text type="secondary" style={{ fontSize: 12 }}>
                         <CalendarOutlined />{" "}

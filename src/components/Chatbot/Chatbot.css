@@ -2,8 +2,9 @@
 .chatbot-container {
   position: fixed;
   bottom: 24px;
-  right: 24px;
-  z-index: 1000;
+  left: 24px;
+  right: auto;
+  z-index: 1001;
   user-select: none;
 }
 
@@ -36,7 +37,8 @@
 .chatbot-popup {
   position: absolute;
   bottom: 72px;
-  right: 0;
+  left: 0;
+  right: auto;
   width: 380px;
   height: 500px;
   border-radius: 16px;
@@ -362,12 +364,14 @@
 @media (max-width: 480px) {
   .chatbot-container {
     bottom: 16px;
-    right: 16px;
+    left: 16px;
+    right: auto;
   }
 
   .chatbot-popup {
     width: calc(100vw - 32px);
-    right: -8px;
+    left: -8px;
+    right: auto;
   }
 
   .chatbot-toggle-btn {

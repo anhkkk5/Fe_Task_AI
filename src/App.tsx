@@ -1,7 +1,7 @@
 import "./App.css";
 import "./styles/global.scss";
 import AllRoute from "./routes";
-import { ConfigProvider } from "antd";
+import { ConfigProvider, App as AntdApp } from "antd";
 import Chatbot from "./components/Chatbot";
 import { ChatbotProvider } from "./contexts/ChatbotContext";
 import { MessengerProvider } from "./contexts/MessengerContext";
@@ -90,13 +90,15 @@ const mongoTheme = {
 function App() {
   return (
     <ConfigProvider theme={mongoTheme}>
-      <ChatbotProvider>
-        <MessengerProvider>
-          <AllRoute />
-          <Chatbot />
-          <MessengerRoot />
-        </MessengerProvider>
-      </ChatbotProvider>
+      <AntdApp>
+        <ChatbotProvider>
+          <MessengerProvider>
+            <AllRoute />
+            <Chatbot />
+            <MessengerRoot />
+          </MessengerProvider>
+        </ChatbotProvider>
+      </AntdApp>
     </ConfigProvider>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import {
   getTasks,
   updateTask,
@@ -9,6 +9,7 @@ import {
 } from "../services/taskServices";
 
 export function useTasks() {
+  const { message } = App.useApp();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,7 +26,7 @@ export function useTasks() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [message]);
 
   // Initial load + refetch khi window focus lại
   useEffect(() => {

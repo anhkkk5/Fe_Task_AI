@@ -1,4 +1,8 @@
-import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
+import axios, {
+  AxiosError,
+  type AxiosRequestConfig,
+  type InternalAxiosRequestConfig,
+} from "axios";
 
 const API_BASE_URL =
   (import.meta.env?.VITE_API_BASE_URL || "").trim() || "http://localhost:3002";
@@ -99,13 +103,20 @@ export const clearAccessToken = () => {
 
 export const getAccessToken = () => accessToken;
 
-export const get = async <T = any,>(path: string): Promise<T> => {
-  const response = await axiosInstance.get<T>(path);
+export const get = async <T = any,>(
+  path: string,
+  config?: AxiosRequestConfig,
+): Promise<T> => {
+  const response = await axiosInstance.get<T>(path, config);
   return response.data;
 };
 
-export const post = async <T = any,>(path: string, data: any): Promise<T> => {
-  const response = await axiosInstance.post<T>(path, data);
+export const post = async <T = any,>(
+  path: string,
+  data: any,
+  config?: AxiosRequestConfig,
+): Promise<T> => {
+  const response = await axiosInstance.post<T>(path, data, config);
   return response.data;
 };
 

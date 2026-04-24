@@ -142,11 +142,11 @@ export const createTask = async (data: {
   return await post("/tasks", data);
 };
 
-// Trigger AI breakdown for a task
+// Trigger AI breakdown for a task (timeout 90s vì AI call có thể mất 30-60s)
 export const triggerAiBreakdown = async (
   taskId: string,
 ): Promise<{ task: Task }> => {
-  return await post(`/tasks/${taskId}/ai-breakdown`, {});
+  return await post(`/tasks/${taskId}/ai-breakdown`, {}, { timeout: 90000 });
 };
 
 export const getTaskEstimationExplanation = async (

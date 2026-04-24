@@ -229,7 +229,7 @@ export const AvailabilitySettingsModal: React.FC<
     slots: AvailableTimeSlot[],
     target: keyof WeeklyPattern | "custom",
   ) => (
-    <Space direction="vertical" style={{ width: "100%" }}>
+    <Space orientation="vertical" style={{ width: "100%" }}>
       {slots.map((slot, idx) => (
         <Space
           key={`${target}-${idx}`}
@@ -303,7 +303,11 @@ export const AvailabilitySettingsModal: React.FC<
                   Thiết lập khung giờ rảnh cho từng ngày trong tuần.
                 </Text>
                 <Divider style={{ margin: "12px 0" }} />
-                <Space direction="vertical" style={{ width: "100%" }} size={12}>
+                <Space
+                  orientation="vertical"
+                  style={{ width: "100%" }}
+                  size={12}
+                >
                   {DAY_KEYS.map((day) => (
                     <div
                       key={day}
@@ -338,7 +342,11 @@ export const AvailabilitySettingsModal: React.FC<
             label: "Override theo ngày",
             children: (
               <div>
-                <Space direction="vertical" style={{ width: "100%" }} size={12}>
+                <Space
+                  orientation="vertical"
+                  style={{ width: "100%" }}
+                  size={12}
+                >
                   <Space>
                     <Text>Chọn ngày:</Text>
                     <DatePicker

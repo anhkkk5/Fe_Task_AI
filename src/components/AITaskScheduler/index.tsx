@@ -340,7 +340,7 @@ export default function AITaskScheduler({
                         handleTaskSelect(task.id, e.target.checked)
                       }
                     >
-                      <Space direction="vertical" size={0}>
+                      <Space orientation="vertical" size={0}>
                         <Text strong>{task.title}</Text>
                         <Space size={8}>
                           <Tag color={getPriorityColor(task.priority)}>
@@ -366,7 +366,7 @@ export default function AITaskScheduler({
               title={<Text strong>Chiến lược sắp xếp</Text>}
               style={{ marginTop: 12 }}
             >
-              <Space direction="vertical" style={{ width: "100%" }} size={8}>
+              <Space orientation="vertical" style={{ width: "100%" }} size={8}>
                 <div>
                   <Text type="secondary" style={{ fontSize: 12 }}>
                     Khi có nhiều công việc cùng lúc:

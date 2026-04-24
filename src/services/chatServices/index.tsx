@@ -62,7 +62,7 @@ export const sendChatMessage = async (params: {
   reply: string;
   conversationId: string;
 }> => {
-  return await post("/ai/chat", params);
+  return await post("/ai/chat", params, { timeout: 60000 });
 };
 
 // Get or create conversation by parent task (shared thread across subtasks)

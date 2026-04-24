@@ -238,7 +238,7 @@ export default function SmartRescheduleModal({
               onChange={(e) => setSelectedSlot(e.target.value)}
             >
               <Radio value="primary">
-                <Space direction="vertical" size="small">
+                <Space orientation="vertical" size="small">
                   <Text strong>
                     <CalendarOutlined />{" "}
                     {dayjs(suggestion.suggestion.newDate).format("DD/MM/YYYY")}
@@ -265,10 +265,10 @@ export default function SmartRescheduleModal({
                   onChange={(e) => setSelectedSlot(e.target.value)}
                   style={{ width: "100%" }}
                 >
-                  <Space direction="vertical" style={{ width: "100%" }}>
+                  <Space orientation="vertical" style={{ width: "100%" }}>
                     {suggestion.alternativeSlots.map((slot, index) => (
                       <Radio key={index} value={index}>
-                        <Space direction="vertical" size="small">
+                        <Space orientation="vertical" size="small">
                           <Text>
                             <CalendarOutlined />{" "}
                             {dayjs(slot.date).format("DD/MM/YYYY")}
