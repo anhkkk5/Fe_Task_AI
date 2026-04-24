@@ -9,7 +9,11 @@ import {
   ExclamationCircleOutlined,
   FolderOutlined,
   ArrowRightOutlined,
+  ThunderboltOutlined,
+  ScheduleOutlined,
+  BookOutlined,
 } from "@ant-design/icons";
+import { Link } from "react-router-dom";
 import { useTasks } from "../../hooks/useTasks";
 import { getMe } from "../../services/authServices";
 import { useDispatch, useSelector } from "react-redux";
@@ -114,11 +118,75 @@ function Home() {
   return (
     <div className="dashboard-page">
       <main className="dashboard-main">
-        <section className="welcome-section">
-          <Title level={3} className="welcome-title">
-            Chào mừng {user?.name || "bạn"}, quản lý công việc của bạn hôm nay
-            thế nào?
-          </Title>
+        {/* Hero 2-col (Smile AI inspired) */}
+        <section className="home-hero">
+          <div className="home-hero-grid">
+            {/* Left: main message */}
+            <div className="home-hero-main">
+              <span className="home-hero-eyebrow">
+                <span className="dot" /> TASKMIND • AI WORKSPACE
+              </span>
+              <Title level={1} className="home-hero-title">
+                Chào {user?.name || "bạn"} — quản lý công việc{" "}
+                <span className="accent">thông minh</span>, tập trung vào kết
+                quả.
+              </Title>
+              <Text className="home-hero-desc">
+                Lên lịch tự động theo deadline, nhận gợi ý từ AI và theo dõi
+                tiến độ trong một bảng điều khiển duy nhất. Mọi thứ bạn cần để
+                làm việc hiệu quả hơn mỗi ngày.
+              </Text>
+              <div className="home-hero-actions">
+                <Link to="/tasks">
+                  <Button
+                    type="primary"
+                    size="large"
+                    className="home-hero-cta-primary"
+                  >
+                    Xem công việc <ArrowRightOutlined />
+                  </Button>
+                </Link>
+                <Link to="/guide">
+                  <Button size="large" className="home-hero-cta-secondary">
+                    <BookOutlined /> Hướng dẫn sử dụng
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            {/* Right: 2 stacked info cards */}
+            <div className="home-hero-side">
+              <div className="home-hero-info-card">
+                <div className="info-card-head">
+                  <span className="info-card-icon">
+                    <ThunderboltOutlined />
+                  </span>
+                  <span className="info-card-label">AI TỐI ƯU LỊCH</span>
+                </div>
+                <h4 className="info-card-title">
+                  Tự động phân bổ theo deadline
+                </h4>
+                <p className="info-card-desc">
+                  AI phân chia công việc theo mức độ ưu tiên, thời gian còn lại
+                  và khung giờ hiệu quả của bạn — chỉ trong vài giây.
+                </p>
+              </div>
+
+              <div className="home-hero-info-card">
+                <div className="info-card-head">
+                  <span className="info-card-icon">
+                    <ScheduleOutlined />
+                  </span>
+                  <span className="info-card-label">NHẮC VIỆC TỨC THÌ</span>
+                </div>
+                <h4 className="info-card-title">Không bỏ lỡ deadline nào</h4>
+                <p className="info-card-desc">
+                  Hệ thống chủ động nhắc các công việc sắp đến hạn, phát hiện
+                  xung đột lịch và đề xuất điều chỉnh hợp lý.
+                </p>
+              </div>
+            </div>
+          </div>
         </section>
 
         <Row gutter={[24, 24]} className="stats-row">

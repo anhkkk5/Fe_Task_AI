@@ -14,6 +14,7 @@ import Calendar from "../pages/Calendar";
 import Notifications from "../pages/Notifications";
 import Chat from "../pages/Chat";
 import Messenger from "../pages/Messenger";
+import Guide from "../pages/Guide";
 import GoogleCallback from "../pages/GoogleCallback";
 
 export const routes = [
@@ -91,6 +92,10 @@ export const routes = [
           {
             path: "messenger",
             element: <Messenger />,
+          },
+          {
+            path: "guide",
+            element: <Guide />,
           },
         ],
       },

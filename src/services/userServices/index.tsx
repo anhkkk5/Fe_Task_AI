@@ -21,9 +21,28 @@ export interface ChangePasswordData {
   newPassword: string;
 }
 
+export interface NotificationQuietHours {
+  enabled: boolean;
+  start: string; // "HH:mm"
+  end: string; // "HH:mm"
+}
+
+export interface NotificationDigestSettings {
+  enabled: boolean;
+  frequency: "daily" | "weekly";
+  time: string; // "HH:mm"
+  includeTypes?: string[];
+  lastSentAt?: string;
+}
+
 export interface NotificationSettings {
   reminderMinutes: number;
+  quietHours?: NotificationQuietHours;
+  groupingEnabled?: boolean;
+  digest?: NotificationDigestSettings;
 }
+
+export type UpdateNotificationSettingsDto = Partial<NotificationSettings>;
 
 // Get all users (admin)
 export const getUsers = async (params?: { page?: number; limit?: number }) => {
@@ -62,7 +81,7 @@ export const getNotificationSettings = async () => {
 };
 
 export const updateNotificationSettings = async (
-  data: NotificationSettings,
+  data: UpdateNotificationSettingsDto,
 ) => {
   return await patch("/users/notification-settings", data);
 };

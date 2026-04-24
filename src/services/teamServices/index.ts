@@ -62,6 +62,18 @@ export interface TeamTaskCreatePayload {
   deadline?: string;
 }
 
+export interface TeamTaskComment {
+  id: string;
+  teamId: string;
+  taskId: string;
+  authorId: string;
+  authorName: string;
+  content: string;
+  mentionedUserIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface TeamTaskUpdatePayload {
   title?: string;
   description?: string;
@@ -192,6 +204,27 @@ export const assignTask = (
 export const unassignTask = (teamId: string, taskId: string) =>
   axiosInstance
     .delete(`/teams/${teamId}/tasks/${taskId}/assign`)
+    .then((r) => r.data);
+
+export const getTeamTaskComments = (teamId: string, taskId: string) =>
+  axiosInstance
+    .get<{
+      items: TeamTaskComment[];
+    }>(`/teams/${teamId}/tasks/${taskId}/comments`)
+    .then((r) => r.data);
+
+export const createTeamTaskComment = (
+  teamId: string,
+  taskId: string,
+  content: string,
+) =>
+  axiosInstance
+    .post<{ comment: TeamTaskComment }>(
+      `/teams/${teamId}/tasks/${taskId}/comments`,
+      {
+        content,
+      },
+    )
     .then((r) => r.data);
 
 // Calendar

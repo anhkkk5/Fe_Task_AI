@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   Tabs,
   Button,
@@ -17,6 +17,7 @@ import {
   Empty,
   Badge,
   Space,
+  Divider,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -45,6 +46,9 @@ import {
   deleteTeamTask,
   lookupUserByEmail,
   updateMemberProfile,
+  getTeamTaskComments,
+  createTeamTaskComment,
+  type TeamTaskComment,
 } from "../../services/teamServices";
 import {
   getCatalog,
@@ -95,6 +99,7 @@ function canManageByRole(
 export default function TeamDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const currentUser = useSelector((s: any) => s.auth.user);
   const currentUserId =
     currentUser?._id || currentUser?.id || currentUser?.userId;
@@ -123,6 +128,15 @@ export default function TeamDetail() {
   >(null);
   const [taskDeadlineRange, setTaskDeadlineRange] = useState<
     [dayjs.Dayjs | null, dayjs.Dayjs | null] | null
+  >(null);
+  const [commentModalOpen, setCommentModalOpen] = useState(false);
+  const [commentTask, setCommentTask] = useState<any>(null);
+  const [commentText, setCommentText] = useState("");
+  const [commentItems, setCommentItems] = useState<TeamTaskComment[]>([]);
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [focusTaskIdFromQuery, setFocusTaskIdFromQuery] = useState<
+    string | null
   >(null);
   // User lookup state
   const [lookupResult, setLookupResult] = useState<{
@@ -162,6 +176,56 @@ export default function TeamDetail() {
       message.error(
         err?.response?.data?.message || "Không thể cập nhật vị trí / level",
       );
+    }
+  };
+
+  const loadTaskComments = useCallback(
+    async (taskId: string) => {
+      try {
+        setCommentLoading(true);
+        const res = await getTeamTaskComments(id!, taskId);
+        setCommentItems(res.items || []);
+      } catch (err: any) {
+        message.error(
+          err?.response?.data?.message || "Không thể tải bình luận công việc",
+        );
+      } finally {
+        setCommentLoading(false);
+      }
+    },
+    [id],
+  );
+
+  const openCommentModal = useCallback(
+    async (task: any) => {
+      const taskId = String(task._id || task.id);
+      setCommentTask(task);
+      setCommentText("");
+      setCommentModalOpen(true);
+      await loadTaskComments(taskId);
+    },
+    [loadTaskComments],
+  );
+
+  const handleCreateComment = async () => {
+    if (!commentTask) return;
+    const content = commentText.trim();
+    if (!content) {
+      message.warning("Vui lòng nhập nội dung bình luận");
+      return;
+    }
+
+    try {
+      setCommentSubmitting(true);
+      const taskId = String(commentTask._id || commentTask.id);
+      await createTeamTaskComment(id!, taskId, content);
+      setCommentText("");
+      await loadTaskComments(taskId);
+      message.success("Đã gửi bình luận");
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || "Không thể gửi bình luận");
+    } finally {
+      setCommentSubmitting(false);
     }
   };
 
@@ -304,6 +368,12 @@ export default function TeamDetail() {
   useEffect(() => {
     if (id) loadTeam();
   }, [id]);
+
+  useEffect(() => {
+    const query = new URLSearchParams(location.search);
+    const taskId = query.get("taskId");
+    setFocusTaskIdFromQuery(taskId);
+  }, [location.search]);
 
   const loadTeam = async () => {
     try {
@@ -550,6 +620,17 @@ export default function TeamDetail() {
       ]
     : [];
 
+  useEffect(() => {
+    if (!focusTaskIdFromQuery || !allTasks.length || commentModalOpen) return;
+    const targetTask = allTasks.find(
+      (task: any) => String(task._id || task.id) === focusTaskIdFromQuery,
+    );
+    if (!targetTask) return;
+
+    setFocusTaskIdFromQuery(null);
+    void openCommentModal(targetTask);
+  }, [allTasks, focusTaskIdFromQuery, commentModalOpen, openCommentModal]);
+
   const membersById = new Map(team.members.map((m) => [m.userId, m]));
 
   const filteredTasks = allTasks.filter((task: any) => {
@@ -720,40 +801,52 @@ export default function TeamDetail() {
       title: "Thao tác",
       key: "actions",
       render: (task: any) => {
-        if (!canManageTask(task)) {
-          return (
-            <span style={{ color: "var(--color-text-tertiary)", fontSize: 12 }}>
-              Chỉ người giao/owner
-            </span>
-          );
-        }
+        const canManage = canManageTask(task);
 
         return (
           <Space>
             <Button
               type="text"
               size="small"
-              icon={<EditOutlined />}
-              onClick={() => openEditTaskModal(task)}
+              icon={<MessageOutlined />}
+              onClick={() => openCommentModal(task)}
             >
-              Sửa
+              Bình luận
             </Button>
-            <Popconfirm
-              title="Xóa công việc này?"
-              okText="Xóa"
-              cancelText="Hủy"
-              onConfirm={() => handleDeleteTask(task)}
-            >
-              <Button
-                type="text"
-                danger
-                size="small"
-                icon={<DeleteOutlined />}
-                loading={deletingTaskId === String(task._id || task.id)}
+            {canManage ? (
+              <>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<EditOutlined />}
+                  onClick={() => openEditTaskModal(task)}
+                >
+                  Sửa
+                </Button>
+                <Popconfirm
+                  title="Xóa công việc này?"
+                  okText="Xóa"
+                  cancelText="Hủy"
+                  onConfirm={() => handleDeleteTask(task)}
+                >
+                  <Button
+                    type="text"
+                    danger
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    loading={deletingTaskId === String(task._id || task.id)}
+                  >
+                    Xóa
+                  </Button>
+                </Popconfirm>
+              </>
+            ) : (
+              <span
+                style={{ color: "var(--color-text-tertiary)", fontSize: 12 }}
               >
-                Xóa
-              </Button>
-            </Popconfirm>
+                Chỉ người giao/owner được sửa/xóa
+              </span>
+            )}
           </Space>
         );
       },
@@ -1193,6 +1286,87 @@ export default function TeamDetail() {
             />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title={
+          commentTask
+            ? `Bình luận: ${commentTask.title}`
+            : "Bình luận công việc"
+        }
+        open={commentModalOpen}
+        onCancel={() => {
+          setCommentModalOpen(false);
+          setCommentTask(null);
+          setCommentText("");
+          setCommentItems([]);
+        }}
+        footer={null}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <Input.TextArea
+            rows={3}
+            placeholder="Nhập bình luận... (gợi ý mention: @email hoặc @tenkhongdau)"
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            maxLength={2000}
+            showCount
+          />
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <Button
+              type="primary"
+              onClick={handleCreateComment}
+              loading={commentSubmitting}
+            >
+              Gửi bình luận
+            </Button>
+          </div>
+
+          <Divider style={{ margin: "8px 0" }} />
+
+          <Spin spinning={commentLoading}>
+            {commentItems.length === 0 ? (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description="Chưa có bình luận"
+              />
+            ) : (
+              <div style={{ maxHeight: 320, overflowY: "auto" }}>
+                {commentItems.map((comment) => (
+                  <div
+                    key={comment.id}
+                    style={{
+                      padding: "8px 10px",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: 8,
+                      marginBottom: 8,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: 12,
+                        color: "var(--color-text-secondary)",
+                        marginBottom: 4,
+                      }}
+                    >
+                      <strong style={{ color: "var(--color-text-primary)" }}>
+                        {comment.authorName}
+                      </strong>
+                      <span>
+                        {new Date(comment.createdAt).toLocaleString("vi-VN")}
+                      </span>
+                    </div>
+                    <div style={{ whiteSpace: "pre-wrap" }}>
+                      {comment.content}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Spin>
+        </div>
       </Modal>
 
       <Modal

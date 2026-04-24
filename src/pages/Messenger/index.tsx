@@ -55,7 +55,7 @@ const MessengerPage: React.FC = () => {
               border: "none",
               background: "#f0f2f5",
               cursor: "pointer",
-              color: "#0066cc",
+              color: "#1AA0B0",
             }}
             title="Tin nhắn mới"
           >
@@ -117,11 +117,7 @@ const MessengerPage: React.FC = () => {
       <section className="mf-main">
         {activeId ? (
           <div className="mf-chat">
-            <ChatWindow
-              key={activeId}
-              conversationId={activeId}
-              embedded
-            />
+            <ChatWindow key={activeId} conversationId={activeId} embedded />
           </div>
         ) : (
           <div className="mf-empty">

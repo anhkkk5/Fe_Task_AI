@@ -33,54 +33,54 @@ export const cssVariables = `
   :root {
     /* Neutral Colors (60%) */
     --color-white: #FFFFFF;
-    --color-off-white: #F9FAFB;
-    --color-light-gray: #F5F7FA;
-    --color-medium-light-gray: #E8ECEF;
-    --color-light-border-gray: #D1D5DB;
-    
-    /* Soft Blue Colors (30%) */
-    --color-primary-blue: #0066CC;
-    --color-secondary-blue: #1A73E8;
-    --color-light-blue: #4D94FF;
-    --color-lighter-blue: #B3D9FF;
-    --color-very-light-blue: #E6F0FF;
-    
+    --color-off-white: #FBFBFC;
+    --color-light-gray: #F6F7F9;
+    --color-medium-light-gray: #EEF0F3;
+    --color-light-border-gray: #E5E7EB;
+
+    /* Primary Teal (30%) - legacy names kept */
+    --color-primary-blue: #1AA0B0;
+    --color-secondary-blue: #148F9F;
+    --color-light-blue: #5FC1CD;
+    --color-lighter-blue: #B5E0E6;
+    --color-very-light-blue: #E8F4F6;
+
     /* Accent Colors (10%) */
     --color-success: #10B981;
     --color-warning: #F59E0B;
     --color-error: #EF4444;
     --color-info: #3B82F6;
-    
+
     /* Text Colors */
-    --color-text-primary: #3C4043;
-    --color-text-secondary: #5F6368;
-    --color-text-tertiary: #70757A;
+    --color-text-primary: #0F172A;
+    --color-text-secondary: #475569;
+    --color-text-tertiary: #64748B;
     --color-text-inverse: #FFFFFF;
-    
+
     /* Component Tokens - Backgrounds */
     --background-primary: #FFFFFF;
-    --background-secondary: #F9FAFB;
-    --background-tertiary: #F5F7FA;
-    
+    --background-secondary: #FBFBFC;
+    --background-tertiary: #F6F7F9;
+
     /* Component Tokens - Buttons */
-    --button-primary-bg: #0066CC;
-    --button-primary-bg-hover: #1A73E8;
+    --button-primary-bg: #1AA0B0;
+    --button-primary-bg-hover: #148F9F;
     --button-primary-text: #FFFFFF;
-    --button-secondary-bg: #F5F7FA;
-    --button-secondary-bg-hover: #E8ECEF;
-    --button-secondary-text: #0066CC;
-    --button-disabled-bg: #E8ECEF;
-    --button-disabled-text: #D1D5DB;
-    
+    --button-secondary-bg: #F6F7F9;
+    --button-secondary-bg-hover: #EEF0F3;
+    --button-secondary-text: #0F7985;
+    --button-disabled-bg: #EEF0F3;
+    --button-disabled-text: #94A3B8;
+
     /* Component Tokens - Cards */
     --card-bg: #FFFFFF;
-    --card-border: #D1D5DB;
-    --card-shadow: rgba(0, 0, 0, 0.06);
-    
+    --card-border: #E5E7EB;
+    --card-shadow: rgba(15, 23, 42, 0.04);
+
     /* Component Tokens - Borders */
-    --border-light: #D1D5DB;
-    --border-medium: #E8ECEF;
-    
+    --border-light: #E5E7EB;
+    --border-medium: #EEF0F3;
+
     /* Component Tokens - States */
     --state-success: #10B981;
     --state-warning: #F59E0B;

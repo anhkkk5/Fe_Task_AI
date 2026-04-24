@@ -757,8 +757,50 @@ function Tasks() {
           </Text>
         </div>
 
+        {/* Responsive Toolbar - outside Card to avoid overflow on mobile */}
+        <div className="tasks-toolbar">
+          <div className="tasks-toolbar-search">
+            <Input
+              placeholder="Tìm kiếm công việc..."
+              prefix={<SearchOutlined />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              allowClear
+            />
+            <Select
+              value={statusFilter}
+              onChange={setStatusFilter}
+              suffixIcon={<FilterOutlined />}
+              className="tasks-toolbar-select"
+            >
+              <Option value="all">Tất cả trạng thái</Option>
+              <Option value="todo">Chờ xử lý</Option>
+              <Option value="in_progress">Đang thực hiện</Option>
+              <Option value="done">Hoàn thành</Option>
+              <Option value="overdue">Quá hạn</Option>
+            </Select>
+          </div>
+          <div className="tasks-toolbar-actions">
+            <Button
+              className="ai-gradient-btn tasks-toolbar-ai-btn"
+              icon={<ScheduleOutlined />}
+              onClick={() => setSchedulerVisible(true)}
+            >
+              <span className="btn-label-full">AI Tối Ưu Lịch</span>
+              <span className="btn-label-short">AI Lịch</span>
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setCreateModalVisible(true)}
+            >
+              <span className="btn-label-full">Thêm công việc</span>
+              <span className="btn-label-short">Thêm</span>
+            </Button>
+          </div>
+        </div>
+
         <Row gutter={[24, 24]}>
-          {/* Tasks Table - Full width */}
           <Col xs={24}>
             <Card
               className="tasks-table-card"
@@ -768,43 +810,6 @@ function Tasks() {
                     Danh sách công việc
                   </Title>
                   <Tag>{filteredTasks.length}</Tag>
-                </Space>
-              }
-              extra={
-                <Space>
-                  <Input
-                    placeholder="Tìm kiếm..."
-                    prefix={<SearchOutlined />}
-                    value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
-                    style={{ width: 200 }}
-                  />
-                  <Select
-                    value={statusFilter}
-                    onChange={setStatusFilter}
-                    style={{ width: 140 }}
-                    suffixIcon={<FilterOutlined />}
-                  >
-                    <Option value="all">Tất cả trạng thái</Option>
-                    <Option value="todo">Chờ xử lý</Option>
-                    <Option value="in_progress">Đang thực hiện</Option>
-                    <Option value="done">Hoàn thành</Option>
-                    <Option value="overdue">Quá hạn</Option>
-                  </Select>
-                  <Button
-                    className="ai-gradient-btn"
-                    icon={<ScheduleOutlined />}
-                    onClick={() => setSchedulerVisible(true)}
-                  >
-                    AI Tối Ưu Lịch
-                  </Button>
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={() => setCreateModalVisible(true)}
-                  >
-                    Thêm công việc
-                  </Button>
                 </Space>
               }
             >

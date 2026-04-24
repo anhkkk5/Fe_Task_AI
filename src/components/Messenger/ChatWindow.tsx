@@ -707,7 +707,7 @@ const ChatWindow: React.FC<Props> = ({
                       width: 14,
                       height: 14,
                       borderRadius: "50%",
-                      background: "#0066cc",
+                      background: "#1AA0B0",
                       color: "#fff",
                       fontSize: 8,
                       display: "flex",

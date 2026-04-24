@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { Button, Input, Spin, Tooltip, Dropdown, Modal, message } from "antd";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { Button, Input, Spin, Dropdown, Modal, message } from "antd";
 import type { MenuProps } from "antd";
+import { useSelector } from "react-redux";
 import {
   PlusOutlined,
   SendOutlined,
@@ -11,6 +12,10 @@ import {
   EditOutlined,
   DeleteOutlined,
   QuestionCircleOutlined,
+  ThunderboltOutlined,
+  CalendarOutlined,
+  BarChartOutlined,
+  BulbOutlined,
 } from "@ant-design/icons";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -25,7 +30,38 @@ import {
 } from "../../services/chatServices";
 import "./Chat.scss";
 
+type Suggestion = { icon: React.ReactNode; label: string; prompt: string };
+
+const SUGGESTIONS: Suggestion[] = [
+  {
+    icon: <ThunderboltOutlined />,
+    label: "Tối ưu lịch hôm nay",
+    prompt:
+      "Giúp tôi sắp xếp lại lịch làm việc hôm nay sao cho hiệu quả nhất dựa trên mức độ ưu tiên.",
+  },
+  {
+    icon: <CalendarOutlined />,
+    label: "Tạo công việc mới",
+    prompt:
+      "Tôi muốn tạo một công việc mới. Hãy hỏi tôi các thông tin cần thiết (tiêu đề, deadline, ưu tiên, ước lượng thời gian).",
+  },
+  {
+    icon: <BarChartOutlined />,
+    label: "Tóm tắt tiến độ tuần",
+    prompt:
+      "Hãy tóm tắt tiến độ công việc của tôi trong tuần này và chỉ ra các task đang chậm deadline.",
+  },
+  {
+    icon: <BulbOutlined />,
+    label: "Gợi ý cải thiện năng suất",
+    prompt:
+      "Dựa trên thói quen làm việc của tôi, hãy gợi ý 3 điều tôi có thể cải thiện để năng suất cao hơn.",
+  },
+];
+
 function Chat() {
+  const { user } = useSelector((state: any) => state.auth);
+  const firstName = (user?.name || "bạn").split(" ").slice(-1)[0];
   const [conversations, setConversations] = useState<AiConversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<AiMessage[]>([]);
@@ -270,14 +306,37 @@ function Chat() {
       minute: "2-digit",
     });
 
-  const formatDate = (iso: string) => {
-    const diff = Date.now() - new Date(iso).getTime();
-    if (diff < 86400000) return "Hôm nay";
-    if (diff < 172800000) return "Hôm qua";
-    return new Date(iso).toLocaleDateString("vi-VN");
-  };
-
   const isNewChat = !activeId && messages.length === 0;
+
+  // Group conversations by date bucket (Today, Yesterday, Last 7 days, Older)
+  const groupedConversations = useMemo(() => {
+    const now = Date.now();
+    const DAY = 86400000;
+    const groups: Record<string, AiConversation[]> = {
+      "Hôm nay": [],
+      "Hôm qua": [],
+      "7 ngày trước": [],
+      "Cũ hơn": [],
+    };
+    conversations.forEach((c) => {
+      const diff = now - new Date(c.updatedAt).getTime();
+      if (diff < DAY) groups["Hôm nay"].push(c);
+      else if (diff < 2 * DAY) groups["Hôm qua"].push(c);
+      else if (diff < 7 * DAY) groups["7 ngày trước"].push(c);
+      else groups["Cũ hơn"].push(c);
+    });
+    return groups;
+  }, [conversations]);
+
+  const handleSuggestionClick = (prompt: string) => {
+    setInput(prompt);
+    setTimeout(() => {
+      const ta = document.querySelector(
+        ".chat-composer textarea",
+      ) as HTMLTextAreaElement | null;
+      ta?.focus();
+    }, 30);
+  };
 
   return (
     <div className="chat-page">
@@ -290,39 +349,39 @@ function Chat() {
           </button>
         </div>
 
-        <div className="sidebar-section-label">Gần đây</div>
-
         <nav className="conversation-list">
           {conversations.length === 0 ? (
             <div className="no-convs">Chưa có cuộc trò chuyện nào</div>
           ) : (
-            conversations.map((conv) => (
-              <div
-                key={conv.id}
-                className={`conv-item ${activeId === conv.id ? "active" : ""}`}
-                onClick={() => openConversation(conv.id)}
-              >
-                <div className="conv-info">
-                  <span className="conv-title">{conv.title}</span>
-                  <span className="conv-date">
-                    {formatDate(conv.updatedAt)}
-                  </span>
+            Object.entries(groupedConversations).map(([groupLabel, items]) =>
+              items.length === 0 ? null : (
+                <div key={groupLabel} className="conv-group">
+                  <div className="conv-group-label">{groupLabel}</div>
+                  {items.map((conv) => (
+                    <div
+                      key={conv.id}
+                      className={`conv-item ${activeId === conv.id ? "active" : ""}`}
+                      onClick={() => openConversation(conv.id)}
+                    >
+                      <span className="conv-title">{conv.title}</span>
+                      <Dropdown
+                        menu={getConvMenu(conv)}
+                        trigger={["click"]}
+                        placement="bottomRight"
+                      >
+                        <button
+                          className="conv-more-btn"
+                          onClick={(e) => e.stopPropagation()}
+                          title="Tùy chọn"
+                        >
+                          <MoreOutlined />
+                        </button>
+                      </Dropdown>
+                    </div>
+                  ))}
                 </div>
-                <Dropdown
-                  menu={getConvMenu(conv)}
-                  trigger={["click"]}
-                  placement="bottomRight"
-                >
-                  <button
-                    className="conv-more-btn"
-                    onClick={(e) => e.stopPropagation()}
-                    title="Tùy chọn"
-                  >
-                    <MoreOutlined />
-                  </button>
-                </Dropdown>
-              </div>
-            ))
+              ),
+            )
           )}
         </nav>
       </aside>
@@ -331,114 +390,116 @@ function Chat() {
       <main className="chat-main">
         {isNewChat ? (
           <div className="chat-welcome">
-            <div className="welcome-icon">
-              <RobotOutlined />
-            </div>
-            <h2>Bạn đang làm về cái gì?</h2>
-            <p>Hỏi bất kỳ điều gì về công việc, lịch trình, hoặc năng suất.</p>
-            <div className="welcome-input-wrap">
-              <Input.TextArea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
+            <div className="welcome-inner">
+              <div className="welcome-greeting">
+                <span className="greet-sparkle">✨</span> Xin chào {firstName}!
+              </div>
+              <h1 className="welcome-title">Chúng ta bắt đầu từ đâu nhỉ?</h1>
+
+              <ChatComposer
+                input={input}
+                setInput={setInput}
+                onSend={handleSend}
                 onKeyDown={handleKeyDown}
-                placeholder="Hỏi bất kỳ điều gì..."
-                autoSize={{ minRows: 1, maxRows: 6 }}
-                disabled={sending}
+                sending={sending}
+                placeholder="Hỏi TaskMind AI bất cứ điều gì..."
               />
-              <Button
-                type="primary"
-                shape="circle"
-                icon={sending ? <LoadingOutlined /> : <SendOutlined />}
-                onClick={handleSend}
-                disabled={!input.trim() || sending}
-                className="send-btn"
-              />
+
+              <div className="suggestion-chips">
+                {SUGGESTIONS.map((s) => (
+                  <button
+                    key={s.label}
+                    type="button"
+                    className="suggestion-chip"
+                    onClick={() => handleSuggestionClick(s.prompt)}
+                  >
+                    <span className="chip-icon">{s.icon}</span>
+                    <span>{s.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         ) : (
           <>
             <div className="messages-area">
-              {loadingMsgs ? (
-                <div className="loading-center">
-                  <Spin size="large" />
-                </div>
-              ) : (
-                messages.map((msg) => (
-                  <div key={msg.id} className={`msg-row ${msg.role}`}>
+              <div className="messages-inner">
+                {loadingMsgs ? (
+                  <div className="loading-center">
+                    <Spin size="large" />
+                  </div>
+                ) : (
+                  messages.map((msg) => (
+                    <div key={msg.id} className={`msg-row ${msg.role}`}>
+                      {msg.role === "assistant" && (
+                        <div className="msg-avatar">
+                          <div className="avatar ai-avatar">
+                            <RobotOutlined />
+                          </div>
+                        </div>
+                      )}
+                      <div className="msg-body">
+                        <div className="msg-bubble">
+                          {msg.role === "assistant" ? (
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {msg.content}
+                            </ReactMarkdown>
+                          ) : (
+                            <p>{msg.content}</p>
+                          )}
+                        </div>
+                        <span
+                          className="msg-time"
+                          title={new Date(msg.createdAt).toLocaleString(
+                            "vi-VN",
+                          )}
+                        >
+                          {formatTime(msg.createdAt)}
+                        </span>
+                      </div>
+                      {msg.role === "user" && (
+                        <div className="msg-avatar">
+                          <div className="avatar user-avatar">
+                            <UserOutlined />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+
+                {sending && (
+                  <div className="msg-row assistant">
                     <div className="msg-avatar">
-                      <div
-                        className={`avatar ${msg.role === "user" ? "user-avatar" : "ai-avatar"}`}
-                      >
-                        {msg.role === "user" ? (
-                          <UserOutlined />
-                        ) : (
-                          <RobotOutlined />
-                        )}
+                      <div className="avatar ai-avatar">
+                        <RobotOutlined />
                       </div>
                     </div>
                     <div className="msg-body">
                       <div className="msg-bubble">
-                        {msg.role === "assistant" ? (
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {msg.content}
-                          </ReactMarkdown>
-                        ) : (
-                          <p>{msg.content}</p>
-                        )}
-                      </div>
-                      <Tooltip
-                        title={new Date(msg.createdAt).toLocaleString("vi-VN")}
-                      >
-                        <span className="msg-time">
-                          {formatTime(msg.createdAt)}
-                        </span>
-                      </Tooltip>
-                    </div>
-                  </div>
-                ))
-              )}
-
-              {sending && (
-                <div className="msg-row assistant">
-                  <div className="msg-avatar">
-                    <div className="avatar ai-avatar">
-                      <RobotOutlined />
-                    </div>
-                  </div>
-                  <div className="msg-body">
-                    <div className="msg-bubble">
-                      <div className="typing">
-                        <span />
-                        <span />
-                        <span />
+                        <div className="typing">
+                          <span />
+                          <span />
+                          <span />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div ref={messagesEndRef} />
+                <div ref={messagesEndRef} />
+              </div>
             </div>
 
             <div className="input-bar">
-              <div className="input-wrap">
-                <Input.TextArea
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Nhập tin nhắn... (Enter để gửi, Shift+Enter xuống dòng)"
-                  autoSize={{ minRows: 1, maxRows: 6 }}
-                  disabled={sending}
-                />
-                <Button
-                  type="primary"
-                  shape="circle"
-                  icon={sending ? <LoadingOutlined /> : <SendOutlined />}
-                  onClick={handleSend}
-                  disabled={!input.trim() || sending}
-                  className="send-btn"
-                />
-              </div>
+              <ChatComposer
+                input={input}
+                setInput={setInput}
+                onSend={handleSend}
+                onKeyDown={handleKeyDown}
+                sending={sending}
+                placeholder="Hỏi tiếp TaskMind AI... (Enter gửi, Shift+Enter xuống dòng)"
+              />
               <span className="input-hint">
                 TaskMind AI có thể mắc lỗi. Hãy kiểm tra thông tin quan trọng.
               </span>
@@ -484,6 +545,40 @@ function Chat() {
           autoFocus
         />
       </Modal>
+    </div>
+  );
+}
+
+// Reusable pill composer (ChatGPT-style)
+function ChatComposer(props: {
+  input: string;
+  setInput: (v: string) => void;
+  onSend: () => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  sending: boolean;
+  placeholder?: string;
+}) {
+  const { input, setInput, onSend, onKeyDown, sending, placeholder } = props;
+  return (
+    <div className="chat-composer">
+      <Input.TextArea
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={onKeyDown}
+        placeholder={placeholder || "Hỏi bất kỳ điều gì..."}
+        autoSize={{ minRows: 1, maxRows: 8 }}
+        disabled={sending}
+        variant="borderless"
+      />
+      <Button
+        type="primary"
+        shape="circle"
+        size="large"
+        icon={sending ? <LoadingOutlined /> : <SendOutlined />}
+        onClick={onSend}
+        disabled={!input.trim() || sending}
+        className="composer-send-btn"
+      />
     </div>
   );
 }

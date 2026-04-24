@@ -1,10 +1,11 @@
 .calendar-page {
-  height: 100vh;
+  height: calc(100vh - 48px); // subtract layout padding
   background: #fff;
-  padding-top: 64px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid var(--border-light);
 
   .calendar-main {
     flex: 1;
@@ -14,6 +15,21 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+  }
+}
+
+@media (max-width: 1024px) {
+  .calendar-page {
+    height: calc(100vh - 80px); // account for mobile hamburger padding
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .calendar-page {
+    height: calc(100vh - 76px);
+    border-radius: 10px;
+    margin: 0 -4px;
   }
 }
 

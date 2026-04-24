@@ -1,11 +1,15 @@
+/* ============================================================
+   Notifications page — priority colors, snooze, group expand
+   ============================================================ */
+
 .notifications-page {
   min-height: 100vh;
-  background: var(--background-tertiary);
+  background: var(--background-tertiary, #f6f8fa);
 }
 
 .notifications-main {
   padding: 88px 30px 24px;
-  max-width: 1400px;
+  max-width: 1100px;
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
@@ -15,54 +19,398 @@
   margin-bottom: 24px;
 
   .back-link {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 8px;
-    color: var(--color-text-secondary);
+    color: var(--color-text-secondary, #64748b);
     text-decoration: none;
     font-size: 14px;
     margin-bottom: 12px;
 
     &:hover {
-      color: var(--color-primary-blue);
+      color: #1aa0b0;
     }
   }
 
   h2 {
-    margin: 0 0 8px 0 !important;
-    color: var(--color-text-primary);
+    margin: 0 0 6px 0 !important;
+    color: var(--color-text-primary, #0f172a);
   }
 }
 
-.coming-soon-card {
-  max-width: 600px;
-  margin: 0 auto;
-  text-align: center;
+/* ─── Settings card ───────────────────────────────────── */
+.settings-card {
+  margin-bottom: 20px;
+  border-radius: 16px !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  border: 1px solid #e5e7eb !important;
 
   .ant-card-body {
-    padding: 48px;
+    padding: 22px 24px;
   }
 
-  .coming-soon-icon {
-    font-size: 64px;
-    color: var(--color-primary-blue);
-    margin-bottom: 24px;
+  .settings-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
   }
 
-  h4 {
-    margin-bottom: 16px !important;
-    color: var(--color-text-primary);
-  }
+  .setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px dashed #e5e7eb;
 
-  .feature-list {
-    text-align: left;
-    max-width: 400px;
-    margin: 24px auto 0;
-    padding-left: 20px;
-
-    li {
-      padding: 8px 0;
-      color: var(--color-text-secondary);
+    &:last-of-type {
+      border-bottom: none;
     }
+  }
+
+  .setting-label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+
+    .setting-hint {
+      font-size: 12.5px;
+    }
+
+    .anticon {
+      color: #1aa0b0;
+      margin-right: 6px;
+    }
+  }
+
+  .quiet-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    .ant-picker {
+      width: 100px;
+    }
+  }
+
+  .digest-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    .ant-picker {
+      width: 96px;
+    }
+  }
+
+  .setting-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 8px;
+  }
+}
+
+/* ─── Notifications list card ────────────────────────── */
+.notifications-list-card {
+  border-radius: 16px !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  border: 1px solid #e5e7eb !important;
+
+  .ant-card-body {
+    padding: 8px 20px 20px;
+  }
+
+  .ant-tabs-tab .ant-badge {
+    margin-left: 2px;
+  }
+}
+
+.noti-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ─── Notification item ──────────────────────────────── */
+.noti-item {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 14px 16px 14px 18px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  transition: all 160ms ease;
+
+  &:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+  }
+
+  /* Priority left-accent bar */
+  .noti-priority-indicator {
+    position: absolute;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 4px;
+    border-radius: 4px;
+    background: #94a3b8;
+  }
+
+  &.priority-critical {
+    background: linear-gradient(
+      90deg,
+      rgba(239, 68, 68, 0.06) 0%,
+      transparent 40%
+    );
+    .noti-priority-indicator {
+      background: linear-gradient(180deg, #ef4444, #b91c1c);
+    }
+  }
+
+  &.priority-high {
+    background: linear-gradient(
+      90deg,
+      rgba(245, 158, 11, 0.06) 0%,
+      transparent 40%
+    );
+    .noti-priority-indicator {
+      background: linear-gradient(180deg, #f59e0b, #d97706);
+    }
+  }
+
+  &.priority-normal {
+    .noti-priority-indicator {
+      background: linear-gradient(180deg, #1aa0b0, #0f7985);
+    }
+  }
+
+  &.priority-low {
+    .noti-priority-indicator {
+      background: #cbd5e1;
+    }
+  }
+
+  &.unread {
+    background-color: #fafefe;
+    border-color: #cce7ea;
+  }
+
+  &.is-group {
+    border-style: dashed;
+    border-color: #60a5fa;
+    background: linear-gradient(
+      135deg,
+      rgba(96, 165, 250, 0.06) 0%,
+      transparent 60%
+    );
+  }
+}
+
+.noti-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.noti-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.noti-prio-icon {
+  font-size: 16px;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.noti-title {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #0f172a;
+  flex: 1;
+  min-width: 0;
+
+  .group-tag {
+    margin-left: 8px;
+    font-size: 11px;
+    vertical-align: middle;
+
+    .anticon {
+      margin-right: 2px;
+    }
+  }
+}
+
+.unread-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #1aa0b0;
+  box-shadow: 0 0 0 3px rgba(26, 160, 176, 0.2);
+}
+
+.noti-message {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #475569;
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+
+.rich-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0 8px;
+
+  .ant-btn {
+    border-radius: 999px;
+  }
+}
+
+.noti-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #64748b;
+
+  .prio-tag {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.04);
+  }
+
+  .noti-time {
+    font-size: 12px;
+  }
+
+  .snooze-until {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #6366f1;
+    font-weight: 500;
+
+    .anticon {
+      font-size: 11px;
+    }
+  }
+}
+
+/* ─── Group children ─────────────────────────────────── */
+.group-children {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px dashed #cbd5e1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  .group-loading {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    color: #64748b;
+  }
+
+  .child-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 12.5px;
+    color: #475569;
+    padding: 4px 2px;
+
+    .child-title {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .child-time {
+      color: #94a3b8;
+      font-size: 11.5px;
+      flex-shrink: 0;
+    }
+
+    & + .child-item {
+      border-top: 1px dashed #e5e7eb;
+      padding-top: 6px;
+    }
+  }
+}
+
+/* ─── Actions ────────────────────────────────────────── */
+.noti-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+
+  .ant-btn {
+    color: #64748b;
+
+    &:hover {
+      color: #0f172a;
+      background: #f1f5f9;
+    }
+
+    &.ant-btn-dangerous:hover {
+      color: #ef4444;
+      background: #fef2f2;
+    }
+  }
+}
+
+/* ─── Responsive ─────────────────────────────────────── */
+@media (max-width: 768px) {
+  .notifications-main {
+    padding: 76px 14px 20px;
+  }
+
+  .settings-card .ant-card-body {
+    padding: 18px 16px;
+  }
+
+  .setting-row {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+
+  .quiet-controls {
+    flex-wrap: wrap;
+  }
+
+  .digest-controls {
+    flex-wrap: wrap;
+  }
+
+  .noti-item {
+    padding: 12px 12px 12px 16px;
+  }
+
+  .noti-title {
+    font-size: 14px;
+  }
+
+  .noti-message {
+    font-size: 13px;
   }
 }

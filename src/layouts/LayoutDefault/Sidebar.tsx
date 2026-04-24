@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { Avatar, Badge, Dropdown, Tooltip } from "antd";
@@ -12,7 +12,10 @@ import {
   UserOutlined,
   SettingOutlined,
   MenuFoldOutlined,
+  MenuOutlined,
+  CloseOutlined,
   StarFilled,
+  BookOutlined,
 } from "@ant-design/icons";
 import { clearAccessToken } from "../../utils/axios/request";
 import { logout } from "../../store/slices/authSlice";
@@ -50,6 +53,12 @@ const menuItems = [
     badge: null,
     ai: true,
   },
+  {
+    key: "/guide",
+    icon: <BookOutlined />,
+    label: "Hướng dẫn",
+    badge: null,
+  },
 ];
 
 interface SidebarProps {
@@ -61,6 +70,7 @@ function Sidebar({ onCollapse }: SidebarProps) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { user } = useSelector((state: any) => state.auth);
 
   const toggleCollapse = () => {
@@ -68,6 +78,28 @@ function Sidebar({ onCollapse }: SidebarProps) {
     setCollapsed(newState);
     onCollapse?.(newState);
   };
+
+  // Close mobile drawer on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  // Close mobile drawer on Escape
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Lock body scroll when drawer open
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
 
   const handleMenuClick = (key: string) => {
     if (key === "logout") {
@@ -109,102 +141,137 @@ function Sidebar({ onCollapse }: SidebarProps) {
   };
 
   return (
-    <aside className={`sidebar ${collapsed ? "collapsed" : ""}`}>
-      {/* Logo Section */}
-      <div className="sidebar-logo">
-        <Link to="/" className="logo-link">
-          <div
-            className="logo-icon-wrapper"
-            onClick={collapsed ? toggleCollapse : undefined}
-            style={collapsed ? { cursor: "pointer" } : undefined}
-            title={collapsed ? "Mở rộng sidebar" : undefined}
-          >
-            <StarFilled className="logo-sparkle" />
-          </div>
-          {!collapsed && (
-            <div className="logo-text">
-              <span className="logo-brand">TaskMind</span>
-              <span className="logo-ai">AI</span>
-            </div>
-          )}
-        </Link>
-        {!collapsed && (
-          <button className="collapse-btn" onClick={toggleCollapse}>
-            <MenuFoldOutlined />
-          </button>
-        )}
-      </div>
+    <>
+      {/* Mobile hamburger - fixed top-left on small screens */}
+      <button
+        type="button"
+        className="sidebar-mobile-trigger"
+        onClick={() => setMobileOpen(true)}
+        aria-label="Mở menu"
+      >
+        <MenuOutlined />
+      </button>
 
-      {/* Main Navigation */}
-      <nav className="sidebar-nav">
-        {menuItems.map((item) => (
-          <Tooltip
-            key={item.key}
-            title={collapsed ? item.label : null}
-            placement="right"
-          >
-            <Link
-              to={item.key}
-              className={`nav-item ${isActive(item.key) ? "active" : ""}`}
-            >
-              <div className="nav-icon">
-                {item.icon}
-                {item.badge && (
-                  <Badge
-                    count={item.badge}
-                    size="small"
-                    className="nav-badge"
-                  />
-                )}
-              </div>
-              {!collapsed && (
-                <>
-                  <span className="nav-label">{item.label}</span>
-                  {item.ai && (
-                    <span className="ai-indicator">
-                      <StarFilled />
-                    </span>
-                  )}
-                </>
-              )}
-            </Link>
-          </Tooltip>
-        ))}
-      </nav>
+      {/* Backdrop for mobile drawer */}
+      {mobileOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
-      {/* Bottom Section - User */}
-      <div className="sidebar-footer">
-        <Dropdown
-          menu={{
-            items: userMenuItems,
-            onClick: (e) => handleMenuClick(e.key),
-          }}
-          placement="topRight"
-          trigger={["click"]}
+      <aside
+        className={`sidebar ${collapsed ? "collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}
+      >
+        {/* Mobile close button */}
+        <button
+          type="button"
+          className="sidebar-mobile-close"
+          onClick={() => setMobileOpen(false)}
+          aria-label="Đóng menu"
         >
-          <div className="user-menu">
-            <Avatar
-              size={collapsed ? 32 : 38}
-              src={user?.avatar}
-              className="user-avatar"
-              style={{
-                backgroundColor: user?.avatar
-                  ? undefined
-                  : "var(--color-primary-blue)",
-              }}
+          <CloseOutlined />
+        </button>
+
+        {/* Logo Section */}
+        <div className="sidebar-logo">
+          <Link to="/" className="logo-link">
+            <div
+              className="logo-icon-wrapper"
+              onClick={collapsed ? toggleCollapse : undefined}
+              style={collapsed ? { cursor: "pointer" } : undefined}
+              title={collapsed ? "Mở rộng sidebar" : undefined}
             >
-              {!user?.avatar && (user?.name?.charAt(0)?.toUpperCase() || "U")}
-            </Avatar>
+              <StarFilled className="logo-sparkle" />
+            </div>
             {!collapsed && (
-              <div className="user-info">
-                <span className="user-name">{user?.name || "Người dùng"}</span>
-                <span className="user-role">Premium</span>
+              <div className="logo-text">
+                <span className="logo-brand">TaskMind</span>
+                <span className="logo-ai">AI</span>
               </div>
             )}
-          </div>
-        </Dropdown>
-      </div>
-    </aside>
+          </Link>
+          {!collapsed && (
+            <button className="collapse-btn" onClick={toggleCollapse}>
+              <MenuFoldOutlined />
+            </button>
+          )}
+        </div>
+
+        {/* Main Navigation */}
+        <nav className="sidebar-nav">
+          {menuItems.map((item) => (
+            <Tooltip
+              key={item.key}
+              title={collapsed ? item.label : null}
+              placement="right"
+            >
+              <Link
+                to={item.key}
+                className={`nav-item ${isActive(item.key) ? "active" : ""}`}
+              >
+                <div className="nav-icon">
+                  {item.icon}
+                  {item.badge && (
+                    <Badge
+                      count={item.badge}
+                      size="small"
+                      className="nav-badge"
+                    />
+                  )}
+                </div>
+                {!collapsed && (
+                  <>
+                    <span className="nav-label">{item.label}</span>
+                    {item.ai && (
+                      <span className="ai-indicator">
+                        <StarFilled />
+                      </span>
+                    )}
+                  </>
+                )}
+              </Link>
+            </Tooltip>
+          ))}
+        </nav>
+
+        {/* Bottom Section - User */}
+        <div className="sidebar-footer">
+          <Dropdown
+            menu={{
+              items: userMenuItems,
+              onClick: (e) => handleMenuClick(e.key),
+            }}
+            placement="topRight"
+            trigger={["click"]}
+          >
+            <div className="user-menu">
+              <Avatar
+                size={collapsed ? 32 : 38}
+                src={user?.avatar}
+                className="user-avatar"
+                style={{
+                  backgroundColor: user?.avatar
+                    ? undefined
+                    : "var(--color-primary-blue)",
+                }}
+              >
+                {!user?.avatar && (user?.name?.charAt(0)?.toUpperCase() || "U")}
+              </Avatar>
+              {!collapsed && (
+                <div className="user-info">
+                  <span className="user-name">
+                    {user?.name || "Người dùng"}
+                  </span>
+                  <span className="user-role">Premium</span>
+                </div>
+              )}
+            </div>
+          </Dropdown>
+        </div>
+      </aside>
+    </>
   );
 }
 

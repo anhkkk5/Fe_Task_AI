@@ -80,20 +80,83 @@ function Register() {
   };
 
   return (
-    <div className="register-wrapper">
-      <div className="register-page">
-        {contextHolder}
-        {/* Left side - Register Form */}
-        <div className="register-left">
-          <div className="register-form-container">
-            <div className="register-header">
-              <h1 className="register-title">Tạo tài khoản mới</h1>
-              <p className="register-subtitle">
-                Bắt đầu hành trình nâng suất của bạn miễn phí.
-              </p>
+    <div className="auth-wrapper">
+      {contextHolder}
+
+      <header className="auth-topbar">
+        <Link to="/" className="auth-brand">
+          <span className="auth-brand-logo">
+            <span className="auth-brand-initial">T</span>
+          </span>
+          <span className="auth-brand-text">
+            <span className="auth-brand-name">TASKMIND</span>
+            <span className="auth-brand-sub">AI WORKSPACE</span>
+          </span>
+        </Link>
+        <Link to="/login" className="auth-topbar-cta">
+          Đăng Nhập
+        </Link>
+      </header>
+
+      <div className="auth-shell">
+        <div className="auth-grid">
+          {/* LEFT: informational panel */}
+          <section className="auth-info soft-card">
+            <span className="eyebrow">Đăng ký</span>
+            <h1 className="auth-info-title">
+              BẮT ĐẦU VỚI
+              <br />
+              TASKMIND AI.
+            </h1>
+            <p className="auth-info-desc">
+              Tạo tài khoản miễn phí để truy cập AI Breakdown, Calendar thông
+              minh và hệ thống gợi ý lịch trình tối ưu cho công việc cá nhân.
+            </p>
+
+            <div className="auth-steps-card">
+              <div className="auth-steps-title">Những gì bạn nhận được</div>
+              <ol className="auth-steps">
+                <li>
+                  <span className="step-num">1</span>
+                  <span>AI breakdown công việc thành subtasks có thứ tự.</span>
+                </li>
+                <li>
+                  <span className="step-num">2</span>
+                  <span>
+                    Gợi ý lịch tự động dựa trên deadline và mức ưu tiên.
+                  </span>
+                </li>
+                <li>
+                  <span className="step-num">3</span>
+                  <span>Chat AI hỗ trợ thực thi từng subtask.</span>
+                </li>
+                <li>
+                  <span className="step-num">4</span>
+                  <span>Đồng bộ đa thiết bị, bảo mật token an toàn.</span>
+                </li>
+              </ol>
             </div>
 
+            <div className="auth-security-note">
+              <div className="auth-security-label">Miễn phí</div>
+              <p>
+                Không cần thẻ tín dụng. Nâng cấp bất kỳ lúc nào để mở khóa thêm
+                dung lượng AI.
+              </p>
+            </div>
+          </section>
+
+          {/* RIGHT: form card */}
+          <section className="auth-form-card soft-card">
+            <span className="section-label">Bước 1</span>
+            <h2 className="auth-form-title">Tạo tài khoản mới</h2>
+            <p className="auth-form-desc">
+              Chỉ mất 30 giây. Sau khi đăng ký, bạn sẽ xác thực email bằng mã
+              OTP 6 số.
+            </p>
+
             <Form
+              className="auth-form"
               form={form}
               layout="vertical"
               onFinish={onFinish}
@@ -218,55 +281,39 @@ function Register() {
                 </Checkbox>
               </Form.Item>
 
-              <Form.Item>
+              <Form.Item className="auth-submit-item">
                 <Button
                   type="primary"
                   htmlType="submit"
                   loading={loading}
                   block
                   size="large"
-                  className="register-button"
+                  className="auth-submit-btn"
                 >
                   Đăng ký miễn phí
                 </Button>
               </Form.Item>
             </Form>
 
-            <div className="divider">
-              <span className="divider-text">Hoặc đăng ký với</span>
+            <div className="auth-divider-plain">
+              <span>hoặc đăng ký với</span>
             </div>
 
-            <Button
-              block
-              size="large"
-              className="social-button"
-              icon={<GoogleOutlined />}
-            >
-              Đăng ký bằng Google
-            </Button>
+            <div className="auth-social">
+              <Button
+                block
+                size="large"
+                className="auth-social-btn"
+                icon={<GoogleOutlined />}
+              >
+                Đăng ký bằng Google
+              </Button>
+            </div>
 
-            <p className="login-link">
+            <p className="auth-bottom-link">
               Đã có tài khoản? <Link to="/login">Đăng nhập</Link>
             </p>
-          </div>
-        </div>
-
-        {/* Right side - Background Image */}
-        <div className="register-right">
-          <div className="testimonial-card">
-            <div className="stars">★★★★★</div>
-            <p className="testimonial-text">
-              "TaskMind AI đã thay đổi hoàn toàn cách tôi làm việc. Nó như một
-              người trợ lý thực thụ, giúp tôi tập trung hơn bao giờ hết."
-            </p>
-            <div className="testimonial-author">
-              <div className="author-avatar">N</div>
-              <div className="author-info">
-                <p className="author-name">Nguyễn Văn A</p>
-                <p className="author-title">UX Designer tại TechFlow</p>
-              </div>
-            </div>
-          </div>
+          </section>
         </div>
       </div>
     </div>

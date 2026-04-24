@@ -30,7 +30,7 @@
 }
 
 .chatbot-toggle-btn:hover {
-  box-shadow: 0 6px 16px rgba(0, 102, 204, 0.4);
+  box-shadow: 0 6px 16px rgba(26, 160, 176, 0.4);
 }
 
 /* Chat Popup Card */
@@ -348,7 +348,7 @@
 
 .chat-form .message-input:focus {
   border-color: var(--color-primary-blue);
-  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
+  box-shadow: 0 0 0 2px rgba(26, 160, 176, 0.1);
 }
 
 .chat-form .send-button {
@@ -426,7 +426,7 @@
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(0, 102, 204, 0.45);
+  box-shadow: 0 4px 16px rgba(26, 160, 176, 0.45);
   white-space: nowrap;
   transition:
     background 0.15s,

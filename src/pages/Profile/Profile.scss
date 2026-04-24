@@ -1,8 +1,7 @@
 .profile-page {
   display: flex;
-  min-height: calc(100vh - 64px);
-  background: #f8fafc;
-  padding-top: 64px; // Space for fixed header
+  min-height: calc(100vh - 48px);
+  background: var(--background-tertiary);
 
   &.loading {
     justify-content: center;

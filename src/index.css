@@ -2,27 +2,36 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
 
 /* ============================================
-   TaskMind AI - MongoDB-Style Theme
+   TaskMind AI - Smile AI-Inspired Teal Theme
    60-30-10 Color Rule
-   60%: #FFFFFF / #F9FAFB (White/Off-white - Background)
-   30%: #0066CC / #E6F0FF (Soft Blue - Accents/Sidebar)
-   10%: #10B981 / #F59E0B / #EF4444 (State colors)
+   60%: #FFFFFF / #F6F7F9 (White/Off-white - Background)
+   30%: #1AA0B0 / #E8F4F6 (Teal - Primary/Accents)
+   10%: #F5EEDB (Cream) + states (success/warning/error/info)
    ============================================ */
 
 :root {
   /* Neutral Colors (60%) */
   --color-white: #ffffff;
-  --color-off-white: #f9fafb;
-  --color-light-gray: #f5f7fa;
-  --color-medium-light-gray: #e8ecef;
-  --color-light-border-gray: #d1d5db;
+  --color-off-white: #fbfbfc;
+  --color-light-gray: #f6f7f9;
+  --color-medium-light-gray: #eef0f3;
+  --color-light-border-gray: #e5e7eb;
 
-  /* Soft Blue Colors (30%) */
-  --color-primary-blue: #0066cc;
-  --color-secondary-blue: #1a73e8;
-  --color-light-blue: #4d94ff;
-  --color-lighter-blue: #b3d9ff;
-  --color-very-light-blue: #e6f0ff;
+  /* Primary Teal Palette (30%) - replaces legacy "blue" variable names */
+  --color-primary-blue: #1aa0b0; /* PRIMARY teal */
+  --color-secondary-blue: #148f9f; /* hover */
+  --color-light-blue: #5fc1cd; /* light teal */
+  --color-lighter-blue: #b5e0e6; /* very light teal */
+  --color-very-light-blue: #e8f4f6; /* lightest teal / bg tint */
+
+  /* Semantic (non-legacy) names for new code */
+  --color-primary: #1aa0b0;
+  --color-primary-hover: #148f9f;
+  --color-primary-active: #0f7985;
+  --color-primary-soft: #e8f4f6;
+  --color-primary-tint: #f3fafb;
+  --color-accent-cream: #f5eedb;
+  --color-accent-cream-dark: #ebdfbc;
 
   /* Accent Colors (10%) */
   --color-success: #10b981;
@@ -30,35 +39,35 @@
   --color-error: #ef4444;
   --color-info: #3b82f6;
 
-  /* Text Colors */
-  --color-text-primary: #3c4043;
-  --color-text-secondary: #5f6368;
-  --color-text-tertiary: #70757a;
+  /* Text Colors - darker, more contrast like Smile AI */
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-tertiary: #64748b;
   --color-text-inverse: #ffffff;
 
   /* Component Tokens - Backgrounds */
   --background-primary: #ffffff;
-  --background-secondary: #f9fafb;
-  --background-tertiary: #f5f7fa;
+  --background-secondary: #fbfbfc;
+  --background-tertiary: #f6f7f9;
 
   /* Component Tokens - Buttons */
-  --button-primary-bg: #0066cc;
-  --button-primary-bg-hover: #1a73e8;
+  --button-primary-bg: #1aa0b0;
+  --button-primary-bg-hover: #148f9f;
   --button-primary-text: #ffffff;
-  --button-secondary-bg: #f5f7fa;
-  --button-secondary-bg-hover: #e8ecef;
-  --button-secondary-text: #0066cc;
-  --button-disabled-bg: #e8ecef;
-  --button-disabled-text: #d1d5db;
+  --button-secondary-bg: #f6f7f9;
+  --button-secondary-bg-hover: #eef0f3;
+  --button-secondary-text: #0f7985;
+  --button-disabled-bg: #eef0f3;
+  --button-disabled-text: #94a3b8;
 
   /* Component Tokens - Cards */
   --card-bg: #ffffff;
-  --card-border: #d1d5db;
-  --card-shadow: rgba(0, 0, 0, 0.06);
+  --card-border: #e5e7eb;
+  --card-shadow: rgba(15, 23, 42, 0.04);
 
   /* Component Tokens - Borders */
-  --border-light: #d1d5db;
-  --border-medium: #e8ecef;
+  --border-light: #e5e7eb;
+  --border-medium: #eef0f3;
 
   /* Component Tokens - States */
   --state-success: #10b981;
@@ -67,14 +76,28 @@
   --state-info: #3b82f6;
 
   /* Legacy aliases for backward compat */
-  --bg-primary: #f5f7fa;
+  --bg-primary: #f6f7f9;
   --bg-secondary: #ffffff;
   --bg-elevated: #ffffff;
-  --text-primary: #3c4043;
-  --text-secondary: #5f6368;
-  --text-tertiary: #70757a;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary: #64748b;
   --text-white: #ffffff;
   --border-lighter: #f3f4f6;
+
+  /* Responsive breakpoints (for reference in JS via getComputedStyle) */
+  --bp-xs: 480px;
+  --bp-sm: 640px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1280px;
+  --bp-2xl: 1536px;
+
+  /* Layout */
+  --container-max: 1280px;
+  --sidebar-width: 240px;
+  --sidebar-width-collapsed: 72px;
+  --header-height: 64px;
 
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -164,25 +187,25 @@ button {
   background: var(--color-primary-blue);
   color: white;
   border: none;
-  box-shadow: 0 2px 8px rgba(0, 102, 204, 0.25);
+  box-shadow: 0 2px 8px rgba(26, 160, 176, 0.25);
 }
 
 .btn-primary:hover {
   background: var(--color-secondary-blue);
-  box-shadow: 0 4px 12px rgba(0, 102, 204, 0.35);
+  box-shadow: 0 4px 12px rgba(26, 160, 176, 0.35);
   transform: translateY(-1px);
 }
 
-/* AI Gradient Button - toned down, MongoDB-style */
+/* AI Gradient Button - teal gradient */
 .ai-gradient-btn {
   background: linear-gradient(
     135deg,
     var(--color-primary-blue) 0%,
-    var(--color-secondary-blue) 100%
+    #0f7985 100%
   );
   color: white;
   border: none;
-  box-shadow: 0 2px 8px rgba(0, 102, 204, 0.3);
+  box-shadow: 0 2px 8px rgba(26, 160, 176, 0.3);
   position: relative;
   overflow: hidden;
 }
@@ -191,10 +214,10 @@ button {
   background: linear-gradient(
     135deg,
     var(--color-secondary-blue) 0%,
-    var(--color-light-blue) 100%
+    var(--color-primary-blue) 100%
   );
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(0, 102, 204, 0.4);
+  box-shadow: 0 4px 14px rgba(26, 160, 176, 0.4);
 }
 
 .ai-gradient-btn::before {
@@ -294,5 +317,97 @@ button {
 /* Selection */
 ::selection {
   background-color: var(--color-very-light-blue);
-  color: var(--color-primary-blue);
+  color: var(--color-primary-active, #0f7985);
+}
+
+/* ============================================
+   Responsive Utilities (Smile AI-inspired)
+   ============================================ */
+
+.container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* Hide on mobile / show on mobile helpers */
+.hide-mobile {
+  display: initial;
+}
+.show-mobile {
+  display: none;
+}
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none !important;
+  }
+  .show-mobile {
+    display: initial !important;
+  }
+}
+
+/* Chip/Pill - Smile AI label style (SMILE AI MARKETPLACE pill) */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-active);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.eyebrow::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  background: var(--color-primary);
+  border-radius: 50%;
+}
+
+/* Section label (small uppercase) */
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+/* Soft card like Smile AI panels */
+.soft-card {
+  background: var(--color-white);
+  border: 1px solid var(--border-light);
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.03);
+  transition:
+    box-shadow 220ms ease,
+    transform 220ms ease;
+}
+
+.soft-card:hover {
+  box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.08);
+}
+
+@media (max-width: 640px) {
+  .soft-card {
+    padding: 20px;
+    border-radius: 16px;
+  }
 }

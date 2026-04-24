@@ -297,28 +297,42 @@ function ForgotPassword() {
   };
 
   return (
-    <div className="forgot-password-page">
+    <div className="auth-wrapper">
       {contextHolder}
-      <div className="forgot-password-container">
-        <div className="forgot-password-card">
-          {/* Logo */}
-          <div className="card-header">
-            <div className="logo-section">
-              <div className="logo-icon">▲</div>
-              <span className="logo-text">TaskMind AI</span>
+
+      <header className="auth-topbar">
+        <Link to="/" className="auth-brand">
+          <span className="auth-brand-logo">
+            <span className="auth-brand-initial">T</span>
+          </span>
+          <span className="auth-brand-text">
+            <span className="auth-brand-name">TASKMIND</span>
+            <span className="auth-brand-sub">AI WORKSPACE</span>
+          </span>
+        </Link>
+        <Link to="/login" className="auth-topbar-cta">
+          Đăng Nhập
+        </Link>
+      </header>
+
+      <div className="auth-shell">
+        <div className="auth-grid auth-grid-single">
+          <section className="auth-form-card soft-card">
+            <div className="auth-icon-badge">
+              <SafetyOutlined />
             </div>
-          </div>
 
-          {/* Steps */}
-          <Steps
-            current={currentStep}
-            items={steps}
-            className="forgot-steps"
-            size="small"
-          />
+            <span className="eyebrow">Khôi phục mật khẩu</span>
 
-          {/* Step Content */}
-          {renderStepContent()}
+            <Steps
+              current={currentStep}
+              items={steps}
+              className="auth-steps-progress"
+              size="small"
+            />
+
+            {renderStepContent()}
+          </section>
         </div>
       </div>
     </div>

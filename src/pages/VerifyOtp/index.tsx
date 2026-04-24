@@ -48,72 +48,98 @@ function VerifyOtp() {
       await resendOtp(email);
       messageApi.success("Đã gửi lại OTP!");
     } catch (error: any) {
-      messageApi.error(error.response?.data?.message || "Không thể gửi lại OTP");
+      messageApi.error(
+        error.response?.data?.message || "Không thể gửi lại OTP",
+      );
     } finally {
       setResendLoading(false);
     }
   };
 
   return (
-    <div className="verify-otp-page">
+    <div className="auth-wrapper">
       {contextHolder}
-      <div className="verify-otp-container">
-        <Link to="/register" className="back-link">
-          <ArrowLeftOutlined /> Quay lại đăng ký
+
+      <header className="auth-topbar">
+        <Link to="/" className="auth-brand">
+          <span className="auth-brand-logo">
+            <span className="auth-brand-initial">T</span>
+          </span>
+          <span className="auth-brand-text">
+            <span className="auth-brand-name">TASKMIND</span>
+            <span className="auth-brand-sub">AI WORKSPACE</span>
+          </span>
         </Link>
+        <Link to="/login" className="auth-topbar-cta">
+          Đăng Nhập
+        </Link>
+      </header>
 
-        <div className="verify-otp-card">
-          <div className="otp-icon">
-            <MailOutlined />
-          </div>
+      <div className="auth-shell">
+        <div className="auth-grid auth-grid-single">
+          <section className="auth-form-card soft-card">
+            <Link to="/register" className="auth-back-link">
+              <ArrowLeftOutlined /> Quay lại đăng ký
+            </Link>
 
-          <Title level={3} className="otp-title">Xác thực email</Title>
-          <Text type="secondary" className="otp-subtitle">
-            Chúng tôi đã gửi mã OTP đến {email || "email của bạn"}.
-            <br />
-            Vui lòng nhập mã để hoàn tất đăng ký.
-          </Text>
+            <div className="auth-icon-badge">
+              <MailOutlined />
+            </div>
 
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={onFinish}
-            autoComplete="off"
-          >
-            <Form.Item
-              name="otp"
-              rules={[
-                { required: true, message: "Vui lòng nhập mã OTP!" },
-                { len: 6, message: "Mã OTP phải có 6 chữ số!" },
-              ]}
+            <span className="section-label">Bước 2</span>
+            <Title level={3} className="auth-form-title">
+              Xác thực email của bạn
+            </Title>
+            <Text className="auth-form-desc">
+              Chúng tôi đã gửi mã OTP 6 số đến{" "}
+              <strong>{email || "email của bạn"}</strong>. Vui lòng nhập mã để
+              hoàn tất đăng ký.
+            </Text>
+
+            <Form
+              className="auth-form auth-form-otp"
+              form={form}
+              layout="vertical"
+              onFinish={onFinish}
+              autoComplete="off"
             >
-              <Input.OTP length={6} size="large" />
-            </Form.Item>
-
-            <Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={loading}
-                block
-                size="large"
-                className="verify-button"
+              <Form.Item
+                name="otp"
+                label="Mã OTP"
+                rules={[
+                  { required: true, message: "Vui lòng nhập mã OTP!" },
+                  { len: 6, message: "Mã OTP phải có 6 chữ số!" },
+                ]}
               >
-                Xác thực
-              </Button>
-            </Form.Item>
-          </Form>
+                <Input.OTP length={6} size="large" />
+              </Form.Item>
 
-          <div className="resend-section">
-            <Text type="secondary">Không nhận được mã?</Text>
-            <Button
-              type="link"
-              onClick={handleResendOtp}
-              loading={resendLoading}
-            >
-              Gửi lại OTP
-            </Button>
-          </div>
+              <Form.Item className="auth-submit-item">
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={loading}
+                  block
+                  size="large"
+                  className="auth-submit-btn"
+                >
+                  Xác thực mã OTP
+                </Button>
+              </Form.Item>
+            </Form>
+
+            <div className="auth-resend">
+              <Text type="secondary">Không nhận được mã?</Text>
+              <Button
+                type="link"
+                onClick={handleResendOtp}
+                loading={resendLoading}
+                className="auth-resend-btn"
+              >
+                Gửi lại OTP
+              </Button>
+            </div>
+          </section>
         </div>
       </div>
     </div>

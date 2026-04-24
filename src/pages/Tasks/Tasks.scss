@@ -127,7 +127,7 @@
       justify-content: center;
       font-size: 22px;
       color: white;
-      box-shadow: 0 2px 8px rgba(0, 102, 204, 0.25);
+      box-shadow: 0 2px 8px rgba(26, 160, 176, 0.25);
     }
   }
 }
@@ -169,5 +169,170 @@
     &:last-child {
       border-bottom: none;
     }
+  }
+}
+
+/* ============================================
+   Tasks Toolbar (outside Card, responsive)
+   ============================================ */
+.tasks-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  background: var(--color-white);
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+
+  .tasks-toolbar-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1 1 280px;
+    min-width: 0;
+
+    > .ant-input-affix-wrapper {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .tasks-toolbar-select {
+      width: 180px;
+      flex-shrink: 0;
+    }
+  }
+
+  .tasks-toolbar-actions {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+    margin-left: auto;
+
+    .ant-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+  }
+
+  /* Desktop: show full labels, hide short */
+  .btn-label-short {
+    display: none;
+  }
+}
+
+/* Toolbar tablet */
+@media (max-width: 1024px) {
+  .tasks-toolbar {
+    .tasks-toolbar-search {
+      flex: 1 1 100%;
+    }
+
+    .tasks-toolbar-actions {
+      margin-left: 0;
+      width: 100%;
+
+      .ant-btn {
+        flex: 1 1 auto;
+        justify-content: center;
+      }
+    }
+  }
+}
+
+/* Toolbar mobile: stack + swap to short labels */
+@media (max-width: 640px) {
+  .tasks-toolbar {
+    padding: 12px;
+    border-radius: 14px;
+    gap: 10px;
+
+    .tasks-toolbar-search {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+
+      .tasks-toolbar-select {
+        width: 100%;
+      }
+    }
+
+    .btn-label-full {
+      display: none;
+    }
+
+    .btn-label-short {
+      display: inline;
+    }
+
+    .tasks-toolbar-actions .ant-btn {
+      height: 42px;
+      font-size: 13px;
+      padding: 0 12px;
+    }
+  }
+}
+
+/* ============================================
+   Page + Table Responsive
+   ============================================ */
+@media (max-width: 1024px) {
+  .tasks-main {
+    padding: 8px 0 20px;
+    max-width: 100%;
+  }
+
+  .tasks-table-card .task-title-cell .task-title-row .task-title-text {
+    max-width: 160px;
+  }
+}
+
+@media (max-width: 768px) {
+  .tasks-main {
+    padding: 4px 0 16px;
+  }
+
+  .page-header {
+    margin-bottom: 18px;
+
+    h2 {
+      font-size: 22px !important;
+    }
+  }
+
+  .tasks-table-card {
+    /* Card padding reduce */
+    > .ant-card-head {
+      padding: 14px 16px;
+    }
+
+    > .ant-card-body {
+      padding: 8px;
+    }
+
+    .ant-table {
+      font-size: 13px;
+    }
+  }
+
+  .ai-assistant-card,
+  .ai-suggestions-card,
+  .quick-stats-card {
+    .ant-card-body {
+      padding: 16px;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .page-header h2 {
+    font-size: 20px !important;
+  }
+
+  .tasks-table-card > .ant-card-body {
+    padding: 4px;
   }
 }

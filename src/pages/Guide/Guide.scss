@@ -1,0 +1,349 @@
+/* ============================================
+   Guide page - Smile AI style (images 4-6)
+   ============================================ */
+
+.guide-page {
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Intro block */
+.guide-intro {
+  background: var(--color-white);
+  border: 1px solid var(--border-light);
+  border-radius: 20px;
+  padding: 36px 40px;
+}
+
+.guide-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-tertiary);
+  letter-spacing: 1.4px;
+  margin-bottom: 14px;
+
+  .anticon {
+    color: #1aa0b0;
+  }
+}
+
+.guide-intro-title {
+  margin: 0 0 14px 0;
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.8px;
+  color: var(--color-text-primary);
+
+  .accent {
+    color: #0f7985;
+    font-style: italic;
+  }
+}
+
+.guide-intro-desc {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+  max-width: 620px;
+}
+
+/* Steps section */
+.guide-section {
+  background: var(--color-white);
+  border: 1px solid var(--border-light);
+  border-radius: 20px;
+  padding: 32px 36px;
+}
+
+.guide-section-label {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f7985;
+  letter-spacing: 1.2px;
+  margin-bottom: 8px;
+
+  &.warning-label {
+    color: #b45309;
+  }
+}
+
+.guide-section-title {
+  margin: 0 0 24px 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.guide-step-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.guide-step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+
+  .step-number {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #e8f4f6;
+    color: #0f7985;
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+
+  .step-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .step-title {
+    margin: 0 0 6px 0;
+    font-size: 15.5px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+  }
+
+  .step-desc {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--color-text-secondary);
+
+    a {
+      color: #0f7985;
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+
+      &:hover {
+        color: #1aa0b0;
+      }
+    }
+
+    code {
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    strong {
+      color: var(--color-text-primary);
+      font-weight: 700;
+    }
+
+    .btn-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 10px;
+      background: linear-gradient(135deg, #1aa0b0, #148f9f);
+      color: #fff;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+  }
+}
+
+.guide-section-cta {
+  display: inline-block;
+  margin-top: 26px;
+
+  .guide-cta-btn {
+    height: 44px !important;
+    padding: 0 22px !important;
+    border-radius: 999px !important;
+    font-weight: 600 !important;
+    background: linear-gradient(135deg, #15a884 0%, #10b981 100%) !important;
+    border: none !important;
+    box-shadow: 0 8px 18px -4px rgba(16, 185, 129, 0.45) !important;
+
+    .anticon {
+      margin-left: 4px;
+    }
+  }
+}
+
+/* Important notes */
+.guide-notes {
+  .guide-note-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+
+    li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 14px;
+      line-height: 1.65;
+      color: var(--color-text-secondary);
+
+      strong {
+        color: var(--color-text-primary);
+        font-weight: 700;
+      }
+    }
+
+    .note-dot {
+      color: #f59e0b;
+      font-size: 10px;
+      margin-top: 8px;
+      flex-shrink: 0;
+    }
+  }
+}
+
+/* Support block */
+.guide-support {
+  background: var(--color-white);
+  border: 1px solid var(--border-light);
+  border-radius: 20px;
+  padding: 28px 32px;
+
+  .support-title {
+    margin: 0 0 6px 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+  }
+
+  .support-desc {
+    margin: 0 0 20px 0;
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+  }
+
+  .support-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+
+    .ant-btn {
+      height: 44px;
+      padding: 0 20px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+
+    .support-btn-primary {
+      background: linear-gradient(135deg, #1aa0b0, #148f9f) !important;
+      border: none !important;
+      box-shadow: 0 6px 14px -4px rgba(26, 160, 176, 0.5) !important;
+    }
+
+    .support-btn-secondary {
+      border: 1.5px solid var(--border-light) !important;
+      color: var(--color-text-primary) !important;
+
+      &:hover {
+        border-color: #1aa0b0 !important;
+        color: #1aa0b0 !important;
+      }
+    }
+  }
+}
+
+/* Footer wrap: break out of guide-page max-width, span full main width */
+.guide-footer-wrap {
+  margin: 32px calc(-1 * var(--guide-break-x, 32px)) -24px;
+  width: auto;
+
+  @media (max-width: 1024px) {
+    margin-left: -20px;
+    margin-right: -20px;
+    margin-bottom: -24px;
+  }
+
+  @media (max-width: 640px) {
+    margin-left: -14px;
+    margin-right: -14px;
+    margin-bottom: -20px;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .guide-page {
+    gap: 16px;
+  }
+
+  .guide-intro {
+    padding: 26px 22px;
+  }
+
+  .guide-intro-title {
+    font-size: 24px;
+  }
+
+  .guide-section {
+    padding: 24px 22px;
+  }
+
+  .guide-section-title {
+    font-size: 18px;
+  }
+
+  .guide-step-item .step-title {
+    font-size: 15px;
+  }
+
+  .guide-support {
+    padding: 22px 20px;
+
+    .support-actions .ant-btn {
+      flex: 1 1 auto;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .guide-intro {
+    padding: 22px 18px;
+  }
+
+  .guide-intro-title {
+    font-size: 22px;
+  }
+
+  .guide-section {
+    padding: 20px 18px;
+  }
+
+  .guide-step-item {
+    gap: 12px;
+
+    .step-number {
+      width: 26px;
+      height: 26px;
+      font-size: 13px;
+    }
+  }
+}
