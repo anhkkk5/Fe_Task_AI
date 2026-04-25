@@ -119,6 +119,7 @@ export default function ScheduleTemplateManager({
         <Empty description="Chưa có template nào" style={{ padding: 40 }} />
       ) : (
         <List
+          loading={loading}
           dataSource={templates}
           renderItem={(template) => (
             <List.Item

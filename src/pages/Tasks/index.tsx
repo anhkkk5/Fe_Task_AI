@@ -11,7 +11,6 @@ import {
   Dropdown,
   Space,
   Typography,
-  Badge,
   Avatar,
   Tooltip,
   Modal,
@@ -28,7 +27,6 @@ import {
   EditOutlined,
   DeleteOutlined,
   CheckCircleOutlined,
-  ClockCircleOutlined,
   CalendarOutlined,
   ArrowLeftOutlined,
   ScheduleOutlined,
@@ -36,7 +34,6 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import AITaskScheduler from "../../components/AITaskScheduler";
 import StatusDropdown from "../../components/StatusDropdown";
-import { AIBreakdownButton } from "../../components/AIBreakdownButton";
 import { SubtaskList } from "../../components/SubtaskList";
 import { useChatbot } from "../../contexts/ChatbotContext";
 import {
@@ -62,92 +59,12 @@ import "./Tasks.scss";
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-// Helper: Calculate optimal distribution across days
-const calculateDistribution = (
-  totalMinutes: number,
-  targetRange: { min: number; max: number },
-  days: number,
-): number[] => {
-  // Validate: can we fit within constraints?
-  const minTotal = targetRange.min * days;
-  const maxTotal = targetRange.max * days;
-
-  if (totalMinutes < minTotal) {
-    // Not enough days with current target, use min target
-    const base = Math.floor(totalMinutes / days);
-    const remainder = totalMinutes % days;
-    return Array(days)
-      .fill(0)
-      .map((_, i) => base + (i < remainder ? 1 : 0));
-  }
-
-  if (totalMinutes > maxTotal) {
-    // Exceeds max, cap at max per day and extend days
-    return Array(days).fill(targetRange.max);
-  }
-
-  // Optimal: distribute as evenly as possible within range
-  const idealPerDay = Math.floor(totalMinutes / days);
-
-  // Adjust to be within range
-  const targetPerDay = Math.max(
-    targetRange.min,
-    Math.min(idealPerDay, targetRange.max),
-  );
-
-  // Calculate distribution
-  let remaining = totalMinutes;
-  const distribution: number[] = [];
-
-  for (let i = 0; i < days; i++) {
-    if (i === days - 1) {
-      // Last day takes remainder
-      distribution.push(remaining);
-    } else {
-      const dayMinutes = Math.min(
-        targetPerDay +
-          (remaining > targetPerDay * (days - i)
-            ? targetRange.max - targetPerDay
-            : 0),
-        remaining - targetRange.min * (days - i - 1), // Ensure remaining days can meet min
-      );
-      distribution.push(Math.round(dayMinutes));
-      remaining -= Math.round(dayMinutes);
-    }
-  }
-
-  return distribution;
-};
-
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  status:
-    | "todo"
-    | "in_progress"
-    | "done"
-    | "overdue"
-    | "completed"
-    | "cancelled";
-  priority: "low" | "medium" | "high" | "urgent";
-  dueDate: string;
-  assignee?: string;
-  aiAssisted: boolean;
-  tags: string[];
-  estimatedDuration?: number;
-  dailyTargetDuration?: number;
-  dailyTargetMin?: number;
-}
-
 type ApiTaskStatus =
   | "todo"
   | "scheduled"
   | "in_progress"
   | "completed"
   | "cancelled";
-
-type DropdownTaskStatus = "todo" | "scheduled";
 
 const normalizeApiStatus = (apiStatus: string): ApiTaskStatus => {
   if (
@@ -164,29 +81,6 @@ const normalizeApiStatus = (apiStatus: string): ApiTaskStatus => {
 
   return "todo";
 };
-
-const toDropdownStatus = (status: string): DropdownTaskStatus => {
-  const s = normalizeApiStatus(status);
-  if (s === "scheduled") return "scheduled";
-  return "todo";
-};
-
-const aiSuggestions = [
-  {
-    id: 1,
-    title: "Tự động phân loại",
-    description:
-      "Tôi có thể giúp phân loại các task theo độ ưu tiên dựa trên deadline.",
-    action: "Phân loại ngay",
-  },
-  {
-    id: 2,
-    title: "Gợi ý phân công",
-    description:
-      "Dựa trên khối lượng công việc hiện tại, tôi gợi ý phân công lại 2 task.",
-    action: "Xem gợi ý",
-  },
-];
 
 interface TaskItem {
   id: string;

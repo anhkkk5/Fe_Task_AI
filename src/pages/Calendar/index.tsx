@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Typography, Button, Select, message } from "antd";
 import {
   LeftOutlined,
@@ -28,7 +28,7 @@ import { useCalendarData } from "./hooks/useCalendarData";
 
 // Components
 import { CalendarSidebar } from "./components/CalendarSidebar";
-import { CalendarGrid, WEEK_DAYS } from "./components/CalendarGrid";
+import { CalendarGrid } from "./components/CalendarGrid";
 import { CreateEventModal } from "./components/CreateEventModal";
 import { EventDetailModal } from "./components/EventDetailModal";
 import { AvailabilitySettingsModal } from "./components/AvailabilitySettingsModal";

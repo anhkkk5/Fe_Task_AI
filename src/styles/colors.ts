@@ -10,11 +10,25 @@
  * - 10% Accent: Success, warning, error, and info states
  */
 
-// Re-export color palette and design tokens from shared configuration
-export {
-  colorPalette,
-  designTokens,
-} from "../../../shared/colors/colors.config";
+export const colorPalette = {
+  white: "#FFFFFF",
+  offWhite: "#FBFBFC",
+  lightGray: "#F6F7F9",
+  primaryBlue: "#1AA0B0",
+  secondaryBlue: "#148F9F",
+  success: "#10B981",
+  warning: "#F59E0B",
+  error: "#EF4444",
+  info: "#3B82F6",
+};
+
+export const designTokens = {
+  backgroundPrimary: colorPalette.white,
+  backgroundSecondary: colorPalette.offWhite,
+  textPrimary: "#0F172A",
+  textSecondary: "#475569",
+  borderLight: "#E5E7EB",
+};
 
 /**
  * CSS Variables String

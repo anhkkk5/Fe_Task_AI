@@ -171,17 +171,17 @@ export const loadGoogleScript = (): Promise<void> => {
 
 // Initialize Google Sign-In - now redirects to backend
 export const initGoogleSignIn = (
-  callback: (token: string, user: GoogleUserInfo) => void,
-  errorCallback?: (error: Error) => void,
+  _callback: (token: string, user: GoogleUserInfo) => void,
+  _errorCallback?: (error: Error) => void,
 ): void => {
   redirectToGoogleAuth();
 };
 
 // Render Google Sign-In button - not needed with custom UI
 export const renderGoogleSignInButton = (
-  containerId: string,
-  onSuccess: (token: string, user: GoogleUserInfo) => void,
-  onError?: (error: Error) => void,
+  _containerId: string,
+  _onSuccess: (token: string, user: GoogleUserInfo) => void,
+  _onError?: (error: Error) => void,
 ): void => {
   // Not implemented - use redirectToGoogleAuth instead
   console.warn("renderGoogleSignInButton not implemented with Passport flow");

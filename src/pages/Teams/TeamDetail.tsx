@@ -56,6 +56,7 @@ import {
   type CatalogResponse,
   type IndustryInfo,
 } from "../../services/catalogServices";
+import { useMessenger } from "../../contexts/MessengerContext";
 import "./TeamDetail.scss";
 import dayjs from "dayjs";
 
@@ -100,6 +101,7 @@ export default function TeamDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { socket } = useMessenger();
   const currentUser = useSelector((s: any) => s.auth.user);
   const currentUserId =
     currentUser?._id || currentUser?.id || currentUser?.userId;
@@ -247,10 +249,12 @@ export default function TeamDetail() {
     return Boolean(isOwner || assignerId === String(currentUserId));
   };
 
-  const canUpdateTaskStatus = (task: any) => {
+  const isTaskAssignee = (task: any) => {
     const assigneeId = String(task?.teamAssignment?.assigneeId || "");
-    return canManageTask(task) || assigneeId === String(currentUserId);
+    return assigneeId === String(currentUserId);
   };
+
+  const canUpdateWorkflowStatus = () => true;
 
   const openEditTaskModal = (task: any) => {
     if (!canManageTask(task)) {
@@ -265,7 +269,7 @@ export default function TeamDetail() {
       description: task.description,
       priority: task.priority || "medium",
       assigneeId: task?.teamAssignment?.assigneeId,
-      status: task.status || "todo",
+      status: task.status === "scheduled" ? "todo" : task.status || "todo",
       startAt: task?.teamAssignment?.startAt
         ? dayjs(task.teamAssignment.startAt)
         : null,
@@ -303,7 +307,7 @@ export default function TeamDetail() {
   };
 
   const handleUpdateTaskStatus = async (task: any, status: string) => {
-    if (!canUpdateTaskStatus(task)) {
+    if (!canUpdateWorkflowStatus()) {
       message.warning("Bạn không có quyền cập nhật trạng thái task này");
       return;
     }
@@ -312,12 +316,7 @@ export default function TeamDetail() {
       await updateTeamTaskStatus(
         id!,
         String(task._id || task.id),
-        status as
-          | "todo"
-          | "scheduled"
-          | "in_progress"
-          | "completed"
-          | "cancelled",
+        status as "todo" | "in_progress" | "completed" | "cancelled",
       );
       message.success("Đã cập nhật trạng thái");
       await loadTeam();
@@ -374,6 +373,67 @@ export default function TeamDetail() {
     const taskId = query.get("taskId");
     setFocusTaskIdFromQuery(taskId);
   }, [location.search]);
+
+  useEffect(() => {
+    if (!socket || !id) return;
+
+    const handleTeamTaskChanged = async (payload: {
+      teamId?: string;
+      taskId?: string;
+      action?:
+        | "created"
+        | "updated"
+        | "status_changed"
+        | "deleted"
+        | "assigned"
+        | "unassigned";
+      actorId?: string;
+      at?: string;
+    }) => {
+      if (!payload?.teamId || String(payload.teamId) !== String(id)) return;
+      if (
+        payload.actorId &&
+        String(payload.actorId) === String(currentUserId)
+      ) {
+        return;
+      }
+
+      try {
+        const boardData = await getTeamBoard(id);
+        setBoard(boardData);
+      } catch {
+        // silent fallback, user can still manually refresh
+      }
+    };
+
+    socket.on("team:task:changed", handleTeamTaskChanged);
+    return () => {
+      socket.off("team:task:changed", handleTeamTaskChanged);
+    };
+  }, [socket, id, currentUserId]);
+
+  useEffect(() => {
+    if (!focusTaskIdFromQuery || commentModalOpen) return;
+
+    const tasks = board
+      ? [
+          ...(board.todo || []),
+          ...(board.scheduled || []),
+          ...(board.in_progress || []),
+          ...(board.completed || []),
+          ...(board.cancelled || []),
+        ]
+      : [];
+    if (!tasks.length) return;
+
+    const targetTask = tasks.find(
+      (task: any) => String(task._id || task.id) === focusTaskIdFromQuery,
+    );
+    if (!targetTask) return;
+
+    setFocusTaskIdFromQuery(null);
+    void openCommentModal(targetTask);
+  }, [board, focusTaskIdFromQuery, commentModalOpen, openCommentModal]);
 
   const loadTeam = async () => {
     try {
@@ -615,21 +675,12 @@ export default function TeamDetail() {
   const allTasks = board
     ? [
         ...(board.todo || []),
+        ...(board.scheduled || []),
         ...(board.in_progress || []),
         ...(board.completed || []),
+        ...(board.cancelled || []),
       ]
     : [];
-
-  useEffect(() => {
-    if (!focusTaskIdFromQuery || !allTasks.length || commentModalOpen) return;
-    const targetTask = allTasks.find(
-      (task: any) => String(task._id || task.id) === focusTaskIdFromQuery,
-    );
-    if (!targetTask) return;
-
-    setFocusTaskIdFromQuery(null);
-    void openCommentModal(targetTask);
-  }, [allTasks, focusTaskIdFromQuery, commentModalOpen, openCommentModal]);
 
   const membersById = new Map(team.members.map((m) => [m.userId, m]));
 
@@ -727,38 +778,62 @@ export default function TeamDetail() {
       },
     },
     {
-      title: "Trạng thái",
+      title: "Lịch cá nhân",
+      key: "personalSchedule",
+      render: (task: any) => {
+        if (!isTaskAssignee(task)) {
+          return (
+            <span style={{ color: "var(--color-text-tertiary)", fontSize: 12 }}>
+              Riêng tư
+            </span>
+          );
+        }
+
+        const hasPersonalSchedule =
+          Boolean(task?.scheduledTime?.start) || task?.status === "scheduled";
+        return hasPersonalSchedule ? (
+          <Badge status="processing" text="Đã lên lịch" />
+        ) : (
+          <Badge status="default" text="Chưa lên lịch" />
+        );
+      },
+    },
+    {
+      title: "Trạng thái công việc",
       dataIndex: "status",
       key: "status",
       render: (s: string, task: any) => {
+        const workflowStatus = s === "scheduled" ? "todo" : s;
         const map: Record<string, string> = {
           todo: "default",
-          scheduled: "processing",
           in_progress: "processing",
           completed: "success",
           cancelled: "error",
         };
         const labels: Record<string, string> = {
           todo: "Chờ",
-          scheduled: "Đã lên lịch",
           in_progress: "Đang làm",
           completed: "Hoàn thành",
           cancelled: "Huỷ",
         };
 
-        if (!canUpdateTaskStatus(task)) {
-          return <Badge status={map[s] as any} text={labels[s] || s} />;
+        if (!canUpdateWorkflowStatus()) {
+          return (
+            <Badge
+              status={map[workflowStatus] as any}
+              text={labels[workflowStatus] || workflowStatus}
+            />
+          );
         }
 
         return (
           <Select
-            value={s}
+            value={workflowStatus}
             size="small"
             style={{ width: 140 }}
             onChange={(nextStatus) => handleUpdateTaskStatus(task, nextStatus)}
             options={[
               { value: "todo", label: "Chờ" },
-              { value: "scheduled", label: "Đã lên lịch" },
               { value: "in_progress", label: "Đang làm" },
               { value: "completed", label: "Hoàn thành" },
               { value: "cancelled", label: "Huỷ" },
@@ -1244,7 +1319,6 @@ export default function TeamDetail() {
           <Form.Item name="status" label="Trạng thái">
             <Select>
               <Select.Option value="todo">Chờ</Select.Option>
-              <Select.Option value="scheduled">Đã lên lịch</Select.Option>
               <Select.Option value="in_progress">Đang làm</Select.Option>
               <Select.Option value="completed">Hoàn thành</Select.Option>
               <Select.Option value="cancelled">Huỷ</Select.Option>
