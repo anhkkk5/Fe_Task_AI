@@ -12,7 +12,11 @@ function GoogleCallback() {
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(
+      window.location.hash.replace(/^#/, ""),
+    );
     const error = urlParams.get("error");
+    const tokenFromHash = hashParams.get("token");
 
     if (error) {
       message.error(`Đăng nhập thất bại: ${error}`);
@@ -21,6 +25,16 @@ function GoogleCallback() {
       // CRITICAL: Clear old memory token to ensure cookie is used
       clearAccessToken();
       localStorage.removeItem("token");
+
+      if (tokenFromHash) {
+        setAccessToken(tokenFromHash);
+        localStorage.setItem("token", tokenFromHash);
+        window.history.replaceState(
+          {},
+          document.title,
+          window.location.pathname,
+        );
+      }
 
       // httpOnly cookie is set by backend, fetch user info
       getMe()

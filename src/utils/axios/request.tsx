@@ -10,8 +10,8 @@ const NORMALIZED_BASE_URL = API_BASE_URL.endsWith("/")
   ? API_BASE_URL
   : `${API_BASE_URL}/`;
 
-// Store access token in memory (not localStorage for security)
-let accessToken: string | null = null;
+// Store access token in memory with localStorage fallback for mobile browsers
+let accessToken: string | null = localStorage.getItem("token");
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
 
@@ -84,6 +84,7 @@ axiosInstance.interceptors.response.use(
         isRefreshing = false;
         refreshSubscribers = [];
         accessToken = null;
+        localStorage.removeItem("token");
         window.location.href = "/login";
         return Promise.reject(refreshError);
       }
@@ -95,10 +96,12 @@ axiosInstance.interceptors.response.use(
 
 export const setAccessToken = (token: string) => {
   accessToken = token;
+  localStorage.setItem("token", token);
 };
 
 export const clearAccessToken = () => {
   accessToken = null;
+  localStorage.removeItem("token");
 };
 
 export const getAccessToken = () => accessToken;
