@@ -223,6 +223,110 @@
   -webkit-text-fill-color: transparent;
 }
 
+.schedule-guide {
+  width: 100%;
+  max-width: 760px;
+  border: 1px solid #d9eef2;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f8fdff, #f3fcff);
+  padding: 14px;
+  box-shadow: 0 8px 24px -18px rgba(26, 160, 176, 0.45);
+
+  .schedule-guide-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .guide-icon {
+    margin-top: 2px;
+    color: #0f7985;
+    font-size: 16px;
+  }
+
+  .guide-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f3b47;
+    line-height: 1.35;
+  }
+
+  .guide-subtitle {
+    font-size: 12.5px;
+    color: #3b5f68;
+    margin-top: 3px;
+    line-height: 1.45;
+  }
+
+  .guide-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .guide-action {
+    border: 1px solid #d2e9ee;
+    background: #fff;
+    border-radius: 10px;
+    padding: 10px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 140ms ease;
+
+    &:hover:not(:disabled) {
+      border-color: #1aa0b0;
+      background: #f0fafb;
+      transform: translateY(-1px);
+    }
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .action-label {
+      display: block;
+      font-size: 12.8px;
+      font-weight: 700;
+      color: #0f3b47;
+      margin-bottom: 3px;
+    }
+
+    .action-description {
+      display: block;
+      font-size: 11.8px;
+      color: #507782;
+      line-height: 1.35;
+    }
+  }
+
+  &.compact {
+    max-width: 760px;
+    padding: 10px 12px;
+
+    .guide-subtitle {
+      font-size: 12px;
+    }
+
+    .guide-actions {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .guide-action {
+      padding: 8px 9px;
+
+      .action-label {
+        font-size: 12px;
+      }
+
+      .action-description {
+        font-size: 11px;
+      }
+    }
+  }
+}
+
 /* Suggestion chips */
 .suggestion-chips {
   display: flex;
@@ -277,7 +381,9 @@
   box-shadow:
     0 2px 6px rgba(15, 23, 42, 0.03),
     0 10px 40px -16px rgba(15, 23, 42, 0.08);
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 
   &:focus-within {
     border-color: #1aa0b0;
@@ -417,17 +523,27 @@
         }
       }
 
-      h1, h2, h3, h4 {
+      h1,
+      h2,
+      h3,
+      h4 {
         margin: 18px 0 8px 0;
         font-weight: 600;
         color: #111827;
       }
 
-      h1 { font-size: 22px; }
-      h2 { font-size: 19px; }
-      h3 { font-size: 17px; }
+      h1 {
+        font-size: 22px;
+      }
+      h2 {
+        font-size: 19px;
+      }
+      h3 {
+        font-size: 17px;
+      }
 
-      ul, ol {
+      ul,
+      ol {
         margin: 8px 0 12px 0;
         padding-left: 22px;
 
@@ -477,7 +593,8 @@
         margin: 10px 0;
         font-size: 14px;
 
-        th, td {
+        th,
+        td {
           border: 1px solid #e5e7eb;
           padding: 8px 12px;
           text-align: left;
@@ -551,14 +668,26 @@
     border-radius: 50%;
     animation: typing-bounce 1.3s infinite ease-in-out;
 
-    &:nth-child(2) { animation-delay: 0.15s; }
-    &:nth-child(3) { animation-delay: 0.3s; }
+    &:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+    &:nth-child(3) {
+      animation-delay: 0.3s;
+    }
   }
 }
 
 @keyframes typing-bounce {
-  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-  30% { transform: translateY(-6px); opacity: 1; }
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
 }
 
 /* ─── Input bar (bottom, active chat) ─────────────────── */
@@ -656,6 +785,12 @@
   .suggestion-chip {
     padding: 8px 14px;
     font-size: 12.5px;
+  }
+
+  .schedule-guide {
+    .guide-actions {
+      grid-template-columns: 1fr;
+    }
   }
 
   .msg-row {

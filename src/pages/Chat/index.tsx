@@ -31,6 +31,12 @@ import {
 import "./Chat.scss";
 
 type Suggestion = { icon: React.ReactNode; label: string; prompt: string };
+type ScheduleGuideAction = {
+  label: string;
+  description: string;
+  prompt: string;
+  sendNow?: boolean;
+};
 
 const SUGGESTIONS: Suggestion[] = [
   {
@@ -56,6 +62,31 @@ const SUGGESTIONS: Suggestion[] = [
     label: "Gợi ý cải thiện năng suất",
     prompt:
       "Dựa trên thói quen làm việc của tôi, hãy gợi ý 3 điều tôi có thể cải thiện để năng suất cao hơn.",
+  },
+];
+
+const SCHEDULING_GUIDE_ACTIONS: ScheduleGuideAction[] = [
+  {
+    label: "Bắt đầu từng bước",
+    description:
+      "AI sẽ hỏi lần lượt mục tiêu, thời lượng, khung giờ, ngày ưu tiên.",
+    prompt:
+      "Hãy giúp tôi lên lịch theo từng bước. Bạn hãy hỏi tôi từng câu một để thu thập đủ: hoạt động, thời lượng mỗi buổi, số buổi/tuần, khung giờ mong muốn, ngày ưu tiên. Khi đủ dữ liệu thì tóm tắt lại và hỏi tôi có muốn lên lịch luôn không.",
+    sendNow: true,
+  },
+  {
+    label: "Mẫu nhập nhanh",
+    description: "Dùng mẫu có sẵn để điền nhanh rồi AI lên lịch.",
+    prompt:
+      "Tôi muốn lên lịch theo mẫu sau: hoạt động=[...], thời lượng mỗi buổi=[...] phút, số buổi/tuần=[...], khung giờ=[...], ngày ưu tiên=[...], khoảng ngày=[... đến ...]. Hãy hỏi bù phần thiếu rồi mới lên lịch.",
+    sendNow: true,
+  },
+  {
+    label: "Kiểm tra lịch rảnh trước",
+    description: "Xem lịch bận/rảnh trước khi chốt đề xuất.",
+    prompt:
+      "Hãy bắt đầu bằng cách kiểm tra lịch rảnh của tôi tuần này, sau đó hỏi tôi từng bước để lên lịch hoạt động phù hợp.",
+    sendNow: true,
   },
 ];
 
@@ -187,45 +218,52 @@ function Chat() {
     setInput("");
   };
 
-  const handleSend = async () => {
-    const text = input.trim();
-    if (!text || sending) return;
+  const sendMessageText = useCallback(
+    async (rawText: string) => {
+      const text = rawText.trim();
+      if (!text || sending) return;
 
-    const userMsg: AiMessage = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      content: text,
-      createdAt: new Date().toISOString(),
-    };
-    shouldScrollRef.current = true;
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-    setSending(true);
-
-    try {
-      const res = await sendChatMessage({
-        message: text,
-        conversationId: activeId ?? undefined,
-      });
-
-      if (!activeId) setActiveId(res.conversationId);
-
-      const aiMsg: AiMessage = {
-        id: `ai-${Date.now()}`,
-        role: "assistant",
-        content: res.reply,
+      const userMsg: AiMessage = {
+        id: `user-${Date.now()}`,
+        role: "user",
+        content: text,
         createdAt: new Date().toISOString(),
       };
       shouldScrollRef.current = true;
-      setMessages((prev) => [...prev, aiMsg]);
-      loadConversations();
-    } catch {
-      message.error("Gửi tin nhắn thất bại");
-      setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
-      setInput(text);
-    } finally {
-      setSending(false);
-    }
+      setMessages((prev) => [...prev, userMsg]);
+      setInput("");
+      setSending(true);
+
+      try {
+        const res = await sendChatMessage({
+          message: text,
+          conversationId: activeId ?? undefined,
+        });
+
+        if (!activeId) setActiveId(res.conversationId);
+
+        const aiMsg: AiMessage = {
+          id: `ai-${Date.now()}`,
+          role: "assistant",
+          content: res.reply,
+          createdAt: new Date().toISOString(),
+        };
+        shouldScrollRef.current = true;
+        setMessages((prev) => [...prev, aiMsg]);
+        loadConversations();
+      } catch {
+        message.error("Gửi tin nhắn thất bại");
+        setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
+        setInput(text);
+      } finally {
+        setSending(false);
+      }
+    },
+    [activeId, loadConversations, sending],
+  );
+
+  const handleSend = async () => {
+    void sendMessageText(input);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -338,6 +376,17 @@ function Chat() {
     }, 30);
   };
 
+  const handleSchedulingGuideAction = (action: ScheduleGuideAction) => {
+    if (sending) return;
+
+    if (action.sendNow) {
+      void sendMessageText(action.prompt);
+      return;
+    }
+
+    setInput(action.prompt);
+  };
+
   return (
     <div className="chat-page">
       {/* Sidebar */}
@@ -395,6 +444,13 @@ function Chat() {
                 <span className="greet-sparkle">✨</span> Xin chào {firstName}!
               </div>
               <h1 className="welcome-title">Chúng ta bắt đầu từ đâu nhỉ?</h1>
+
+              <SchedulingGuideBlock
+                actions={SCHEDULING_GUIDE_ACTIONS}
+                onActionClick={handleSchedulingGuideAction}
+                compact={false}
+                disabled={sending}
+              />
 
               <ChatComposer
                 input={input}
@@ -492,6 +548,12 @@ function Chat() {
             </div>
 
             <div className="input-bar">
+              <SchedulingGuideBlock
+                actions={SCHEDULING_GUIDE_ACTIONS}
+                onActionClick={handleSchedulingGuideAction}
+                compact
+                disabled={sending}
+              />
               <ChatComposer
                 input={input}
                 setInput={setInput}
@@ -546,6 +608,45 @@ function Chat() {
         />
       </Modal>
     </div>
+  );
+}
+
+function SchedulingGuideBlock(props: {
+  actions: ScheduleGuideAction[];
+  onActionClick: (action: ScheduleGuideAction) => void;
+  compact?: boolean;
+  disabled?: boolean;
+}) {
+  const { actions, onActionClick, compact = false, disabled = false } = props;
+
+  return (
+    <section className={`schedule-guide ${compact ? "compact" : ""}`}>
+      <div className="schedule-guide-header">
+        <CalendarOutlined className="guide-icon" />
+        <div>
+          <div className="guide-title">Hướng dẫn lên lịch với AI</div>
+          <div className="guide-subtitle">
+            Chạm một lựa chọn để bắt đầu ngay, AI sẽ hỏi từng bước đến khi đủ
+            thông tin rồi mới đề xuất/chốt lịch.
+          </div>
+        </div>
+      </div>
+
+      <div className="guide-actions">
+        {actions.map((action) => (
+          <button
+            key={action.label}
+            type="button"
+            className="guide-action"
+            onClick={() => onActionClick(action)}
+            disabled={disabled}
+          >
+            <span className="action-label">{action.label}</span>
+            <span className="action-description">{action.description}</span>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
