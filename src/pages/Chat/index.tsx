@@ -251,6 +251,15 @@ function Chat() {
         shouldScrollRef.current = true;
         setMessages((prev) => [...prev, aiMsg]);
         loadConversations();
+
+        // Notify task list / calendar to refetch when AI created tasks
+        if ((res as any).tasksCreated > 0) {
+          window.dispatchEvent(
+            new CustomEvent("ai-tasks-created", {
+              detail: { count: (res as any).tasksCreated },
+            }),
+          );
+        }
       } catch {
         message.error("Gửi tin nhắn thất bại");
         setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));

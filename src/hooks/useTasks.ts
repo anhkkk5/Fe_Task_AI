@@ -40,9 +40,16 @@ export function useTasks() {
       }
     };
 
+    const handleAiTasksCreated = () => {
+      console.log("[useTasks] AI tasks created, refetching tasks...");
+      fetchTasks();
+    };
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("ai-tasks-created", handleAiTasksCreated);
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("ai-tasks-created", handleAiTasksCreated);
     };
   }, [fetchTasks]);
 
