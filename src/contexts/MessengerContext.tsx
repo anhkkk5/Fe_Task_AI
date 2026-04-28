@@ -15,7 +15,6 @@ import {
   listConversations,
   type MessengerConversation,
   type MessengerMessage,
-  type MessengerUser,
 } from "../services/messengerServices";
 
 // ───────────────────── Types ─────────────────────
@@ -37,15 +36,6 @@ type MessengerContextValue = {
   openChat: (conversationId: string) => void;
   closeChat: (conversationId: string) => void;
   toggleMinimizeChat: (conversationId: string) => void;
-  // incoming call
-  incomingCall: null | {
-    callId: string;
-    conversationId: string;
-    kind: "audio" | "video";
-    fromUserId: string;
-    fromUser?: MessengerUser;
-  };
-  setIncomingCall: (c: MessengerContextValue["incomingCall"]) => void;
   // last message events subscription utility
   onMessageNew: (cb: (msg: MessengerMessage) => void) => () => void;
   onMessageUpdated: (cb: (msg: MessengerMessage) => void) => () => void;
@@ -97,9 +87,6 @@ export const MessengerProvider: React.FC<{ children: React.ReactNode }> = ({
     [],
   );
   const [openChats, setOpenChats] = useState<OpenChatWindow[]>([]);
-  const [incomingCall, setIncomingCall] =
-    useState<MessengerContextValue["incomingCall"]>(null);
-
   // External subscribers
   const subsNew = useRef<Set<(m: MessengerMessage) => void>>(new Set());
   const subsUpdated = useRef<Set<(m: MessengerMessage) => void>>(new Set());
@@ -230,19 +217,6 @@ export const MessengerProvider: React.FC<{ children: React.ReactNode }> = ({
       },
     );
 
-    socket.on(
-      "call:incoming",
-      (data: {
-        callId: string;
-        conversationId: string;
-        kind: "audio" | "video";
-        fromUserId: string;
-        fromUser?: MessengerUser;
-      }) => {
-        setIncomingCall(data);
-      },
-    );
-
     // presence heartbeat
     const heartbeat = setInterval(() => {
       if (socket.connected) socket.emit("presence:ping");
@@ -340,8 +314,6 @@ export const MessengerProvider: React.FC<{ children: React.ReactNode }> = ({
       openChat,
       closeChat,
       toggleMinimizeChat,
-      incomingCall,
-      setIncomingCall,
       onMessageNew,
       onMessageUpdated,
       onMessageReacted,
@@ -359,7 +331,6 @@ export const MessengerProvider: React.FC<{ children: React.ReactNode }> = ({
       openChat,
       closeChat,
       toggleMinimizeChat,
-      incomingCall,
       onMessageNew,
       onMessageUpdated,
       onMessageReacted,

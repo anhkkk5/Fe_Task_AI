@@ -5,7 +5,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useMessenger } from "../../contexts/MessengerContext";
 import MessengerPopup from "./MessengerPopup";
 import ChatWindow from "./ChatWindow";
-import CallManager from "./CallManager";
 import "./Messenger.scss";
 
 const MessengerRoot: React.FC = () => {
@@ -82,8 +81,6 @@ const MessengerRoot: React.FC = () => {
           </div>
         </>
       )}
-
-      <CallManager />
     </>
   );
 };

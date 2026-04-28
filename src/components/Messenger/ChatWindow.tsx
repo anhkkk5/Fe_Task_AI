@@ -2,8 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   CloseOutlined,
   MinusOutlined,
-  PhoneOutlined,
-  VideoCameraOutlined,
   SmileOutlined,
   PaperClipOutlined,
   SendOutlined,
@@ -349,26 +347,6 @@ const ChatWindow: React.FC<Props> = ({
     });
   };
 
-  // ───── Call actions ─────
-  const startCall = (kind: "audio" | "video") => {
-    if (!conversation || !socket) return;
-    const targets = conversation.members
-      .map((m) => m.id)
-      .filter((id) => id !== currentUserId);
-    const callId = `${conversationId}-${Date.now()}`;
-    const event = new CustomEvent("messenger:startCall", {
-      detail: {
-        callId,
-        conversationId,
-        kind,
-        targetUserIds: targets,
-        peerName: title,
-        peerAvatar: avatar,
-      },
-    });
-    window.dispatchEvent(event);
-  };
-
   // ───── Derived ─────
   const title = conversation
     ? getConversationTitle(conversation, currentUserId)
@@ -443,16 +421,6 @@ const ChatWindow: React.FC<Props> = ({
             className="cw-header-actions"
             onClick={(e) => e.stopPropagation()}
           >
-            <Tooltip title="Gọi thoại">
-              <button onClick={() => startCall("audio")}>
-                <PhoneOutlined />
-              </button>
-            </Tooltip>
-            <Tooltip title="Gọi video">
-              <button onClick={() => startCall("video")}>
-                <VideoCameraOutlined />
-              </button>
-            </Tooltip>
             {!embedded && (
               <Tooltip title="Mở rộng">
                 <button
