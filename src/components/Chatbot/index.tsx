@@ -152,8 +152,15 @@ const Chatbot: React.FC = () => {
         }
 
         updateHistory(res.reply);
+
+        if ((res as any).tasksCreated > 0) {
+          window.dispatchEvent(
+            new CustomEvent("ai-tasks-created", {
+              detail: { count: (res as any).tasksCreated },
+            }),
+          );
+        }
       } catch (error) {
-        console.error("Chatbot Error:", error);
         updateHistory(
           error instanceof Error
             ? error.message

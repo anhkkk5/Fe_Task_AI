@@ -71,7 +71,6 @@ export interface AIScheduleResponse {
   estimationMetadata?: TaskEstimationMeta[];
 }
 
-// Schedule Template interfaces
 export interface ScheduleTemplate {
   id: string;
   name: string;
@@ -99,7 +98,6 @@ export interface ScheduleTemplate {
   updatedAt: string;
 }
 
-// AI task breakdown
 export const aiTaskBreakdown = async (data: AIBreakdownRequest) => {
   if (data.taskId) {
     return await post(`/ai/tasks/${data.taskId}/breakdown`, {});
@@ -110,19 +108,16 @@ export const aiTaskBreakdown = async (data: AIBreakdownRequest) => {
   });
 };
 
-// AI chat/assistant
 export const aiChat = async (message: string, context?: string[]) => {
   return await post("/ai/chat", { message, context });
 };
 
-// AI schedule plan - tối ưu lịch làm việc
 export const aiSchedulePlan = async (
   data: AIScheduleRequest,
 ): Promise<AIScheduleResponse> => {
   return await post("/ai/schedule-plan", data);
 };
 
-// Save AI schedule to tasks
 export const saveAISchedule = async (
   aiSchedule: AIScheduleResponse,
 ): Promise<{
@@ -142,7 +137,6 @@ export const saveAISchedule = async (
   });
 };
 
-// Get active AI schedule
 export const getActiveAISchedule = async (): Promise<{
   success: boolean;
   data: AIScheduleResponse | null;
@@ -150,7 +144,6 @@ export const getActiveAISchedule = async (): Promise<{
   return await get("/ai-schedules/active");
 };
 
-// Delete AI schedule
 export const deleteAISchedule = async (
   scheduleId: string,
 ): Promise<{
@@ -160,7 +153,6 @@ export const deleteAISchedule = async (
   return await del(`/ai-schedules/${scheduleId}`);
 };
 
-// Update AI session time (drag-drop)
 export const updateAISessionTime = async (
   scheduleId: string,
   sessionId: string,
@@ -261,7 +253,6 @@ export const setDefaultTemplate = async (
   return await post(`/schedule-templates/${id}/set-default`, {});
 };
 
-// Smart Reschedule API
 export interface SmartRescheduleRequest {
   missedTask: {
     id: string;

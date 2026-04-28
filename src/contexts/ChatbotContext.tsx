@@ -202,10 +202,8 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({
 
     (async () => {
       try {
-        const { conversation, messages } = await getOrCreateConversationByParent(
-          taskId,
-          parentTaskTitle,
-        );
+        const { conversation, messages } =
+          await getOrCreateConversationByParent(taskId, parentTaskTitle);
         const history = messagesToHistory(messages);
         // Prepend our local intro if BE thread is empty so UX feels warm.
         const nextHistory =
@@ -218,10 +216,8 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({
         });
         setCurrentHistory(nextHistory);
         setActiveConversationId(conversation.id);
-      } catch (err) {
-        // Silent fail — keep the local intro. BE will still create a thread
-        // when the user sends the first message (parentTaskId resolves it).
-        console.warn("[Chatbot] getOrCreateConversationByParent failed", err);
+      } catch {
+        // silent — keep local intro, BE creates thread on first message
       }
     })();
   };

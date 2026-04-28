@@ -36,17 +36,13 @@ function GoogleCallback() {
         );
       }
 
-      // httpOnly cookie is set by backend, fetch user info
       getMe()
         .then((res) => {
-          // ✅ FIX: Extract accessToken from response
           const accessToken = res.accessToken;
           const userData = res.user || res;
 
-          // ✅ NEW: Set accessToken in memory for subsequent requests
           if (accessToken) {
             setAccessToken(accessToken);
-            console.log("[GoogleCallback] AccessToken set in memory");
           }
 
           dispatch(checkLogin({ status: true, user: userData }));
@@ -60,8 +56,7 @@ function GoogleCallback() {
 
           navigate("/tasks", { replace: true });
         })
-        .catch((err) => {
-          console.error("[GoogleCallback] getMe failed:", err);
+        .catch(() => {
           message.error("Không thể lấy thông tin người dùng");
           navigate("/login", { replace: true });
         });

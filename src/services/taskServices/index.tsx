@@ -81,7 +81,6 @@ export interface UpdateTaskData {
   } | null;
 }
 
-// Get task list
 export const getTasks = async (params?: {
   status?: string;
   priority?: string;
@@ -101,12 +100,10 @@ export const getTasks = async (params?: {
   return await get(url);
 };
 
-// Get task by ID
 export const getTaskById = async (id: string): Promise<{ task: Task }> => {
   return await get(`/tasks/${id}`);
 };
 
-// Update task
 export const updateTask = async (
   id: string,
   data: UpdateTaskData,
@@ -114,12 +111,10 @@ export const updateTask = async (
   return await patch(`/tasks/${id}`, data);
 };
 
-// Delete task
 export const deleteTask = async (id: string): Promise<{ message: string }> => {
   return await del(`/tasks/${id}`);
 };
 
-// Create new task
 export const createTask = async (data: {
   title: string;
   description?: string;
@@ -142,7 +137,6 @@ export const createTask = async (data: {
   return await post("/tasks", data);
 };
 
-// Trigger AI breakdown for a task (timeout 90s vì AI call có thể mất 30-60s)
 export const triggerAiBreakdown = async (
   taskId: string,
 ): Promise<{ task: Task }> => {
@@ -155,7 +149,6 @@ export const getTaskEstimationExplanation = async (
   return await get(`/tasks/${taskId}/explain-estimation`);
 };
 
-// Update subtask statuses
 export const updateSubtaskStatus = async (
   taskId: string,
   subtasks: Subtask[],

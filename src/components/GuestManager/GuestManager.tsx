@@ -54,8 +54,7 @@ function GuestManager({
       } else {
         setError(response.error || "Failed to load guests");
       }
-    } catch (err) {
-      console.error("Error loading guests:", err);
+    } catch {
       setError("Failed to load guests. Please try again.");
     } finally {
       setIsLoadingGuests(false);
@@ -139,7 +138,6 @@ function GuestManager({
 
       setEmailInput("");
     } catch (err) {
-      console.error("Error adding guest:", err);
       const errorMsg =
         err instanceof Error ? err.message : "Failed to add guest";
       setError(errorMsg);
@@ -174,7 +172,6 @@ function GuestManager({
           setError(response.error || "Failed to remove guest");
         }
       } catch (err) {
-        console.error("Error removing guest:", err);
         const errorMsg =
           err instanceof Error ? err.message : "Failed to remove guest";
         setError(errorMsg);
@@ -216,7 +213,6 @@ function GuestManager({
           setError(response.error || "Failed to update permission");
         }
       } catch (err) {
-        console.error("Error updating permission:", err);
         const errorMsg =
           err instanceof Error ? err.message : "Failed to update permission";
         setError(errorMsg);

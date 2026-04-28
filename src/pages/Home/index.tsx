@@ -29,8 +29,6 @@ function Home() {
   const { user } = useSelector((state: any) => state.auth);
   const { tasks, loading } = useTasks();
 
-  console.log("Home: tasks count:", tasks.length, "loading:", loading);
-
   const [stats] = useState({
     total: 0,
     inProgress: 0,
@@ -38,7 +36,6 @@ function Home() {
     overdue: 0,
   });
 
-  // Fetch user on mount
   useEffect(() => {
     const fetchUser = async () => {
       if (!user?.name) {
@@ -46,15 +43,14 @@ function Home() {
           const response = await getMe();
           const userData = response.user || response;
           dispatch({ type: "UPDATE_USER", payload: userData });
-        } catch (error) {
-          console.error("Failed to fetch user:", error);
+        } catch {
+          // silent
         }
       }
     };
     fetchUser();
   }, [dispatch, user]);
 
-  // Table columns
   const columns = [
     {
       title: "Công việc",

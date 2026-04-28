@@ -147,13 +147,11 @@ export const MessengerProvider: React.FC<{ children: React.ReactNode }> = ({
       setConnected(true);
       refreshConversations();
     });
-    socket.on("disconnect", (reason) => {
+    socket.on("disconnect", () => {
       setConnected(false);
-      console.warn("[Messenger] socket disconnected:", reason);
     });
-    socket.on("connect_error", (err) => {
+    socket.on("connect_error", () => {
       setConnected(false);
-      console.error("[Messenger] connect_error:", err?.message || err);
       antMessage.error("Kết nối chat realtime thất bại");
     });
 

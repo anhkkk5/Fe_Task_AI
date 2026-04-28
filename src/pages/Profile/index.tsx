@@ -53,8 +53,8 @@ function Profile() {
   const handleLogout = async () => {
     try {
       await logoutUser();
-    } catch (error) {
-      console.error("Logout error:", error);
+    } catch {
+      // silent
     } finally {
       clearAccessToken();
       dispatch(logout());
@@ -62,16 +62,14 @@ function Profile() {
     }
   };
 
-  // Fetch user data on mount and set form values
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const response = await getMe();
-        // Backend returns { accessToken, user }, extract user only
         const userData = response.user || response;
         dispatch(updateUser(userData));
-      } catch (error) {
-        console.error("Failed to fetch user data:", error);
+      } catch {
+        // silent
       } finally {
         setInitialLoading(false);
       }

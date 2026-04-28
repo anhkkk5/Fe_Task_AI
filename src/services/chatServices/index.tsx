@@ -21,14 +21,12 @@ export interface AiMessage {
   tokens?: number;
 }
 
-// List all conversations
 export const getConversations = async (): Promise<{
   conversations: AiConversation[];
 }> => {
   return await get("/ai/conversations");
 };
 
-// Get conversation with messages
 export const getConversationMessages = async (
   id: string,
 ): Promise<{
@@ -38,7 +36,6 @@ export const getConversationMessages = async (
   return await get(`/ai/conversations/${id}`);
 };
 
-// Send message (non-streaming fallback)
 export const sendChatMessage = async (params: {
   message: string;
   conversationId?: string;
@@ -65,7 +62,6 @@ export const sendChatMessage = async (params: {
   return await post("/ai/chat", params, { timeout: 60000 });
 };
 
-// Get or create conversation by parent task (shared thread across subtasks)
 export const getOrCreateConversationByParent = async (
   parentTaskId: string,
   title?: string,
@@ -80,12 +76,10 @@ export const getOrCreateConversationByParent = async (
   );
 };
 
-// Delete conversation
 export const deleteConversation = async (id: string): Promise<void> => {
   await del(`/ai/conversations/${id}`);
 };
 
-// Rename conversation
 export const renameConversation = async (
   id: string,
   title: string,
@@ -93,7 +87,6 @@ export const renameConversation = async (
   await patch(`/ai/conversations/${id}`, { title });
 };
 
-// Streaming chat via SSE
 export interface StreamCallbacks {
   onMeta?: (conversationId: string) => void;
   onChunk: (delta: string) => void;

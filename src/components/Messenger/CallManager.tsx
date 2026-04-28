@@ -225,8 +225,8 @@ const CallManager: React.FC = () => {
             pendingIceRef.current.push(data.signal);
           }
         }
-      } catch (err) {
-        console.error("Signal error:", err);
+      } catch {
+        // silent
       }
     };
 

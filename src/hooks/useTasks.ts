@@ -13,37 +13,26 @@ export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch tasks
   const fetchTasks = useCallback(async () => {
     try {
       setLoading(true);
       const response = await getTasks();
-      console.log("API tasks response:", response);
       setTasks(response.items || []);
-    } catch (error) {
-      console.error("Error fetching tasks:", error);
+    } catch {
       message.error("Không thể tải danh sách công việc");
     } finally {
       setLoading(false);
     }
   }, [message]);
 
-  // Initial load + refetch khi window focus lại
   useEffect(() => {
-    console.log("useEffect: calling fetchTasks");
     fetchTasks();
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        console.log("[useTasks] Tab visible, refetching tasks...");
-        fetchTasks();
-      }
+      if (document.visibilityState === "visible") fetchTasks();
     };
 
-    const handleAiTasksCreated = () => {
-      console.log("[useTasks] AI tasks created, refetching tasks...");
-      fetchTasks();
-    };
+    const handleAiTasksCreated = () => fetchTasks();
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("ai-tasks-created", handleAiTasksCreated);
@@ -53,7 +42,6 @@ export function useTasks() {
     };
   }, [fetchTasks]);
 
-  // Create task
   const handleCreate = async (values: any) => {
     try {
       await createTask(values);
@@ -66,7 +54,6 @@ export function useTasks() {
     }
   };
 
-  // Update task
   const handleUpdate = async (taskId: string, values: any) => {
     try {
       await updateTask(taskId, values);
@@ -79,14 +66,11 @@ export function useTasks() {
     }
   };
 
-  // Delete task
   const handleDelete = async (taskId: string) => {
     try {
       await deleteTask(taskId);
       message.success("Xóa công việc thành công!");
-      // Refetch để cập nhật cả task con đã bị xóa ở backend
       await fetchTasks();
-      // Notify calendar để refresh AISchedule
       window.dispatchEvent(
         new CustomEvent("task-deleted", { detail: { taskId } }),
       );

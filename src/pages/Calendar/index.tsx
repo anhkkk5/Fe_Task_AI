@@ -102,8 +102,8 @@ function Calendar() {
             picture: status.user.picture,
           });
         }
-      } catch (err) {
-        console.error("Failed to check Google status:", err);
+      } catch {
+        // silent
       }
     };
     checkGoogleStatus();

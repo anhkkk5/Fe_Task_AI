@@ -31,7 +31,6 @@ interface LoginResponse {
 
 export const loginUser = async (data: LoginData): Promise<LoginResponse> => {
   const response = await post<LoginResponse>("/auth/login", data);
-  // Lưu access token vào memory (không lưu localStorage)
   setAccessToken(response.accessToken);
   return response;
 };
@@ -81,12 +80,10 @@ export const refreshToken = async (): Promise<{ accessToken: string }> => {
     "/auth/refresh-token",
     {},
   );
-  // Lưu access token mới vào memory
   setAccessToken(response.accessToken);
   return response;
 };
 
-// Forgot Password APIs
 export const forgotPassword = async (email: string): Promise<void> => {
   return await post("/auth/forgot-password", { email });
 };

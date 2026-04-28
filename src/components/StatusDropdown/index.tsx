@@ -69,16 +69,14 @@ const StatusDropdown: React.FC<StatusDropdownProps> = ({
         }
       }
     } catch (error: any) {
-      console.error("Error updating status:", error);
-      const errorMessage =
-        error.response?.data?.message || "Không thể cập nhật trạng thái";
-      message.error(errorMessage);
+      message.error(
+        error.response?.data?.message || "Không thể cập nhật trạng thái",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // Get current status option
   const currentOption = STATUS_OPTIONS.find(
     (opt) => opt.value === currentStatus,
   );

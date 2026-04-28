@@ -130,13 +130,11 @@ function Tasks() {
   const [creating, setCreating] = useState(false);
   const [form] = Form.useForm();
 
-  // Edit modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
   const [editForm] = Form.useForm();
   const [editLoading, setEditLoading] = useState(false);
 
-  // AI Breakdown modal state (riêng biệt)
   const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
   const [breakdownTask, setBreakdownTask] = useState<TaskItem | null>(null);
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
@@ -146,7 +144,6 @@ function Tasks() {
     useState<TaskEstimationExplanation | null>(null);
   const { openWithSubtask } = useChatbot();
 
-  // Delete confirmation
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingTask, setDeletingTask] = useState<TaskItem | null>(null);
 
@@ -162,13 +159,8 @@ function Tasks() {
     return true;
   };
 
-  // Handle status change from dropdown
-  const handleStatusChange = () => {
-    // Refresh tasks list after status change
-    fetchTasks();
-  };
+  const handleStatusChange = () => fetchTasks();
 
-  // Define taskColumns inside component to access handleStatusChange
   const taskColumns = [
     {
       title: "Công việc",
@@ -372,15 +364,8 @@ function Tasks() {
     if (!editingTask) return;
     setEditLoading(true);
 
-    // Parse time formats to minutes
     const estimatedMinutes = parseEstimatedDuration(values.estimatedDuration);
     const range = parseTimeRange(values.dailyTargetRange);
-
-    // Debug log
-    console.log("=== UPDATE TASK DEBUG ===");
-    console.log("Form values:", values);
-    console.log("estimatedMinutes:", estimatedMinutes);
-    console.log("range:", range);
 
     const payload = {
       title: values.title,
@@ -397,7 +382,6 @@ function Tasks() {
       dailyTargetDuration: range.dailyTargetDuration,
       dailyTargetMin: range.dailyTargetMin,
     };
-    console.log("Payload gửi lên API:", payload);
 
     const success = await handleUpdate(editingTask.id, payload);
 
@@ -433,12 +417,6 @@ function Tasks() {
         setSubtasks((res.task.aiBreakdown as Subtask[]) ?? []);
         fetchTasks();
       } catch (err: any) {
-        console.error(
-          "[AI Breakdown] error:",
-          err?.response?.status,
-          err?.response?.data,
-          err?.message,
-        );
         const errMsg =
           err?.response?.data?.message ||
           (err?.response?.status === 429
@@ -447,7 +425,7 @@ function Tasks() {
               ? "Không thể kết nối đến server."
               : err?.code === "ECONNABORTED"
                 ? "Request bị timeout. Vui lòng thử lại."
-                : "Không thể tạo AI Breakdown. Kiểm tra console để xem chi tiết.");
+                : "Không thể tạo AI Breakdown.");
         message.error(errMsg);
       } finally {
         setBreakdownLoading(false);
@@ -455,7 +433,6 @@ function Tasks() {
     }
   };
 
-  // Handle regenerate breakdown
   const onRegenerateBreakdown = async () => {
     if (!breakdownTask) return;
     setBreakdownLoading(true);
@@ -473,12 +450,6 @@ function Tasks() {
       fetchTasks();
       message.success("Đã tạo lại AI Breakdown!");
     } catch (err: any) {
-      console.error(
-        "[AI Breakdown Regen] error:",
-        err?.response?.status,
-        err?.response?.data,
-        err?.message,
-      );
       const errMsg =
         err?.response?.data?.message ||
         (err?.response?.status === 429
@@ -487,7 +458,7 @@ function Tasks() {
             ? "Không thể kết nối đến server."
             : err?.code === "ECONNABORTED"
               ? "Request bị timeout. Vui lòng thử lại."
-              : "Không thể tạo lại AI Breakdown. Kiểm tra console để xem chi tiết.");
+              : "Không thể tạo lại AI Breakdown.");
       message.error(errMsg);
     } finally {
       setBreakdownLoading(false);
@@ -512,58 +483,57 @@ function Tasks() {
     }
   };
 
-  // Map API tasks to component format
-  const tasks: TaskItem[] = apiTasks
-    .filter((t: any) => !(t.parentTaskId && t.scheduledTime?.aiPlanned))
-    .map((t: any) => ({
-      id: t._id || t.id,
-      _id: t._id,
-      title: t.title,
-      description: t.description || "",
-      status: normalizeApiStatus(String(t.status ?? "todo")),
-      priority: (t.priority || "medium") as
-        | "low"
-        | "medium"
-        | "high"
-        | "urgent",
-      startAt: t.startAt || t.teamAssignment?.startAt,
-      dueDate: t.deadline || t.dueDate || undefined,
-      deadline: t.deadline,
-      scheduledTime: t.scheduledTime ?? null,
-      assignee: t.userId?.name || "Bạn",
-      userId: t.userId,
-      aiBreakdown: t.aiBreakdown,
-      aiAssisted: !!(t.aiBreakdown && t.aiBreakdown.length > 0),
-      tags: t.tags || [],
-      estimatedDuration: t.estimatedDuration,
-      dailyTargetDuration: t.dailyTargetDuration,
-      dailyTargetMin: t.dailyTargetMin,
-      parentTaskId: t.parentTaskId,
-      isSubtask: !!t.parentTaskId,
-      teamId: t.teamAssignment?.teamId,
-    }));
+  const tasks: TaskItem[] = useMemo(
+    () =>
+      apiTasks
+        .filter((t: any) => !(t.parentTaskId && t.scheduledTime?.aiPlanned))
+        .map((t: any) => ({
+          id: t._id || t.id,
+          _id: t._id,
+          title: t.title,
+          description: t.description || "",
+          status: normalizeApiStatus(String(t.status ?? "todo")),
+          priority: (t.priority || "medium") as
+            | "low"
+            | "medium"
+            | "high"
+            | "urgent",
+          startAt: t.startAt || t.teamAssignment?.startAt,
+          dueDate: t.deadline || t.dueDate || undefined,
+          deadline: t.deadline,
+          scheduledTime: t.scheduledTime ?? null,
+          assignee: t.userId?.name || "Bạn",
+          userId: t.userId,
+          aiBreakdown: t.aiBreakdown,
+          aiAssisted: !!(t.aiBreakdown && t.aiBreakdown.length > 0),
+          tags: t.tags || [],
+          estimatedDuration: t.estimatedDuration,
+          dailyTargetDuration: t.dailyTargetDuration,
+          dailyTargetMin: t.dailyTargetMin,
+          parentTaskId: t.parentTaskId,
+          isSubtask: !!t.parentTaskId,
+          teamId: t.teamAssignment?.teamId,
+        })),
+    [apiTasks],
+  );
 
-  // Group subtasks under parent tasks
   const groupedTasks = useMemo(() => {
     const taskMap = new Map<string, TaskItem>();
-    const subtasks: TaskItem[] = [];
+    const subs: TaskItem[] = [];
 
-    // First pass: separate parents and subtasks
     tasks.forEach((task) => {
       if (task.isSubtask && task.parentTaskId) {
-        subtasks.push(task);
+        subs.push(task);
       } else {
         taskMap.set(task.id, { ...task, subtasks: [] });
       }
     });
 
-    // Second pass: attach subtasks to parents
-    subtasks.forEach((subtask) => {
+    subs.forEach((subtask) => {
       const parent = taskMap.get(subtask.parentTaskId!);
       if (parent) {
         parent.subtasks!.push(subtask);
       } else {
-        // Orphan subtask (parent not found), add as standalone
         taskMap.set(subtask.id, subtask);
       }
     });
@@ -590,7 +560,6 @@ function Tasks() {
     });
   }, [groupedTasks, searchText, statusFilter]);
 
-  // Add action column to taskColumns
   const columnsWithActions = [
     ...taskColumns,
     {
@@ -723,10 +692,8 @@ function Tasks() {
           visible={schedulerVisible}
           onClose={() => setSchedulerVisible(false)}
           tasks={tasks}
-          onScheduleCreate={(schedule) => {
-            console.log("Schedule created:", schedule);
+          onScheduleCreate={() => {
             message.success("Đã tạo lịch trình thành công!");
-            // Refresh tasks to show updated status
             fetchTasks();
           }}
         />
@@ -741,17 +708,10 @@ function Tasks() {
               const values = await form.validateFields();
               setCreating(true);
 
-              // Parse time formats to minutes
               const estimatedMinutes = parseEstimatedDuration(
                 values.estimatedDuration,
               );
               const range = parseTimeRange(values.dailyTargetRange);
-
-              // Debug log
-              console.log("=== CREATE TASK DEBUG ===");
-              console.log("Form values:", values);
-              console.log("estimatedMinutes:", estimatedMinutes);
-              console.log("range:", range);
 
               const payload = {
                 title: values.title,
@@ -768,15 +728,14 @@ function Tasks() {
                 dailyTargetDuration: range.dailyTargetDuration,
                 dailyTargetMin: range.dailyTargetMin,
               };
-              console.log("Payload gửi lên API:", payload);
 
               const success = await handleCreate(payload);
               if (success) {
                 form.resetFields();
                 setCreateModalVisible(false);
               }
-            } catch (error) {
-              console.error("Create task error:", error);
+            } catch {
+              message.error("Tạo công việc thất bại!");
             } finally {
               setCreating(false);
             }

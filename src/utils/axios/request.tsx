@@ -33,13 +33,8 @@ const axiosInstance = axios.create({
 
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Token is sent via httpOnly cookie automatically (withCredentials: true)
-    // Header Authorization is optional backup from memory
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
-      console.log("[Axios] Authorization header set from memory token");
-    } else {
-      console.log("[Axios] No token in memory, relying on httpOnly cookie");
     }
     return config;
   },

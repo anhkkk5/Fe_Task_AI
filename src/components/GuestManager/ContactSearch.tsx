@@ -113,8 +113,7 @@ function ContactSearch({
           const results = await onSearch(term.trim());
           setSearchResults(results);
           setCurrentPage(1);
-        } catch (err) {
-          console.error("Search error:", err);
+        } catch {
           setSearchResults([]);
         }
       }, debounceMs);

@@ -15,31 +15,27 @@ const PrivateRoutes = () => {
     const checkAuth = async () => {
       const token = getAccessToken();
 
-      // Nếu đã có token và user data, dùng luôn
       if (token && isLogin && user) {
         setIsAuth(true);
         setIsLoading(false);
         return;
       }
 
-      // Thử refresh token từ cookie
       try {
-        await refreshToken();
-        // Fetch user data sau khi refresh token thành công
+        if (!token) {
+          await refreshToken();
+        }
+
         const userResponse = await getMe();
         const userData = userResponse.user || userResponse;
 
-        // ✅ FIX: Set accessToken từ getMe() response vào memory
-        // Điều này đảm bảo googleAccessToken được lưu khi user refresh page
         if (userResponse.accessToken) {
           setAccessToken(userResponse.accessToken);
-          console.log("[PrivateRoutes] AccessToken set from getMe response");
         }
 
         dispatch(checkLogin({ status: true, user: userData }));
         setIsAuth(true);
-      } catch (error) {
-        console.log("Session expired or invalid");
+      } catch {
         setIsAuth(false);
       } finally {
         setIsLoading(false);
