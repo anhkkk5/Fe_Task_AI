@@ -9,6 +9,7 @@ import {
   Button,
   Select,
   TimePicker,
+  DatePicker,
   Checkbox,
   message,
 } from "antd";
@@ -18,7 +19,8 @@ import {
   VideoCameraOutlined,
   EnvironmentOutlined,
   FileTextOutlined,
-  GlobalOutlined,
+  LinkOutlined,
+  CalendarOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import GuestManager from "../../../components/GuestManager/GuestManager";
@@ -32,9 +34,9 @@ interface CreateEventModalProps {
   initialStart: dayjs.Dayjs | null;
   initialEnd: dayjs.Dayjs | null;
   googleUser: GoogleUserInfo | null;
-  isGoogleLoading: boolean;
-  onGoogleSignIn: () => void;
-  onGoogleSignOut: () => void;
+  isGoogleLoading?: boolean;
+  onGoogleSignIn?: () => void;
+  onGoogleSignOut?: () => void;
 }
 
 export const CreateEventModal: React.FC<CreateEventModalProps> = ({
@@ -44,29 +46,25 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   initialStart,
   initialEnd,
   googleUser,
-  isGoogleLoading,
   onGoogleSignIn,
-  onGoogleSignOut,
 }) => {
   const [creatingTask, setCreatingTask] = useState(false);
   const [createTitle, setCreateTitle] = useState("");
-  const [createType, setCreateType] = useState<
-    "event" | "todo" | "appointment"
-  >("event");
+  const [createType, setCreateType] = useState<"event" | "todo">("event");
   const [createAllDay, setCreateAllDay] = useState(false);
   const [createGuests, setCreateGuests] = useState<string[]>([]);
   const [createLocation, setCreateLocation] = useState("");
   const [createReminder, setCreateReminder] = useState<number | null>(15);
-  const [createVisibility, setCreateVisibility] = useState<
-    "default" | "public" | "private"
-  >("default");
   const [createDescription, setCreateDescription] = useState("");
   const [createMeetingLink, setCreateMeetingLink] = useState("");
   const [createStart, setCreateStart] = useState<dayjs.Dayjs | null>(null);
   const [createEnd, setCreateEnd] = useState<dayjs.Dayjs | null>(null);
+  const [todoDeadline, setTodoDeadline] = useState<dayjs.Dayjs | null>(null);
 
   const [showGuestManager, setShowGuestManager] = useState(false);
   const [guestManagerEventId, setGuestManagerEventId] = useState<string>("");
+
+  const isEvent = createType === "event";
 
   useEffect(() => {
     if (open) {
@@ -78,9 +76,9 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
       setCreateGuests([]);
       setCreateLocation("");
       setCreateReminder(15);
-      setCreateVisibility("default");
       setCreateDescription("");
       setCreateMeetingLink("");
+      setTodoDeadline(initialStart || dayjs());
     }
   }, [open, initialStart, initialEnd]);
 
@@ -112,7 +110,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
     } catch (error: any) {
       if (error.message?.includes("Chưa đăng nhập Google")) {
         message.info("Vui lòng đăng nhập Google để tạo link Meet");
-        onGoogleSignIn();
+        onGoogleSignIn?.();
       } else {
         message.error(error?.message || "Lỗi tạo link Meet");
       }
@@ -122,47 +120,59 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   };
 
   const handleSave = async () => {
-    if (!createStart || !createEnd) {
-      message.error("Vui lòng chọn thời gian bắt đầu và kết thúc");
-      return;
-    }
     const title = createTitle.trim();
     if (!title) {
-      message.error("Vui lòng nhập tiêu đề công việc");
+      message.error("Vui lòng nhập tiêu đề");
       return;
     }
-    if (!createEnd.isAfter(createStart)) {
-      message.error("Giờ kết thúc phải sau giờ bắt đầu");
-      return;
+
+    if (isEvent) {
+      if (!createStart || !createEnd) {
+        message.error("Vui lòng chọn thời gian bắt đầu và kết thúc");
+        return;
+      }
+      if (!createEnd.isAfter(createStart)) {
+        message.error("Giờ kết thúc phải sau giờ bắt đầu");
+        return;
+      }
     }
 
     setCreatingTask(true);
     try {
-      let guestDetails = undefined;
-      // In old code this used createEventId which wasn't fully hooked up. Just passing guest details via manager.
-      // Skipping getEventGuests for the temporary temp_${Date.now()} logic unless needed, but we keep the parameter signature.
-
-      const ok = await onSave({
+      const payload: any = {
         title,
-        status: "scheduled",
+        status: isEvent ? "scheduled" : "todo",
         priority: "medium",
         type: createType,
-        allDay: createAllDay,
-        guests: createGuests.length > 0 ? createGuests : undefined,
-        guestDetails,
-        location: createLocation.trim() || undefined,
-        visibility: createVisibility,
-        reminderMinutes: createReminder ?? undefined,
         description: createDescription.trim() || undefined,
-        meetingLink: createMeetingLink.trim() || undefined,
-        scheduledTime: {
-          start: createStart.toISOString(),
-          end: createEnd.toISOString(),
+      };
+
+      if (isEvent) {
+        payload.allDay = createAllDay;
+        payload.guests = createGuests.length > 0 ? createGuests : undefined;
+        payload.location = createLocation.trim() || undefined;
+        payload.reminderMinutes = createReminder ?? undefined;
+        payload.meetingLink = createMeetingLink.trim() || undefined;
+        payload.scheduledTime = {
+          start: createStart!.toISOString(),
+          end: createEnd!.toISOString(),
           aiPlanned: false,
           reason: "Người dùng tạo từ lịch",
-        },
-      });
+        };
+      } else {
+        // Todo: just deadline
+        if (todoDeadline) {
+          payload.dueDate = todoDeadline.toISOString();
+          payload.scheduledTime = {
+            start: todoDeadline.startOf("day").toISOString(),
+            end: todoDeadline.endOf("day").toISOString(),
+            aiPlanned: false,
+            reason: "Người dùng tạo việc cần làm",
+          };
+        }
+      }
 
+      const ok = await onSave(payload);
       if (ok) {
         onCancel();
       }
@@ -184,7 +194,6 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
             items={[
               { key: "event", label: "Sự kiện" },
               { key: "todo", label: "Việc cần làm" },
-              { key: "appointment", label: "Lên lịch hẹn" },
             ]}
           />
         }
@@ -196,7 +205,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
             </Button>
           </Space>
         }
-        width={600}
+        width={560}
       >
         <div style={{ padding: "0 8px" }}>
           {/* Title */}
@@ -204,7 +213,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
             <Input
               value={createTitle}
               onChange={(e) => setCreateTitle(e.target.value)}
-              placeholder="Thêm tiêu đề"
+              placeholder={isEvent ? "Thêm tiêu đề sự kiện" : "Việc cần làm"}
               variant="borderless"
               style={{
                 fontSize: 22,
@@ -217,282 +226,304 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
             />
           </div>
 
-          {/* Date/Time Row */}
-          <Row gutter={16} align="middle" style={{ marginBottom: 20 }}>
-            <Col flex="32px" style={{ textAlign: "center" }}>
-              <ClockCircleOutlined style={{ fontSize: 18, color: "#5f6368" }} />
-            </Col>
-            <Col flex="auto">
-              <Row gutter={8} align="middle">
-                <Col>
-                  <Checkbox
-                    checked={createAllDay}
-                    onChange={(e) => setCreateAllDay(e.target.checked)}
+          {isEvent ? (
+            /* ═══════ EVENT FORM ═══════ */
+            <>
+              {/* Date/Time Row */}
+              <Row gutter={16} align="middle" style={{ marginBottom: 20 }}>
+                <Col flex="32px" style={{ textAlign: "center" }}>
+                  <ClockCircleOutlined
+                    style={{ fontSize: 18, color: "#5f6368" }}
+                  />
+                </Col>
+                <Col flex="auto">
+                  <Row gutter={8} align="middle">
+                    <Col>
+                      <Checkbox
+                        checked={createAllDay}
+                        onChange={(e) => setCreateAllDay(e.target.checked)}
+                      >
+                        Cả ngày
+                      </Checkbox>
+                    </Col>
+                    <Col>
+                      <TimePicker
+                        value={createStart}
+                        onChange={(v: dayjs.Dayjs | null) => {
+                          if (!createStart || !v) return;
+                          const next = createStart
+                            .clone()
+                            .hour(v.hour())
+                            .minute(v.minute());
+                          setCreateStart(next);
+                          if (createEnd && createEnd.isBefore(next)) {
+                            setCreateEnd(next.add(30, "minute"));
+                          }
+                        }}
+                        format="HH:mm"
+                        minuteStep={5}
+                        allowClear={false}
+                        disabled={createAllDay}
+                        style={{ width: 100 }}
+                      />
+                    </Col>
+                    <Col style={{ color: "#5f6368" }}>-</Col>
+                    <Col>
+                      <TimePicker
+                        value={createEnd}
+                        onChange={(v: dayjs.Dayjs | null) => {
+                          if (!createEnd || !v) return;
+                          setCreateEnd(
+                            createEnd.clone().hour(v.hour()).minute(v.minute()),
+                          );
+                        }}
+                        format="HH:mm"
+                        minuteStep={5}
+                        allowClear={false}
+                        disabled={createAllDay}
+                        style={{ width: 100 }}
+                      />
+                    </Col>
+                    <Col>
+                      <Select
+                        value={createReminder}
+                        onChange={setCreateReminder}
+                        style={{ width: 140 }}
+                        variant="borderless"
+                        options={[
+                          { value: null, label: "Không nhắc" },
+                          { value: 0, label: "Vào thời điểm" },
+                          { value: 15, label: "15 phút trước" },
+                          { value: 30, label: "30 phút trước" },
+                          { value: 60, label: "1 giờ trước" },
+                          { value: 1440, label: "1 ngày trước" },
+                        ]}
+                      />
+                    </Col>
+                  </Row>
+                </Col>
+              </Row>
+
+              {/* Guests */}
+              <Row gutter={16} style={{ marginBottom: 20 }}>
+                <Col flex="32px" style={{ textAlign: "center", paddingTop: 4 }}>
+                  <UserOutlined style={{ fontSize: 18, color: "#5f6368" }} />
+                </Col>
+                <Col flex="auto">
+                  <Button
+                    type="default"
+                    block
+                    onClick={() => {
+                      setGuestManagerEventId(`temp_${Date.now()}`);
+                      setShowGuestManager(true);
+                    }}
+                    style={{
+                      background: "#e8eaed",
+                      border: "none",
+                      color: "#3c4043",
+                      fontWeight: 500,
+                    }}
                   >
-                    Cả ngày
-                  </Checkbox>
+                    <span style={{ marginRight: 8 }}>👥</span>
+                    {createGuests.length > 0
+                      ? `${createGuests.length} khách mời`
+                      : "Thêm khách mời"}
+                  </Button>
                 </Col>
-                <Col>
-                  <TimePicker
-                    value={createStart}
-                    onChange={(v: dayjs.Dayjs | null) => {
-                      if (!createStart || !v) return;
-                      const next = createStart
-                        .clone()
-                        .hour(v.hour())
-                        .minute(v.minute());
-                      setCreateStart(next);
-                      if (createEnd && createEnd.isBefore(next)) {
-                        setCreateEnd(next.add(30, "minute"));
-                      }
-                    }}
-                    format="HH:mm"
-                    minuteStep={5}
-                    allowClear={false}
-                    disabled={createAllDay}
-                    style={{ width: 100 }}
+              </Row>
+
+              {/* Meeting Link */}
+              {!createMeetingLink ? (
+                <Row gutter={16} style={{ marginBottom: 20 }}>
+                  <Col
+                    flex="32px"
+                    style={{ textAlign: "center", paddingTop: 4 }}
+                  >
+                    <VideoCameraOutlined
+                      style={{ fontSize: 18, color: "#5f6368" }}
+                    />
+                  </Col>
+                  <Col flex="auto">
+                    {googleUser ? (
+                      <Button
+                        type="default"
+                        loading={localGoogleLoading}
+                        style={{
+                          background: "#e8eaed",
+                          border: "none",
+                          color: "#3c4043",
+                          fontWeight: 500,
+                        }}
+                        onClick={handleCreateRealMeetLink}
+                      >
+                        <span style={{ marginRight: 8 }}>📹</span>
+                        Tạo Google Meet
+                      </Button>
+                    ) : (
+                      <Input
+                        placeholder="Dán link cuộc họp (Zoom, Teams, Meet...)"
+                        prefix={<LinkOutlined style={{ color: "#5f6368" }} />}
+                        value={createMeetingLink}
+                        onChange={(e) => setCreateMeetingLink(e.target.value)}
+                        style={{ width: "100%" }}
+                      />
+                    )}
+                  </Col>
+                </Row>
+              ) : (
+                <Row gutter={16} style={{ marginBottom: 20 }}>
+                  <Col
+                    flex="32px"
+                    style={{ textAlign: "center", paddingTop: 4 }}
+                  >
+                    <VideoCameraOutlined
+                      style={{ fontSize: 18, color: "#1a73e8" }}
+                    />
+                  </Col>
+                  <Col flex="auto">
+                    <div
+                      style={{
+                        background: "#e8f0fe",
+                        borderRadius: 4,
+                        padding: "8px 12px",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <a
+                        href={createMeetingLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: "#1a73e8",
+                          fontWeight: 500,
+                          fontSize: 13,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          maxWidth: 380,
+                        }}
+                      >
+                        📹 {createMeetingLink}
+                      </a>
+                      <Button
+                        type="link"
+                        size="small"
+                        onClick={() => setCreateMeetingLink("")}
+                        style={{ color: "#5f6368", flexShrink: 0 }}
+                      >
+                        Xóa
+                      </Button>
+                    </div>
+                  </Col>
+                </Row>
+              )}
+
+              {/* Location */}
+              <Row gutter={16} style={{ marginBottom: 20 }}>
+                <Col flex="32px" style={{ textAlign: "center", paddingTop: 4 }}>
+                  <EnvironmentOutlined
+                    style={{ fontSize: 18, color: "#5f6368" }}
                   />
                 </Col>
-                <Col style={{ color: "#5f6368" }}>-</Col>
-                <Col>
-                  <TimePicker
-                    value={createEnd}
-                    onChange={(v: dayjs.Dayjs | null) => {
-                      if (!createEnd || !v) return;
-                      setCreateEnd(
-                        createEnd.clone().hour(v.hour()).minute(v.minute()),
-                      );
-                    }}
-                    format="HH:mm"
-                    minuteStep={5}
-                    allowClear={false}
-                    disabled={createAllDay}
-                    style={{ width: 100 }}
-                  />
-                </Col>
-                <Col>
-                  <Select
-                    value={createReminder}
-                    onChange={setCreateReminder}
-                    style={{ width: 140 }}
+                <Col flex="auto">
+                  <Input
+                    placeholder="Thêm vị trí"
+                    value={createLocation}
+                    onChange={(e) => setCreateLocation(e.target.value)}
                     variant="borderless"
-                    options={[
-                      { value: null, label: "Không nhắc" },
-                      { value: 0, label: "Vào thời điểm" },
-                      { value: 15, label: "15 phút trước" },
-                      { value: 30, label: "30 phút trước" },
-                      { value: 60, label: "1 giờ trước" },
-                      { value: 1440, label: "1 ngày trước" },
-                    ]}
+                    style={{ width: "100%" }}
                   />
                 </Col>
               </Row>
-            </Col>
-          </Row>
 
-          {/* Google Sign In Button */}
-          {!googleUser && (
-            <Row gutter={16} style={{ marginBottom: 12 }}>
-              <Col flex="32px" />
-              <Col flex="auto">
-                <Button
-                  loading={isGoogleLoading}
-                  onClick={onGoogleSignIn}
-                  style={{
-                    border: "1px solid #dadce0",
-                    borderRadius: 4,
-                    color: "#3c4043",
-                  }}
-                >
-                  <span style={{ marginRight: 8 }}>🔒</span>
-                  Đăng nhập Google để lấy avatar khách và tạo Meet
-                </Button>
-              </Col>
-            </Row>
-          )}
-
-          {/* Signed In User */}
-          {googleUser && (
-            <Row gutter={16} style={{ marginBottom: 12 }}>
-              <Col flex="32px" />
-              <Col flex="auto">
-                <Space>
-                  {googleUser.picture ? (
-                    <img
-                      src={googleUser.picture}
-                      alt={googleUser.name}
-                      style={{ width: 24, height: 24, borderRadius: "50%" }}
-                    />
-                  ) : (
-                    <UserOutlined />
-                  )}
-                  <span>{googleUser.name}</span>
-                  <Button type="link" size="small" onClick={onGoogleSignOut}>
-                    Đăng xuất
-                  </Button>
-                </Space>
-              </Col>
-            </Row>
-          )}
-
-          {/* Guests */}
-          <Row gutter={16} style={{ marginBottom: 20 }}>
-            <Col flex="32px" style={{ textAlign: "center", paddingTop: 4 }}>
-              <UserOutlined style={{ fontSize: 18, color: "#5f6368" }} />
-            </Col>
-            <Col flex="auto">
-              <Button
-                type="default"
-                block
-                onClick={() => {
-                  setGuestManagerEventId(`temp_${Date.now()}`);
-                  setShowGuestManager(true);
-                }}
-                style={{
-                  background: "#e8eaed",
-                  border: "none",
-                  color: "#3c4043",
-                  fontWeight: 500,
-                }}
-              >
-                <span style={{ marginRight: 8 }}>👥</span>
-                {createGuests.length > 0
-                  ? `${createGuests.length} khách`
-                  : "Quản lý khách"}
-              </Button>
-            </Col>
-          </Row>
-
-          {/* Meet */}
-          {!createMeetingLink ? (
-            <Row gutter={16} style={{ marginBottom: 20 }}>
-              <Col flex="32px" style={{ textAlign: "center" }}>
-                <VideoCameraOutlined
-                  style={{ fontSize: 18, color: "#5f6368" }}
-                />
-              </Col>
-              <Col flex="auto">
-                <Button
-                  type="default"
-                  loading={localGoogleLoading}
-                  style={{
-                    background: "#e8eaed",
-                    border: "none",
-                    color: "#3c4043",
-                    fontWeight: 500,
-                  }}
-                  onClick={handleCreateRealMeetLink}
-                >
-                  <span style={{ marginRight: 8 }}>📹</span>
-                  Thêm hội nghị truyền hình trên Google Meet
-                </Button>
-              </Col>
-            </Row>
+              {/* Description */}
+              <Row gutter={16} style={{ marginBottom: 12 }}>
+                <Col flex="32px" style={{ textAlign: "center", paddingTop: 4 }}>
+                  <FileTextOutlined
+                    style={{ fontSize: 18, color: "#5f6368" }}
+                  />
+                </Col>
+                <Col flex="auto">
+                  <Input.TextArea
+                    placeholder="Thêm mô tả hoặc tệp đính kèm"
+                    value={createDescription}
+                    onChange={(e) => setCreateDescription(e.target.value)}
+                    variant="borderless"
+                    autoSize={{ minRows: 2, maxRows: 6 }}
+                    style={{ width: "100%", resize: "none" }}
+                  />
+                </Col>
+              </Row>
+            </>
           ) : (
-            <Row gutter={16} style={{ marginBottom: 20 }}>
-              <Col flex="32px" style={{ textAlign: "center", paddingTop: 4 }}>
-                <VideoCameraOutlined
-                  style={{ fontSize: 18, color: "#1a73e8" }}
-                />
-              </Col>
-              <Col flex="auto">
-                <div
-                  style={{
-                    background: "#e8f0fe",
-                    borderRadius: 4,
-                    padding: "8px 12px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <span style={{ color: "#1a73e8", fontWeight: 500 }}>
-                    📹 Tham gia bằng Google Meet
-                  </span>
-                  <Button
-                    type="link"
-                    size="small"
-                    onClick={() => setCreateMeetingLink("")}
-                    style={{ color: "#5f6368" }}
-                  >
-                    Xóa
-                  </Button>
-                </div>
-                <div style={{ marginTop: 4, paddingLeft: 4 }}>
-                  <a
-                    href={createMeetingLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: "#1a73e8", fontSize: 13 }}
-                  >
-                    {createMeetingLink}
-                  </a>
-                </div>
-              </Col>
-            </Row>
+            /* ═══════ TODO FORM ═══════ */
+            <>
+              {/* Deadline */}
+              <Row gutter={16} align="middle" style={{ marginBottom: 20 }}>
+                <Col flex="32px" style={{ textAlign: "center" }}>
+                  <CalendarOutlined
+                    style={{ fontSize: 18, color: "#5f6368" }}
+                  />
+                </Col>
+                <Col flex="auto">
+                  <Space>
+                    <DatePicker
+                      value={todoDeadline}
+                      onChange={(v) => setTodoDeadline(v)}
+                      format="DD/MM/YYYY"
+                      allowClear={false}
+                      placeholder="Chọn hạn chót"
+                      style={{ width: 160 }}
+                    />
+                    <TimePicker
+                      value={todoDeadline}
+                      onChange={(v: dayjs.Dayjs | null) => {
+                        if (!todoDeadline || !v) return;
+                        setTodoDeadline(
+                          todoDeadline
+                            .clone()
+                            .hour(v.hour())
+                            .minute(v.minute()),
+                        );
+                      }}
+                      format="HH:mm"
+                      minuteStep={5}
+                      placeholder="Giờ"
+                      style={{ width: 100 }}
+                    />
+                  </Space>
+                </Col>
+              </Row>
+
+              {/* Description */}
+              <Row gutter={16} style={{ marginBottom: 12 }}>
+                <Col flex="32px" style={{ textAlign: "center", paddingTop: 4 }}>
+                  <FileTextOutlined
+                    style={{ fontSize: 18, color: "#5f6368" }}
+                  />
+                </Col>
+                <Col flex="auto">
+                  <Input.TextArea
+                    placeholder="Thêm ghi chú"
+                    value={createDescription}
+                    onChange={(e) => setCreateDescription(e.target.value)}
+                    variant="borderless"
+                    autoSize={{ minRows: 2, maxRows: 6 }}
+                    style={{ width: "100%", resize: "none" }}
+                  />
+                </Col>
+              </Row>
+            </>
           )}
-
-          {/* Location */}
-          <Row gutter={16} style={{ marginBottom: 20 }}>
-            <Col flex="32px" style={{ textAlign: "center", paddingTop: 4 }}>
-              <EnvironmentOutlined style={{ fontSize: 18, color: "#5f6368" }} />
-            </Col>
-            <Col flex="auto">
-              <Input
-                placeholder="Thêm vị trí"
-                value={createLocation}
-                onChange={(e) => setCreateLocation(e.target.value)}
-                variant="borderless"
-                style={{ width: "100%" }}
-              />
-            </Col>
-          </Row>
-
-          {/* Description */}
-          <Row gutter={16} style={{ marginBottom: 20 }}>
-            <Col flex="32px" style={{ textAlign: "center", paddingTop: 4 }}>
-              <FileTextOutlined style={{ fontSize: 18, color: "#5f6368" }} />
-            </Col>
-            <Col flex="auto">
-              <Input.TextArea
-                placeholder="Thêm mô tả hoặc tệp đính kèm"
-                value={createDescription}
-                onChange={(e) => setCreateDescription(e.target.value)}
-                variant="borderless"
-                autoSize={{ minRows: 2, maxRows: 6 }}
-                style={{ width: "100%", resize: "none" }}
-              />
-            </Col>
-          </Row>
-
-          {/* Visibility */}
-          <Row gutter={16} style={{ marginBottom: 12 }}>
-            <Col flex="32px" style={{ textAlign: "center", paddingTop: 4 }}>
-              <GlobalOutlined style={{ fontSize: 18, color: "#5f6368" }} />
-            </Col>
-            <Col flex="auto">
-              <Space size={4} style={{ color: "#5f6368", fontSize: 13 }}>
-                <span style={{ color: "#1a73e8", fontWeight: 500 }}>Bạn</span>
-                <span>•</span>
-                <Select
-                  value={createVisibility}
-                  onChange={setCreateVisibility}
-                  variant="borderless"
-                  options={[
-                    { value: "default", label: "Chế độ hiển thị mặc định" },
-                    { value: "public", label: "Công khai" },
-                    { value: "private", label: "Riêng tư" },
-                  ]}
-                />
-              </Space>
-            </Col>
-          </Row>
         </div>
       </Modal>
 
       <Modal
         open={showGuestManager}
         onCancel={() => setShowGuestManager(false)}
-        title="Quản lý khách"
+        title="Quản lý khách mời"
         width={700}
         footer={[
           <Button key="close" onClick={() => setShowGuestManager(false)}>

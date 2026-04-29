@@ -9,6 +9,9 @@ import {
 import dayjs from "dayjs";
 import type { CalendarEvent } from "../types";
 
+export const HOUR_HEIGHT = 72; // px per hour
+const PX_PER_MIN = HOUR_HEIGHT / 60; // 1.2
+
 export const WEEK_DAYS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 export const HOURS = Array.from({ length: 24 }, (_, i) => {
   const hour = i;
@@ -77,9 +80,9 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
   const getEventPosition = (event: CalendarEvent) => {
     const startHour = event.start.hour();
     const startMinute = event.start.minute();
-    const top = startHour * 48 + Math.round(startMinute * 0.8);
+    const top = startHour * HOUR_HEIGHT + Math.round(startMinute * PX_PER_MIN);
     const duration = event.end.diff(event.start, "minute");
-    const height = Math.max(duration * 0.8, 24);
+    const height = Math.max(duration * PX_PER_MIN, 24);
     return { top, height };
   };
 
@@ -144,7 +147,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
   ) => {
     const rect = columnEl.getBoundingClientRect();
     const y = clientY - rect.top;
-    const rawMinutes = y / 0.8;
+    const rawMinutes = y / PX_PER_MIN;
     const startMinutes = clamp(
       snapMinutes(rawMinutes, 30),
       0,
@@ -221,7 +224,11 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
         <div className="calendar-time-grid">
           <div className="time-labels">
             {HOURS.filter((_, i) => i % 2 === 0).map((slot, i) => (
-              <div key={i} className="time-label" style={{ top: i * 48 }}>
+              <div
+                key={i}
+                className="time-label"
+                style={{ top: i * HOUR_HEIGHT }}
+              >
                 {slot.label}
               </div>
             ))}
@@ -352,7 +359,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                 <div
                   className="current-time-line"
                   style={{
-                    top: `${dayjs().hour() * 48 + Math.round(dayjs().minute() * 0.8)}px`,
+                    top: `${dayjs().hour() * HOUR_HEIGHT + Math.round(dayjs().minute() * PX_PER_MIN)}px`,
                   }}
                 />
               )}

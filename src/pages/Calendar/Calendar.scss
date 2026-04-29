@@ -551,12 +551,12 @@
     background: transparent;
   }
 
-  // Google Calendar style - 48px per hour
+  // Google Calendar style - 72px per hour
   .time-labels {
     border-right: 1px solid var(--color-light-border-gray);
     position: relative;
     background: var(--color-white);
-    min-height: 1152px;
+    min-height: 1728px; // 72px * 24 hours
 
     .time-label {
       position: absolute;
@@ -575,7 +575,7 @@
     position: relative;
     border-right: 1px solid var(--color-light-border-gray);
     background: var(--color-white);
-    min-height: 1152px;
+    min-height: 1728px; // 72px * 24 hours
     overflow: hidden;
 
     &:last-child {
@@ -583,36 +583,50 @@
     }
 
     &.today {
-      background: var(--color-white);
+      background: #f0f7ff;
     }
 
     .hour-cell {
-      height: 48px;
+      height: 72px;
       border-bottom: 1px solid #e0e0e0;
       box-sizing: border-box;
+      position: relative;
+
+      // Half-hour dashed line like Google Calendar
+      &::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
+        border-bottom: 1px dashed #eeeeee;
+      }
 
       &:hover {
-        background: var(--color-light-gray);
+        background: rgba(66, 133, 244, 0.04);
       }
     }
 
     .calendar-event {
       position: absolute;
-      border-radius: 4px;
-      padding: 2px 4px;
+      border-radius: 6px;
+      padding: 3px 6px;
       color: white;
       font-size: 11px;
       cursor: pointer;
       overflow: hidden;
-      box-shadow: none;
-      transition: box-shadow 0.2s;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+      transition:
+        box-shadow 0.15s,
+        transform 0.1s;
       z-index: 10;
       user-select: none;
       border-left: 3px solid transparent;
       box-sizing: border-box;
 
       &:hover {
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        transform: scale(1.01);
         z-index: 20;
       }
 
@@ -652,15 +666,16 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        font-size: 11px;
-        line-height: 1.3;
+        font-size: 12px;
+        line-height: 1.4;
       }
 
       .event-time {
         font-size: 10px;
-        opacity: 0.9;
+        opacity: 0.85;
         margin-top: 1px;
-        line-height: 1.2;
+        line-height: 1.3;
+        font-weight: 400;
       }
 
       .event-ai-icon {

@@ -1,73 +1,119 @@
-# React + TypeScript + Vite
+# TaskMind AI — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> Giao diện quản lý công việc thông minh với AI scheduling, real-time chat và calendar tương tự Google Calendar.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+| Layer      | Technology                               |
+| ---------- | ---------------------------------------- |
+| Framework  | React 19 + TypeScript                    |
+| Build      | Vite                                     |
+| UI Library | Ant Design 6 + Ant Design Icons          |
+| State      | Redux Toolkit + React-Redux              |
+| Routing    | React Router 7                           |
+| Real-time  | Socket.IO Client                         |
+| Auth       | Google OAuth (@react-oauth/google)       |
+| Markdown   | react-markdown + remark-gfm + rehype-raw |
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 📋 Task Management
 
-## Expanding the ESLint configuration
+- CRUD tasks với priority, deadline, status
+- AI task breakdown — chia nhỏ task lớn thành subtasks
+- AI auto-scheduling — xếp lịch tối ưu dựa trên năng suất cá nhân
+- Smart reschedule — đề xuất slot thay thế khi conflict
+- Drag & drop tasks trên calendar
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 📅 Calendar (Google Calendar-style)
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Week view với time grid, current time indicator
+- Click-to-create events trực tiếp trên grid
+- 2 loại: **Sự kiện** (thời gian + khách + meeting link + vị trí) và **Việc cần làm** (deadline)
+- Meeting link: Google login → tạo Google Meet, regular login → paste Zoom/Teams/Meet
+- Guest management cho mọi loại đăng nhập
+- Half-hour gridlines, today column highlight, adaptive event cards
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### 💬 Real-time Messenger
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- Chat cá nhân và nhóm
+- Typing indicator, online presence
+- File/image upload (Cloudinary)
+- Message reactions, edit, delete
+- Floating chat windows + fullscreen messenger
+
+### 🤖 AI Chat
+
+- Streaming chat với Groq (LLaMA)
+- Conversation history
+- Markdown rendering với code highlighting
+
+### 👥 Teams
+
+- Tạo nhóm, mời thành viên qua email
+- Team tasks với comments
+- Role-based permissions
+
+### 🔔 Notifications
+
+- Real-time notifications qua Socket.IO
+- Email reminders cho deadline
+
+## Project Structure
+
+```
+src/
+├── pages/
+│   ├── Calendar/      # Week view calendar + event creation
+│   ├── Tasks/         # Task list + AI features
+│   ├── Chat/          # AI chat page
+│   ├── Messenger/     # Fullscreen messenger
+│   ├── Teams/         # Team management
+│   ├── Profile/       # User profile + habits
+│   ├── Notifications/ # Notification center
+│   ├── Login/         # Login (email + Google)
+│   ├── Register/      # Registration with OTP
+│   └── Guide/         # User guide
+├── components/
+│   ├── Messenger/     # Chat windows, popups
+│   ├── GuestManager/  # Event guest management
+│   ├── AITaskScheduler/   # AI scheduling UI
+│   ├── SmartRescheduleModal/ # Reschedule suggestions
+│   ├── AIBreakdownButton/   # Task breakdown UI
+│   └── Chatbot/       # AI chat components
+├── contexts/          # MessengerContext (Socket.IO)
+├── services/          # API calls, Google services
+├── store/             # Redux store + auth slice
+├── layouts/           # Main layout, sidebar
+└── routes/            # Route definitions
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Getting Started
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# 1. Install dependencies
+npm install
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# 2. Start dev server
+npm run dev
+# → http://localhost:5173
+
+# 3. Build for production
+npm run build
+
+# 4. Preview production build
+npm run preview
 ```
+
+## Environment
+
+Create `.env` at project root:
+
+```env
+VITE_API_URL=http://localhost:3002
+VITE_GOOGLE_CLIENT_ID=your-google-client-id
+```
+
+## Related
+
+- **Backend**: [AI-powered-task-management](../../../KhoaNode/AI-powered-task-management) — Node.js + Express + MongoDB

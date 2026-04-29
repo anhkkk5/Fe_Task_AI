@@ -153,7 +153,7 @@ function Calendar() {
   ) => {
     const rect = columnEl.getBoundingClientRect();
     const y = clientY - rect.top;
-    const rawMinutes = y / 0.8; // 48px per hour = 0.8px per minute
+    const rawMinutes = y / 1.2; // 72px per hour = 1.2px per minute
     const startMinutes = clamp(snapMinutes(rawMinutes, 30), 0, 24 * 60 - 30);
     const start = day
       .clone()
