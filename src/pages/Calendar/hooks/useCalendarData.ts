@@ -16,11 +16,44 @@ const parseSuggestedDuration = (suggestedTime?: string): number => {
   return diff > 0 ? diff : 60;
 };
 
+type TimeInterval = { start: dayjs.Dayjs; end: dayjs.Dayjs };
+
+const subtractIntervals = (
+  base: TimeInterval,
+  busyList: TimeInterval[],
+): TimeInterval[] => {
+  let slices: TimeInterval[] = [base];
+
+  for (const busy of busyList) {
+    const nextSlices: TimeInterval[] = [];
+    for (const slice of slices) {
+      if (
+        busy.end.isBefore(slice.start) ||
+        busy.start.isAfter(slice.end) ||
+        busy.end.isSame(slice.start) ||
+        busy.start.isSame(slice.end)
+      ) {
+        nextSlices.push(slice);
+        continue;
+      }
+      if (busy.start.isAfter(slice.start)) {
+        nextSlices.push({ start: slice.start, end: busy.start });
+      }
+      if (busy.end.isBefore(slice.end)) {
+        nextSlices.push({ start: busy.end, end: slice.end });
+      }
+    }
+    slices = nextSlices.filter((s) => s.end.diff(s.start, "minute") >= 15);
+  }
+
+  return slices;
+};
+
 export const useCalendarData = (
   tasks: any[],
   activeSchedule: any,
   routines: DailyRoutineItem[] = [],
-  weekDays: dayjs.Dayjs[] = []
+  weekDays: dayjs.Dayjs[] = [],
 ) => {
   const [hiddenEventIds, setHiddenEventIds] = useState<Set<string>>(new Set());
 
@@ -281,6 +314,18 @@ export const useCalendarData = (
         const dayNum = day.day() === 0 ? 7 : day.day();
 
         const dateStr = day.format("YYYY-MM-DD");
+        const dayStart = day.clone().startOf("day");
+        const dayEnd = day.clone().endOf("day");
+
+        // Specific concrete tasks on this day
+        const dayTasks = [...taskEvents, ...aiEvents].filter(
+          (t) => t.start.isBefore(dayEnd) && t.end.isAfter(dayStart),
+        );
+        const busyIntervals: TimeInterval[] = dayTasks.map((t) => ({
+          start: t.start,
+          end: t.end,
+        }));
+
         routines.forEach((routine) => {
           if (!routine.isActive) return;
           if (routine.excludedDates && routine.excludedDates.includes(dateStr)) return;
@@ -296,27 +341,41 @@ export const useCalendarData = (
               .split(":")
               .map(Number);
 
-            const start = day.clone().hour(startH).minute(startM).second(0);
-            const end = day.clone().hour(endH).minute(endM).second(0);
+            const baseStart = day.clone().hour(startH).minute(startM).second(0);
+            const baseEnd = day.clone().hour(endH).minute(endM).second(0);
 
-            routineEvents.push({
-              id: `routine-${routine._id}-${day.format("YYYY-MM-DD")}`,
-              routineId: routine._id,
-              title: `🔁 ${routine.title}`,
-              start,
-              end,
-              priority: "medium",
-              status: "scheduled",
-              color: routine.color || "#10b981",
-              isRoutine: true,
-              reason: routine.description || "Lịch sinh hoạt lặp lại hàng ngày",
-              sessionTasks: [
-                {
-                  title: routine.title,
-                  minutes: Math.max(1, end.diff(start, "minute")),
-                  description: routine.description,
-                },
-              ],
+            // Carve out any overlapping specific task from this background routine
+            const availableSlices = subtractIntervals(
+              { start: baseStart, end: baseEnd },
+              busyIntervals,
+            );
+
+            availableSlices.forEach((slice, sliceIdx) => {
+              const sliceMinutes = Math.max(
+                1,
+                slice.end.diff(slice.start, "minute"),
+              );
+              routineEvents.push({
+                id: `routine-${routine._id}-${day.format("YYYY-MM-DD")}-${sliceIdx}`,
+                routineId: routine._id,
+                title: `🔁 ${routine.title}`,
+                start: slice.start,
+                end: slice.end,
+                priority: "medium",
+                status: "scheduled",
+                color: routine.color || "#10b981",
+                isRoutine: true,
+                reason:
+                  routine.description ||
+                  "Lịch sinh hoạt lặp lại hàng ngày (tự động co giãn theo công việc)",
+                sessionTasks: [
+                  {
+                    title: routine.title,
+                    minutes: sliceMinutes,
+                    description: routine.description,
+                  },
+                ],
+              });
             });
           }
         });
