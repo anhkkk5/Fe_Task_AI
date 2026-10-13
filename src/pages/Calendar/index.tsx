@@ -25,6 +25,10 @@ import {
 import type { GoogleUserInfo } from "../../services/backendGoogleServices";
 import type { CalendarEvent } from "./types";
 import { useCalendarData } from "./hooks/useCalendarData";
+import {
+  getRoutines,
+  type DailyRoutineItem,
+} from "../../services/routineServices";
 
 // Components
 import { CalendarSidebar } from "./components/CalendarSidebar";
@@ -78,11 +82,27 @@ function Calendar() {
     useState<AIScheduleResponse | null>(null);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [availabilityModalOpen, setAvailabilityModalOpen] = useState(false);
+  const [routines, setRoutines] = useState<DailyRoutineItem[]>([]);
+
+  const fetchRoutines = async () => {
+    try {
+      const res = await getRoutines();
+      setRoutines(res.routines || []);
+    } catch {
+      // silent
+    }
+  };
+
+  useEffect(() => {
+    void fetchRoutines();
+  }, []);
 
   // Custom data hook to process all events and AI tasks
   const { events, hideEvent, unhideEvent } = useCalendarData(
     tasks,
     activeSchedule,
+    routines,
+    currentWeek,
   );
 
   const weekDays = useMemo(() => {
@@ -450,6 +470,7 @@ function Calendar() {
       <AvailabilitySettingsModal
         open={availabilityModalOpen}
         onCancel={() => setAvailabilityModalOpen(false)}
+        onRoutinesChanged={fetchRoutines}
       />
     </div>
   );

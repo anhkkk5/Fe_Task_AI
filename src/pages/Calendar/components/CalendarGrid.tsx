@@ -306,23 +306,27 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                         }
                       >
                         <div
-                          className={`calendar-event priority-${event.priority} ${event.aiScheduled ? "ai-event" : ""}`}
+                          className={`calendar-event priority-${event.priority} ${event.aiScheduled ? "ai-event" : ""} ${event.isRoutine ? "routine-event" : ""}`}
                           style={{
                             top: `${top}px`,
                             height: `${Math.max(height, 30)}px`,
                             width: `${pos.width}%`,
                             left: `${pos.left}%`,
-                            backgroundColor: getPriorityColor(event.priority),
+                            backgroundColor: event.color || getPriorityColor(event.priority),
+                            borderLeft: event.isRoutine ? "4px solid rgba(255,255,255,0.7)" : undefined,
+                            boxShadow: event.isRoutine ? "0 2px 6px rgba(0,0,0,0.12)" : undefined,
                             opacity:
                               event.status === "completed" ||
                               event.status === "done"
                                 ? 0.6
                                 : 1,
-                            cursor: isMovableEvent(event)
-                              ? "grab"
-                              : "not-allowed",
+                            cursor: event.isRoutine
+                              ? "pointer"
+                              : isMovableEvent(event)
+                                ? "grab"
+                                : "not-allowed",
                           }}
-                          draggable={isMovableEvent(event)}
+                          draggable={!event.isRoutine && isMovableEvent(event)}
                           onDragStart={(e) => {
                             if (!isMovableEvent(event)) {
                               e.preventDefault();

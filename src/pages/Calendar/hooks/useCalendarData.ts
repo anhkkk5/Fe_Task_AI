@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import dayjs from "dayjs";
 import type { CalendarEvent, CalendarSessionTaskItem } from "../types";
+import type { DailyRoutineItem } from "../../../services/routineServices";
 
 const parseSuggestedDuration = (suggestedTime?: string): number => {
   if (!suggestedTime) return 60;
@@ -15,7 +16,12 @@ const parseSuggestedDuration = (suggestedTime?: string): number => {
   return diff > 0 ? diff : 60;
 };
 
-export const useCalendarData = (tasks: any[], activeSchedule: any) => {
+export const useCalendarData = (
+  tasks: any[],
+  activeSchedule: any,
+  routines: DailyRoutineItem[] = [],
+  currentWeek: dayjs.Dayjs = dayjs()
+) => {
   const [hiddenEventIds, setHiddenEventIds] = useState<Set<string>>(new Set());
 
   const events = useMemo<CalendarEvent[]>(() => {
@@ -251,7 +257,6 @@ export const useCalendarData = (tasks: any[], activeSchedule: any) => {
           : packedSessionTasks.length > 0
             ? packedSessionTasks
             : [{ title: ref.title, minutes: ref.durationMinutes }];
-
       aiEvents.push({
         id: ref.eventId,
         title: ref.title,
@@ -267,10 +272,57 @@ export const useCalendarData = (tasks: any[], activeSchedule: any) => {
       });
     });
 
-    return [...taskEvents, ...aiEvents].filter(
+    // Render Daily Routines (Lịch lặp lại hàng ngày từ 1 bản ghi duy nhất)
+    const routineEvents: CalendarEvent[] = [];
+    if (routines && routines.length > 0) {
+      const startOfWeek = currentWeek.startOf("week");
+      for (let i = 0; i < 7; i++) {
+        const day = startOfWeek.add(i, "day");
+        const dayNum = day.day() === 0 ? 7 : day.day(); // 1=T2, ..., 7=CN
+
+        routines.forEach((routine) => {
+          if (!routine.isActive) return;
+          const matchDay =
+            !routine.daysOfWeek || routine.daysOfWeek.includes(dayNum);
+          if (matchDay) {
+            const [startH, startM] = (routine.startTime || "00:00")
+              .split(":")
+              .map(Number);
+            const [endH, endM] = (routine.endTime || "00:00")
+              .split(":")
+              .map(Number);
+
+            const start = day.clone().hour(startH).minute(startM).second(0);
+            const end = day.clone().hour(endH).minute(endM).second(0);
+
+            routineEvents.push({
+              id: `routine-${routine._id}-${day.format("YYYY-MM-DD")}`,
+              routineId: routine._id,
+              title: `🔁 ${routine.title}`,
+              start,
+              end,
+              priority: "medium",
+              status: "scheduled",
+              color: routine.color || "#10b981",
+              isRoutine: true,
+              reason: routine.description || "Lịch sinh hoạt lặp lại hàng ngày",
+              sessionTasks: [
+                {
+                  title: routine.title,
+                  minutes: Math.max(1, end.diff(start, "minute")),
+                  description: routine.description,
+                },
+              ],
+            });
+          }
+        });
+      }
+    }
+
+    return [...taskEvents, ...aiEvents, ...routineEvents].filter(
       (e) => !hiddenEventIds.has(e.id),
     );
-  }, [tasks, activeSchedule, hiddenEventIds]);
+  }, [tasks, activeSchedule, routines, currentWeek, hiddenEventIds]);
 
   const hideEvent = (id: string) => {
     setHiddenEventIds((prev) => {

@@ -26,4 +26,7 @@ export interface CalendarEvent {
   sessionTasks?: CalendarSessionTaskItem[];
   originalStart?: dayjs.Dayjs;
   originalEnd?: dayjs.Dayjs;
+  isRoutine?: boolean;
+  routineId?: string;
+  color?: string;
 }

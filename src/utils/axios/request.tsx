@@ -138,6 +138,11 @@ export const edit = async <T = any,>(path: string, data: any): Promise<T> => {
   return response.data;
 };
 
+export const put = async <T = any,>(path: string, data?: any): Promise<T> => {
+  const response = await axiosInstance.put<T>(path, data);
+  return response.data;
+};
+
 // Alias for edit (PATCH method)
 export const patch = edit;
 
