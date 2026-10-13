@@ -478,16 +478,35 @@ export default function AITaskScheduler({
         </div>
       ) : (
         <div className="step-2">
-          {schedule && (
-            <>
-              <Alert
-                message={`Lịch trình đã sẵn sàng! ${schedule.totalTasks} công việc được sắp xếp trong ${schedule.schedule.length} ngày`}
-                description={schedule.personalizationNote}
-                type="success"
-                showIcon
-                icon={<CheckCircleOutlined />}
-                style={{ marginBottom: 16 }}
-              />
+          {schedule && (() => {
+            const totalScheduledSessions = schedule.schedule.reduce(
+              (acc, d) => acc + (d.tasks?.length || 0),
+              0,
+            );
+            const hasShortfall =
+              schedule.personalizationNote?.includes("⚠️") ||
+              (schedule.warnings && schedule.warnings.length > 0);
+
+            return (
+              <>
+                <Alert
+                  message={
+                    totalScheduledSessions === 0
+                      ? "Chưa thể xếp lịch: Thiếu thời gian rảnh trước hạn chót (Deadline)"
+                      : `Lịch trình đã sẵn sàng! ${schedule.totalTasks} công việc được sắp xếp trong ${schedule.schedule.length} ngày`
+                  }
+                  description={schedule.personalizationNote}
+                  type={totalScheduledSessions === 0 ? "warning" : hasShortfall ? "warning" : "success"}
+                  showIcon
+                  icon={
+                    totalScheduledSessions === 0 || hasShortfall ? (
+                      <WarningOutlined />
+                    ) : (
+                      <CheckCircleOutlined />
+                    )
+                  }
+                  style={{ marginBottom: 16 }}
+                />
 
               {/* Estimation metadata */}
               {schedule.estimationMetadata &&
@@ -779,12 +798,14 @@ export default function AITaskScheduler({
                   type="primary"
                   onClick={handleApplySchedule}
                   loading={applying}
+                  disabled={totalScheduledSessions === 0}
                 >
                   Áp dụng lịch trình
                 </Button>
               </div>
             </>
-          )}
+          );
+        })()}
         </div>
       )}
 
