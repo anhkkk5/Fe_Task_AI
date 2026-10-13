@@ -280,8 +280,10 @@ export const useCalendarData = (
         // Quy ước của chúng ta: 1=Thứ 2, ..., 6=Thứ 7, 7=Chủ Nhật
         const dayNum = day.day() === 0 ? 7 : day.day();
 
+        const dateStr = day.format("YYYY-MM-DD");
         routines.forEach((routine) => {
           if (!routine.isActive) return;
+          if (routine.excludedDates && routine.excludedDates.includes(dateStr)) return;
           const matchDay =
             !routine.daysOfWeek ||
             routine.daysOfWeek.length === 0 ||

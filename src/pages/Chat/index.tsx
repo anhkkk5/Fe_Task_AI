@@ -28,7 +28,22 @@ import {
   type AiConversation,
   type AiMessage,
 } from "../../services/chatServices";
+import { ScheduleActionCard } from "./components/ScheduleActionCard";
 import "./Chat.scss";
+
+const parseScheduleActionFromContent = (content: string) => {
+  const match = content.match(
+    /```(?:json_)?schedule_action\s*([\s\S]*?)\s*```/,
+  );
+  if (!match) return { cleanContent: content, scheduleAction: null };
+  try {
+    const parsed = JSON.parse(match[1]);
+    const cleanContent = content.replace(match[0], "").trim();
+    return { cleanContent, scheduleAction: parsed };
+  } catch {
+    return { cleanContent: content, scheduleAction: null };
+  }
+};
 
 type Suggestion = { icon: React.ReactNode; label: string; prompt: string };
 type ScheduleGuideAction = {
@@ -494,43 +509,53 @@ function Chat() {
                     <Spin size="large" />
                   </div>
                 ) : (
-                  messages.map((msg) => (
-                    <div key={msg.id} className={`msg-row ${msg.role}`}>
-                      {msg.role === "assistant" && (
-                        <div className="msg-avatar">
-                          <div className="avatar ai-avatar">
-                            <RobotOutlined />
+                  messages.map((msg) => {
+                    const isAssistant = msg.role === "assistant";
+                    const { cleanContent, scheduleAction } = isAssistant
+                      ? parseScheduleActionFromContent(msg.content)
+                      : { cleanContent: msg.content, scheduleAction: null };
+
+                    return (
+                      <div key={msg.id} className={`msg-row ${msg.role}`}>
+                        {isAssistant && (
+                          <div className="msg-avatar">
+                            <div className="avatar ai-avatar">
+                              <RobotOutlined />
+                            </div>
                           </div>
-                        </div>
-                      )}
-                      <div className="msg-body">
-                        <div className="msg-bubble">
-                          {msg.role === "assistant" ? (
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {msg.content}
-                            </ReactMarkdown>
-                          ) : (
-                            <p>{msg.content}</p>
+                        )}
+                        <div className="msg-body">
+                          <div className="msg-bubble">
+                            {isAssistant ? (
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {cleanContent}
+                              </ReactMarkdown>
+                            ) : (
+                              <p>{msg.content}</p>
+                            )}
+                          </div>
+                          {scheduleAction && (
+                            <ScheduleActionCard action={scheduleAction} />
                           )}
+                          <span
+                            className="msg-time"
+                            title={new Date(msg.createdAt).toLocaleString(
+                              "vi-VN",
+                            )}
+                          >
+                            {formatTime(msg.createdAt)}
+                          </span>
                         </div>
-                        <span
-                          className="msg-time"
-                          title={new Date(msg.createdAt).toLocaleString(
-                            "vi-VN",
-                          )}
-                        >
-                          {formatTime(msg.createdAt)}
-                        </span>
+                        {msg.role === "user" && (
+                          <div className="msg-avatar">
+                            <div className="avatar user-avatar">
+                              <UserOutlined />
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      {msg.role === "user" && (
-                        <div className="msg-avatar">
-                          <div className="avatar user-avatar">
-                            <UserOutlined />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))
+                    );
+                  })
                 )}
 
                 {sending && (

@@ -11,6 +11,7 @@ export interface DailyRoutineItem {
   category?: string;
   color?: string;
   isActive: boolean;
+  excludedDates?: string[];
   createdAt?: string;
   updatedAt?: string;
 }

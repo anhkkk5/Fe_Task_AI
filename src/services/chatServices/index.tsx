@@ -199,3 +199,38 @@ export const streamChatMessage = async (
     callbacks.onDone?.();
   }
 };
+
+export interface ScheduleActionItem {
+  action: "cancel_routine" | "replace" | "create_event" | "create";
+  routineId?: string;
+  oldTitle?: string;
+  newTitle?: string;
+  title?: string;
+  start?: string;
+  end?: string;
+  time?: string;
+  category?: string;
+  taskId?: string;
+  reason?: string;
+  checked?: boolean;
+}
+
+export interface ScheduleActionPayload {
+  type: string;
+  targetDate: string;
+  targetDayVi?: string;
+  summary?: string;
+  actions: ScheduleActionItem[];
+}
+
+export const applyCalendarAction = async (payload: {
+  targetDate: string;
+  actions: ScheduleActionItem[];
+}): Promise<{
+  success: boolean;
+  appliedCount: number;
+  message: string;
+  details?: string[];
+}> => {
+  return await post("/ai/apply-calendar-action", payload);
+};
