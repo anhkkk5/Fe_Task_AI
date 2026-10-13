@@ -97,18 +97,18 @@ function Calendar() {
     void fetchRoutines();
   }, []);
 
+  const weekDays = useMemo(() => {
+    const startOfWeek = currentWeek.startOf("week");
+    return Array.from({ length: 7 }, (_, i) => startOfWeek.add(i, "day"));
+  }, [currentWeek]);
+
   // Custom data hook to process all events and AI tasks
   const { events, hideEvent, unhideEvent } = useCalendarData(
     tasks,
     activeSchedule,
     routines,
-    currentWeek,
+    weekDays,
   );
-
-  const weekDays = useMemo(() => {
-    const startOfWeek = currentWeek.startOf("week");
-    return Array.from({ length: 7 }, (_, i) => startOfWeek.add(i, "day"));
-  }, [currentWeek]);
 
   useEffect(() => {
     const checkGoogleStatus = async () => {

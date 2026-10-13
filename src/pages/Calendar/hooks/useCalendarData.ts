@@ -20,7 +20,7 @@ export const useCalendarData = (
   tasks: any[],
   activeSchedule: any,
   routines: DailyRoutineItem[] = [],
-  currentWeek: dayjs.Dayjs = dayjs()
+  weekDays: dayjs.Dayjs[] = []
 ) => {
   const [hiddenEventIds, setHiddenEventIds] = useState<Set<string>>(new Set());
 
@@ -274,16 +274,18 @@ export const useCalendarData = (
 
     // Render Daily Routines (Lịch lặp lại hàng ngày từ 1 bản ghi duy nhất)
     const routineEvents: CalendarEvent[] = [];
-    if (routines && routines.length > 0) {
-      const startOfWeek = currentWeek.startOf("week");
-      for (let i = 0; i < 7; i++) {
-        const day = startOfWeek.add(i, "day");
-        const dayNum = day.day() === 0 ? 7 : day.day(); // 1=T2, ..., 7=CN
+    if (routines && routines.length > 0 && weekDays && weekDays.length > 0) {
+      weekDays.forEach((day) => {
+        // dayjs: 0=Chủ Nhật, 1=Thứ 2, ..., 6=Thứ 7
+        // Quy ước của chúng ta: 1=Thứ 2, ..., 6=Thứ 7, 7=Chủ Nhật
+        const dayNum = day.day() === 0 ? 7 : day.day();
 
         routines.forEach((routine) => {
           if (!routine.isActive) return;
           const matchDay =
-            !routine.daysOfWeek || routine.daysOfWeek.includes(dayNum);
+            !routine.daysOfWeek ||
+            routine.daysOfWeek.length === 0 ||
+            routine.daysOfWeek.includes(dayNum);
           if (matchDay) {
             const [startH, startM] = (routine.startTime || "00:00")
               .split(":")
@@ -316,13 +318,13 @@ export const useCalendarData = (
             });
           }
         });
-      }
+      });
     }
 
     return [...taskEvents, ...aiEvents, ...routineEvents].filter(
       (e) => !hiddenEventIds.has(e.id),
     );
-  }, [tasks, activeSchedule, routines, currentWeek, hiddenEventIds]);
+  }, [tasks, activeSchedule, routines, weekDays, hiddenEventIds]);
 
   const hideEvent = (id: string) => {
     setHiddenEventIds((prev) => {
