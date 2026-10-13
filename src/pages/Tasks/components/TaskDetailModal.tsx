@@ -373,12 +373,6 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                       {st.title}
                     </Text>
                   </Checkbox>
-
-                  {st.estimatedDuration && (
-                    <Tag style={{ margin: 0, fontSize: 11 }}>
-                      {st.estimatedDuration}m
-                    </Tag>
-                  )}
                 </div>
               );
             })}
@@ -491,6 +485,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
               <TaskCopilotChat
                 task={currentTask}
                 onTaskUpdated={handleTaskUpdated}
+                onSwitchToDetailsTab={() => setActiveTab("details")}
               />
             ),
           },

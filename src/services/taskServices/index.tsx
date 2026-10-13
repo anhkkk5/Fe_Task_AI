@@ -183,6 +183,97 @@ export const taskCopilotChat = async (
   );
 };
 
+export const streamTaskCopilotChat = async (
+  taskId: string,
+  message: string,
+  onDelta: (delta: string) => void,
+  onDone: (data: {
+    fullReply: string;
+    suggestedBreakdown?: Array<{
+      title: string;
+      estimatedDuration?: number;
+      description?: string;
+      difficulty?: "easy" | "medium" | "hard";
+    }>;
+    task: Task;
+  }) => void,
+  onError: (err: any) => void,
+  signal?: AbortSignal,
+): Promise<void> => {
+  try {
+    const token = localStorage.getItem("token");
+    const { NORMALIZED_BASE_URL } = await import("../../utils/axios/request");
+    const url = `${NORMALIZED_BASE_URL}tasks/${taskId}/copilot/stream`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ message }),
+      signal,
+    });
+
+    if (!response.ok) {
+      let errMsg = "Lỗi khi kết nối AI Copilot";
+      try {
+        const errorData = await response.json();
+        errMsg = errorData?.message || errMsg;
+      } catch {}
+      throw new Error(errMsg);
+    }
+
+    if (!response.body) {
+      throw new Error("Không có phản hồi từ máy chủ");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith("data:")) continue;
+
+        const dataStr = trimmed.slice(5).trim();
+        if (!dataStr) continue;
+
+        try {
+          const event = JSON.parse(dataStr);
+          if (event.error) {
+            onError(new Error(event.error));
+            return;
+          }
+          if (event.type === "delta" && event.delta) {
+            onDelta(event.delta);
+          } else if (event.type === "done") {
+            onDone({
+              fullReply: event.fullReply,
+              suggestedBreakdown: event.suggestedBreakdown,
+              task: event.task,
+            });
+            return;
+          }
+        } catch {
+          // ignore chunk parse error
+        }
+      }
+    }
+  } catch (err: any) {
+    if (err?.name === "AbortError") return;
+    onError(err);
+  }
+};
+
 export const applyCopilotBreakdown = async (
   taskId: string,
   steps: Array<{

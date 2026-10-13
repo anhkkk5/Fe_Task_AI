@@ -19,7 +19,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
-  taskCopilotChat,
+  streamTaskCopilotChat,
   applyCopilotBreakdown,
 } from "../../../services/taskServices";
 import type { TaskItem } from "../types";
@@ -28,6 +28,7 @@ import "./TaskCopilotChat.scss";
 interface TaskCopilotChatProps {
   task: TaskItem;
   onTaskUpdated?: (updatedTask: TaskItem) => void;
+  onSwitchToDetailsTab?: () => void;
 }
 
 interface ChatMessage {
@@ -52,6 +53,7 @@ const PROMPT_SUGGESTIONS = [
 export const TaskCopilotChat: React.FC<TaskCopilotChatProps> = ({
   task,
   onTaskUpdated,
+  onSwitchToDetailsTab,
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     return (task.aiChatHistory || []) as ChatMessage[];
@@ -68,6 +70,13 @@ export const TaskCopilotChat: React.FC<TaskCopilotChatProps> = ({
   const taskId = (task as any)._id || task.id;
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -94,33 +103,70 @@ export const TaskCopilotChat: React.FC<TaskCopilotChatProps> = ({
       timestamp: new Date().toISOString(),
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    // Tạo tin nhắn assistant trống để stream chữ vào
+    const assistantMsg: ChatMessage = {
+      role: "assistant",
+      content: "",
+      timestamp: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, userMsg, assistantMsg]);
     setInputValue("");
     setSending(true);
 
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const ac = new AbortController();
+    abortControllerRef.current = ac;
+
     try {
-      const res = await taskCopilotChat(taskId, text);
-      const assistantMsg: ChatMessage = {
-        role: "assistant",
-        content: res.reply,
-        suggestedBreakdown: res.suggestedBreakdown,
-        timestamp: new Date().toISOString(),
-      };
+      await streamTaskCopilotChat(
+        taskId,
+        text,
+        // onDelta: cập nhật chữ chạy ra streaming như ChatGPT
+        (delta) => {
+          setMessages((prev) => {
+            const copy = [...prev];
+            const last = copy[copy.length - 1];
+            if (last && last.role === "assistant") {
+              last.content += delta;
+            }
+            return copy;
+          });
+        },
+        // onDone: cập nhật kết quả hoàn chỉnh, checklist nếu có
+        (data) => {
+          setMessages((prev) => {
+            const copy = [...prev];
+            const last = copy[copy.length - 1];
+            if (last && last.role === "assistant") {
+              last.content = data.fullReply;
+              last.suggestedBreakdown = data.suggestedBreakdown;
+            }
+            return copy;
+          });
 
-      setMessages((prev) => [...prev, assistantMsg]);
-
-      if (res.task && onTaskUpdated) {
-        onTaskUpdated({
-          ...task,
-          ...res.task,
-          aiBreakdown: res.task.aiBreakdown,
-          aiChatHistory: (res.task as any).aiChatHistory,
-          subtasks: res.task.subtasks || task.subtasks,
-        } as TaskItem);
-      }
+          if (data.task && onTaskUpdated) {
+            onTaskUpdated({
+              ...task,
+              ...data.task,
+              aiBreakdown: data.task.aiBreakdown,
+              aiChatHistory: (data.task as any).aiChatHistory,
+              subtasks: data.task.subtasks || task.subtasks,
+            } as TaskItem);
+          }
+          setSending(false);
+        },
+        // onError
+        (err) => {
+          message.error(err?.message || "Không thể kết nối tới AI Copilot");
+          setSending(false);
+        },
+        ac.signal,
+      );
     } catch (err: any) {
       message.error(err?.message || "Không thể kết nối tới AI Copilot");
-    } finally {
       setSending(false);
     }
   };
@@ -141,8 +187,8 @@ export const TaskCopilotChat: React.FC<TaskCopilotChatProps> = ({
       );
       message.success(
         applyMode === "replace"
-          ? "Đã thay thế toàn bộ checklist bằng lộ trình mới từ AI!"
-          : "Đã thêm nối tiếp các bước mới vào checklist công việc!",
+          ? "Đã lưu lộ trình mới vào danh sách việc con!"
+          : "Đã thêm các bước vào danh sách việc con!",
       );
       setApplyModalOpen(false);
       if (res.task && onTaskUpdated) {
@@ -153,6 +199,7 @@ export const TaskCopilotChat: React.FC<TaskCopilotChatProps> = ({
           subtasks: res.task.subtasks,
         } as TaskItem);
       }
+      onSwitchToDetailsTab?.();
     } catch (err: any) {
       message.error(err?.message || "Lỗi khi áp dụng các bước");
     } finally {
@@ -201,9 +248,21 @@ export const TaskCopilotChat: React.FC<TaskCopilotChatProps> = ({
 
               <div className="chat-bubble">
                 <div className="markdown-body">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {msg.content}
-                  </ReactMarkdown>
+                  {!msg.content && sending && idx === messages.length - 1 ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#64748b", fontSize: 13, padding: "4px 0" }}>
+                      <Spin size="small" />
+                      <span>AI đang suy nghĩ và chuẩn bị câu trả lời...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {msg.content.replace(/```json_breakdown[\s\S]*$/, "").trim()}
+                      </ReactMarkdown>
+                      {sending && idx === messages.length - 1 && (
+                        <span style={{ color: "#10b981", fontWeight: 700, animation: "blink 1s infinite" }}> ▍</span>
+                      )}
+                    </>
+                  )}
                 </div>
 
                 {/* If AI suggested actionable steps */}
@@ -222,11 +281,6 @@ export const TaskCopilotChat: React.FC<TaskCopilotChatProps> = ({
                           <span>
                             <strong>{sIdx + 1}.</strong> {step.title}
                           </span>
-                          {step.estimatedDuration && (
-                            <span className="step-duration">
-                              {step.estimatedDuration}m
-                            </span>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -249,20 +303,6 @@ export const TaskCopilotChat: React.FC<TaskCopilotChatProps> = ({
               </div>
             </div>
           ))
-        )}
-
-        {sending && (
-          <div className="chat-bubble-row assistant-row">
-            <div className="avatar-wrap ai-avatar">
-              <RobotOutlined />
-            </div>
-            <div className="chat-bubble">
-              <Spin size="small" />
-              <span style={{ marginLeft: 8, color: "#64748b", fontSize: 12 }}>
-                AI đang suy nghĩ và tổng hợp kiến thức...
-              </span>
-            </div>
-          </div>
         )}
 
         <div ref={messagesEndRef} />
@@ -308,7 +348,7 @@ export const TaskCopilotChat: React.FC<TaskCopilotChatProps> = ({
 
       {/* Confirmation Modal when Applying Breakdown */}
       <Modal
-        title="Áp dụng các bước thực hiện vào công việc"
+        title="Áp dụng vào danh sách việc con (Subtasks) của công việc"
         open={applyModalOpen}
         onCancel={() => setApplyModalOpen(false)}
         onOk={handleConfirmApply}
@@ -316,9 +356,23 @@ export const TaskCopilotChat: React.FC<TaskCopilotChatProps> = ({
         okText="Xác nhận áp dụng"
         cancelText="Hủy"
       >
-        <p style={{ marginBottom: 16 }}>
-          Bạn muốn cập nhật danh sách <strong>{selectedBreakdown.length} bước</strong> này vào công việc như thế nào?
+        <p style={{ marginBottom: 8, color: "#475569" }}>
+          Bạn muốn cập nhật danh sách <strong>{selectedBreakdown.length} bước</strong> này vào mục việc con của công việc như thế nào?
         </p>
+
+        <div
+          style={{
+            marginBottom: 16,
+            padding: "8px 12px",
+            background: "#f0fdf4",
+            borderRadius: 6,
+            border: "1px solid #bbf7d0",
+            fontSize: 12,
+            color: "#166534",
+          }}
+        >
+          💡 Các bước này được lưu trực tiếp dưới dạng việc con (checklist) bên trong công việc này, không làm rối hay tạo thêm thẻ ngoài bảng chính.
+        </div>
 
         <Radio.Group
           value={applyMode}
@@ -326,10 +380,10 @@ export const TaskCopilotChat: React.FC<TaskCopilotChatProps> = ({
           style={{ display: "flex", flexDirection: "column", gap: 12 }}
         >
           <Radio value="replace">
-            <strong>Thay thế toàn bộ checklist hiện tại</strong> (Khuyên dùng khi bạn muốn theo lộ trình mới hoàn toàn từ AI)
+            <strong>Thay thế toàn bộ danh sách việc con hiện tại</strong> (Khuyên dùng khi bạn muốn theo lộ trình mới hoàn toàn từ AI)
           </Radio>
           <Radio value="append">
-            <strong>Thêm nối tiếp vào các bước đang có</strong> (Giữ nguyên các việc cũ và bổ sung thêm các bước mới này)
+            <strong>Thêm nối tiếp vào danh sách việc con đang có</strong> (Giữ nguyên các việc con cũ và bổ sung thêm các bước mới này)
           </Radio>
         </Radio.Group>
       </Modal>
