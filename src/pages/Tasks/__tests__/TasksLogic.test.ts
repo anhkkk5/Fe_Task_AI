@@ -134,4 +134,53 @@ describe("Tasks Logic & Data Transformations", () => {
       expect(matchVietnameseSearch("Hoàn thiện báo cáo tài chính Q3", "khong tim thay")).toBe(false);
     });
   });
+
+  describe("Flexible Time and Range Parsing", () => {
+    it("should parse arbitrary minutes and hours without rigid intervals", async () => {
+      const {
+        parseHourStringToMinutes,
+        parseTimeRange,
+        minutesToHourString,
+      } = await import("../../../utils/timeParser");
+
+      // 1. Phút lẻ bất kỳ
+      expect(parseHourStringToMinutes("17m")).toBe(17);
+      expect(parseHourStringToMinutes("42p")).toBe(42);
+      expect(parseHourStringToMinutes("50 phút")).toBe(50);
+      expect(parseHourStringToMinutes("35min")).toBe(35);
+      expect(parseHourStringToMinutes("90")).toBe(90);
+
+      // 2. Giờ lẻ và kết hợp giờ + phút
+      expect(parseHourStringToMinutes("1h13")).toBe(73);
+      expect(parseHourStringToMinutes("1h20m")).toBe(80);
+      expect(parseHourStringToMinutes("1h 20p")).toBe(80);
+      expect(parseHourStringToMinutes("2h5")).toBe(125);
+      expect(parseHourStringToMinutes("1.2h")).toBe(72);
+      expect(parseHourStringToMinutes("0.5h")).toBe(30);
+
+      // 3. Mục tiêu ngày linh hoạt (Range)
+      const range1 = parseTimeRange("35m - 1h10m");
+      expect(range1.dailyTargetMin).toBe(35);
+      expect(range1.dailyTargetDuration).toBe(70);
+
+      const range2 = parseTimeRange("17m - 42m");
+      expect(range2.dailyTargetMin).toBe(17);
+      expect(range2.dailyTargetDuration).toBe(42);
+
+      const range3 = parseTimeRange("45p - 1h20p");
+      expect(range3.dailyTargetMin).toBe(45);
+      expect(range3.dailyTargetDuration).toBe(80);
+
+      // 4. Nhập 1 mốc duy nhất cho mục tiêu
+      const single = parseTimeRange("1h13");
+      expect(single.dailyTargetDuration).toBe(73);
+      expect(single.dailyTargetMin).toBe(Math.round(73 * 0.8));
+
+      // 5. Chuyển phút ra chuỗi hiển thị
+      expect(minutesToHourString(45)).toBe("45p");
+      expect(minutesToHourString(60)).toBe("1h");
+      expect(minutesToHourString(73)).toBe("1h13");
+      expect(minutesToHourString(125)).toBe("2h05");
+    });
+  });
 });

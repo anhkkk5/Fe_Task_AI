@@ -5,6 +5,8 @@ import {
   parseEstimatedDuration,
   parseTimeRange,
   minutesToHourString,
+  validateFlexibleTime,
+  validateFlexibleRange,
 } from "../../../utils/timeParser";
 import type { TaskItem } from "../types";
 
@@ -132,15 +134,21 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         <Form.Item name="tags" label="Tags (phân cách bằng dấu phẩy)">
           <Input placeholder="VD: backend, database, urgent" />
         </Form.Item>
-        <Form.Item name="estimatedDuration" label="Thời gian dự kiến">
-          <Input placeholder="VD: 11h, 2h30, 2.5h, 1h30" suffix="giờ" />
+        <Form.Item
+          name="estimatedDuration"
+          label="Thời gian dự kiến"
+          rules={[{ validator: validateFlexibleTime }]}
+          tooltip="Hỗ trợ số phút, số giờ linh hoạt: 45m, 17p, 1h20, 1.2h, 90 phút..."
+        >
+          <Input placeholder="VD: 45m, 17p, 1h15, 1.2h, 90 phút" />
         </Form.Item>
         <Form.Item
           name="dailyTargetRange"
-          label="Mục tiêu/ngày"
-          tooltip="Nhập khoảng thời gian tối thiểu - tối đa mỗi ngày. VD: 2h-2.5h"
+          label="Mục tiêu/ngày (tùy chọn)"
+          rules={[{ validator: validateFlexibleRange }]}
+          tooltip="Mục tiêu làm việc tối thiểu - tối đa mỗi ngày. Hỗ trợ bất kỳ số phút/giờ: 35m-1h10m, 45p-1h20p, 17m-42m, 1h-2h, hoặc 45m"
         >
-          <Input placeholder="VD: 2h-2.5h, 2h30-3h30, 1h-2h" suffix="/ngày" />
+          <Input placeholder="VD: 35m-1h10m, 45p-1h20p, 17m-42m, 1h-2h, 45m" suffix="/ngày" />
         </Form.Item>
       </Form>
     </Modal>

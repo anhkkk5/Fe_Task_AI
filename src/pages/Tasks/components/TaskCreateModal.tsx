@@ -3,8 +3,8 @@ import { Modal, Form, Input, Select, DatePicker, App } from "antd";
 import {
   parseEstimatedDuration,
   parseTimeRange,
-  timeRegex,
-  rangeRegex,
+  validateFlexibleTime,
+  validateFlexibleRange,
 } from "../../../utils/timeParser";
 
 const { Option } = Select;
@@ -112,31 +112,22 @@ export const TaskCreateModal: React.FC<TaskCreateModalProps> = ({
         <Form.Item
           name="estimatedDuration"
           label="Thời gian dự kiến"
-          initialValue="11h"
+          initialValue="1h"
           rules={[
             { required: true, message: "Vui lòng nhập thời gian" },
-            {
-              pattern: timeRegex,
-              message: "Định dạng: 11h, 2h30, 2.5h",
-            },
+            { validator: validateFlexibleTime },
           ]}
+          tooltip="Hỗ trợ số phút, số giờ linh hoạt: 45m, 17p, 1h20, 1.2h, 90 phút..."
         >
-          <Input placeholder="VD: 11h, 2h30, 2.5h, 1h30" suffix="giờ" />
+          <Input placeholder="VD: 45m, 17p, 1h15, 1.2h, 90 phút" />
         </Form.Item>
         <Form.Item
           name="dailyTargetRange"
-          label="Mục tiêu/ngày"
-          initialValue="2h-2.5h"
-          rules={[
-            { required: true, message: "Vui lòng nhập mục tiêu" },
-            {
-              pattern: rangeRegex,
-              message: "VD: 2h-3h, 2h30-3h, 2.5h-3h",
-            },
-          ]}
-          tooltip="Nhập khoảng thời gian tối thiểu - tối đa mỗi ngày. VD: 2h-2.5h"
+          label="Mục tiêu/ngày (tùy chọn)"
+          rules={[{ validator: validateFlexibleRange }]}
+          tooltip="Mục tiêu làm việc tối thiểu - tối đa mỗi ngày. Hỗ trợ bất kỳ số phút/giờ: 35m-1h10m, 45p-1h20p, 17m-42m, 1h-2h, hoặc 45m"
         >
-          <Input placeholder="VD: 2h-2.5h, 2h30-3h30, 1h-2h" suffix="/ngày" />
+          <Input placeholder="VD: 35m-1h10m, 45p-1h20p, 17m-42m, 1h-2h, 45m" suffix="/ngày" />
         </Form.Item>
       </Form>
     </Modal>
