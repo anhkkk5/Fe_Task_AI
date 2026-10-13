@@ -14,6 +14,7 @@ import {
 import { TaskStats } from "./components/TaskStats";
 import { TaskFilterBar } from "./components/TaskFilterBar";
 import { TaskTable } from "./components/TaskTable";
+import { TaskKanbanBoard } from "./components/TaskKanbanBoard";
 import { TaskCreateModal } from "./components/TaskCreateModal";
 import { TaskEditModal } from "./components/TaskEditModal";
 import { TaskBreakdownModal } from "./components/TaskBreakdownModal";
@@ -38,13 +39,23 @@ function Tasks() {
     deleteMutation,
   } = useTasksQuery();
 
-  // 2. Local View State & Filters
+  // 2. Chế độ xem: Bảng (Table) hoặc Kanban Board (lưu vào localStorage)
+  const [viewMode, setViewMode] = useState<"table" | "kanban">(() => {
+    return (localStorage.getItem("tasks_view_mode") as "table" | "kanban") || "kanban";
+  });
+
+  const handleViewModeChange = (mode: "table" | "kanban") => {
+    setViewMode(mode);
+    localStorage.setItem("tasks_view_mode", mode);
+  };
+
+  // 3. Local View State & Filters
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [schedulerVisible, setSchedulerVisible] = useState(false);
   const [createModalVisible, setCreateModalVisible] = useState(false);
 
-  // 3. Modal States
+  // 4. Modal States
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
 
@@ -59,7 +70,7 @@ function Tasks() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingTask, setDeletingTask] = useState<TaskItem | null>(null);
 
-  // 4. Team Task Redirect Helper
+  // 5. Team Task Redirect Helper
   const redirectToTeamTask = (
     task: TaskItem,
     action: "sửa" | "xóa" | "đổi trạng thái",
@@ -72,7 +83,7 @@ function Tasks() {
     return true;
   };
 
-  // 5. Chuẩn hóa dữ liệu Tasks từ API
+  // 6. Chuẩn hóa dữ liệu Tasks từ API
   const tasks: TaskItem[] = useMemo(
     () =>
       apiTasks
@@ -107,7 +118,7 @@ function Tasks() {
     [apiTasks],
   );
 
-  // 6. Nhóm Subtask vào Task cha
+  // 7. Nhóm Subtask vào Task cha
   const groupedTasks = useMemo(() => {
     const taskMap = new Map<string, TaskItem>();
     const subs: TaskItem[] = [];
@@ -132,7 +143,7 @@ function Tasks() {
     return Array.from(taskMap.values());
   }, [tasks]);
 
-  // 7. Lọc dữ liệu theo Search và Trạng thái
+  // 8. Lọc dữ liệu theo Search và Trạng thái
   const filteredTasks = useMemo(() => {
     return groupedTasks.filter((task) => {
       const searchLower = searchText.toLowerCase();
@@ -145,14 +156,27 @@ function Tasks() {
             st.description.toLowerCase().includes(searchLower),
         );
       const matchesStatus =
+        viewMode === "kanban" ||
         statusFilter === "all" ||
         task.status === statusFilter ||
         task.subtasks?.some((st) => st.status === statusFilter);
       return matchesSearch && matchesStatus;
     });
-  }, [groupedTasks, searchText, statusFilter]);
+  }, [groupedTasks, searchText, statusFilter, viewMode]);
 
-  // 8. Event Handlers
+  // 9. Xử lý Drag & Drop trên Kanban (Cập nhật trạng thái tức thì với Optimistic UI)
+  const handleDropTask = async (taskId: string, targetStatus: string) => {
+    const currentTask = tasks.find((t) => t.id === taskId);
+    if (!currentTask) return;
+
+    if (currentTask.status === targetStatus) return;
+
+    if (redirectToTeamTask(currentTask, "đổi trạng thái")) return;
+
+    await handleUpdate(taskId, { status: targetStatus });
+  };
+
+  // 10. Event Handlers
   const onEditClick = (task: TaskItem) => {
     if (redirectToTeamTask(task, "sửa")) return;
     setEditingTask(task);
@@ -184,11 +208,10 @@ function Tasks() {
     getTaskEstimationExplanation(task.id)
       .then((res) => setEstimationExplain(res.explanation))
       .catch(() => {
-        // Silent error
+        // Silent
       })
       .finally(() => setExplainLoading(false));
 
-    // Nếu chưa có breakdown, tự động kích hoạt tạo lần đầu
     if (!task.aiBreakdown?.length) {
       setBreakdownLoading(true);
       try {
@@ -203,9 +226,7 @@ function Tasks() {
           err?.response?.data?.message ||
           (err?.response?.status === 429
             ? "AI đang bị giới hạn request. Vui lòng thử lại sau."
-            : err?.message === "Network Error"
-              ? "Không thể kết nối đến server."
-              : "Không thể tạo AI Breakdown.");
+            : "Không thể tạo AI Breakdown.");
         message.error(errMsg);
       } finally {
         setBreakdownLoading(false);
@@ -226,7 +247,7 @@ function Tasks() {
         const explain = await getTaskEstimationExplanation(breakdownTask.id);
         setEstimationExplain(explain.explanation);
       } catch {
-        // Silent error
+        // Silent
       }
       fetchTasks();
       message.success("Đã tạo lại AI Breakdown!");
@@ -276,25 +297,39 @@ function Tasks() {
         {/* Thẻ thống kê tổng quan */}
         <TaskStats tasks={tasks} />
 
-        {/* Thanh công cụ tìm kiếm và lọc */}
+        {/* Thanh công cụ tìm kiếm, chuyển đổi View và thêm việc */}
         <TaskFilterBar
           searchText={searchText}
           onSearchChange={setSearchText}
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
           onOpenScheduler={() => setSchedulerVisible(true)}
           onOpenCreateModal={() => setCreateModalVisible(true)}
         />
 
-        {/* Bảng danh sách công việc */}
-        <TaskTable
-          tasks={filteredTasks}
-          loading={loading}
-          onEditClick={onEditClick}
-          onDeleteClick={onDeleteClick}
-          onBreakdownClick={onBreakdownClick}
-          onStatusChange={fetchTasks}
-        />
+        {/* Nội dung chính: Chuyển đổi giữa Dạng Bảng và Kanban Board */}
+        {viewMode === "table" ? (
+          <TaskTable
+            tasks={filteredTasks}
+            loading={loading}
+            onEditClick={onEditClick}
+            onDeleteClick={onDeleteClick}
+            onBreakdownClick={onBreakdownClick}
+            onStatusChange={fetchTasks}
+          />
+        ) : (
+          <TaskKanbanBoard
+            tasks={filteredTasks}
+            loading={loading}
+            onDropTask={handleDropTask}
+            onEditClick={onEditClick}
+            onDeleteClick={onDeleteClick}
+            onBreakdownClick={onBreakdownClick}
+            onOpenCreateModal={() => setCreateModalVisible(true)}
+          />
+        )}
 
         {/* Drawer AI Lên Lịch */}
         <AITaskScheduler

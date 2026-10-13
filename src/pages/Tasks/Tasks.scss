@@ -336,3 +336,40 @@
     padding: 4px;
   }
 }
+
+/* ============================================
+   Kanban Board Styles
+   ============================================ */
+.tasks-kanban-board {
+  min-height: 480px;
+  user-select: none;
+
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+}
+
+.kanban-column {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+  &--drag-over {
+    transform: scale(1.008);
+  }
+}
+
+.kanban-card {
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08) !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  &--dragging {
+    cursor: grabbing !important;
+  }
+}
+
