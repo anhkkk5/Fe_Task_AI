@@ -82,6 +82,8 @@ function Calendar() {
     useState<AIScheduleResponse | null>(null);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [availabilityModalOpen, setAvailabilityModalOpen] = useState(false);
+  const [availabilityModalTab, setAvailabilityModalTab] =
+    useState<string>("routines");
   const [routines, setRoutines] = useState<DailyRoutineItem[]>([]);
 
   const fetchRoutines = async () => {
@@ -416,7 +418,14 @@ function Calendar() {
               setCreateEnd(end);
               setCreateModalOpen(true);
             }}
-            onOpenAvailabilitySettings={() => setAvailabilityModalOpen(true)}
+            onOpenAvailabilitySettings={() => {
+              setAvailabilityModalTab("weekly");
+              setAvailabilityModalOpen(true);
+            }}
+            onOpenRoutinesModal={() => {
+              setAvailabilityModalTab("routines");
+              setAvailabilityModalOpen(true);
+            }}
           />
 
           <CalendarGrid
@@ -469,6 +478,7 @@ function Calendar() {
 
       <AvailabilitySettingsModal
         open={availabilityModalOpen}
+        initialTab={availabilityModalTab}
         onCancel={() => setAvailabilityModalOpen(false)}
         onRoutinesChanged={fetchRoutines}
       />

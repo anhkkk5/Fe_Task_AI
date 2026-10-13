@@ -75,6 +75,7 @@ interface AvailabilitySettingsModalProps {
   open: boolean;
   onCancel: () => void;
   onRoutinesChanged?: () => void;
+  initialTab?: string;
 }
 
 const normalizeSlots = (slots: AvailableTimeSlot[]) =>
@@ -92,7 +93,15 @@ const COLOR_OPTIONS = [
 
 export const AvailabilitySettingsModal: React.FC<
   AvailabilitySettingsModalProps
-> = ({ open, onCancel, onRoutinesChanged }) => {
+> = ({ open, onCancel, onRoutinesChanged, initialTab = "routines" }) => {
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [weeklyPattern, setWeeklyPattern] =
@@ -401,7 +410,8 @@ export const AvailabilitySettingsModal: React.FC<
       destroyOnClose
     >
       <Tabs
-        defaultActiveKey="routines"
+        activeKey={activeTab}
+        onChange={setActiveTab}
         items={[
           {
             key: "routines",

@@ -112,6 +112,33 @@
     }
   }
 
+  .sidebar-routine-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    border-radius: 16px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #047857;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 8px;
+
+    &:hover {
+      background: #d1fae5;
+      border-color: #6ee7b7;
+      box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
+    }
+
+    .anticon {
+      font-size: 16px;
+      color: #059669;
+    }
+  }
+
   // Google Calendar mini calendar style
   .mini-calendar {
     padding: 8px 0;

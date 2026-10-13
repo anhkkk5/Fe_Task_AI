@@ -1,9 +1,9 @@
-import React from "react";
 import {
   LeftOutlined,
   RightOutlined,
   PlusOutlined,
   ClockCircleOutlined,
+  SyncOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import type { CalendarEvent } from "../types";
@@ -16,6 +16,7 @@ interface CalendarSidebarProps {
   events: CalendarEvent[];
   onCreateClick: () => void;
   onOpenAvailabilitySettings: () => void;
+  onOpenRoutinesModal?: () => void;
 }
 
 export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
@@ -26,6 +27,7 @@ export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
   events,
   onCreateClick,
   onOpenAvailabilitySettings,
+  onOpenRoutinesModal,
 }) => {
   // Generate mini calendar days
   const startOfMonth = miniCalendarMonth.startOf("month");
@@ -56,6 +58,13 @@ export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
         onClick={onOpenAvailabilitySettings}
       >
         <ClockCircleOutlined /> Lịch rảnh
+      </button>
+
+      <button
+        className="sidebar-routine-btn"
+        onClick={onOpenRoutinesModal}
+      >
+        <SyncOutlined /> Lịch hàng ngày (Routines)
       </button>
 
       {/* Mini Calendar */}
