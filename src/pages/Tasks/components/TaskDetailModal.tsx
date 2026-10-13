@@ -59,12 +59,17 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   } | null>(null);
 
   useEffect(() => {
-    if (task) {
-      setCurrentTask(task);
+    if (task?.id) {
       setActiveTab("details");
       setSelectedSubtask(null);
     }
   }, [task?.id]);
+
+  useEffect(() => {
+    if (task) {
+      setCurrentTask(task);
+    }
+  }, [task]);
 
   const handleAskAiSubtask = (subtaskTitle: string, index: number) => {
     setSelectedSubtask({ title: subtaskTitle, index });
@@ -379,12 +384,18 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                     checked={isDone}
                     onClick={(e) => e.stopPropagation()}
                     onChange={(e) => {
+                      const nextStatus = e.target.checked ? "completed" : "todo";
+                      const updatedSubs = subtaskList.map((s: any, sIdx: number) =>
+                        sIdx === idx ? { ...s, status: nextStatus } : s,
+                      );
+                      const updatedTask = {
+                        ...currentTask,
+                        aiBreakdown: updatedSubs,
+                        subtasks: updatedSubs,
+                      };
+                      setCurrentTask(updatedTask);
                       if (onSubtaskToggle) {
-                        onSubtaskToggle(
-                          currentTask,
-                          idx,
-                          e.target.checked ? "completed" : "todo",
-                        );
+                        onSubtaskToggle(currentTask, idx, nextStatus);
                       }
                     }}
                   >
