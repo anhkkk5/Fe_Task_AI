@@ -27,6 +27,8 @@ import "./TaskCopilotChat.scss";
 
 interface TaskCopilotChatProps {
   task: TaskItem;
+  selectedSubtask?: { title: string; index?: number } | null;
+  onClearSelectedSubtask?: () => void;
   onTaskUpdated?: (updatedTask: TaskItem) => void;
   onSwitchToDetailsTab?: () => void;
 }
@@ -34,6 +36,7 @@ interface TaskCopilotChatProps {
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  subtaskTitle?: string;
   suggestedBreakdown?: Array<{
     title: string;
     estimatedDuration?: number;
@@ -52,6 +55,8 @@ const PROMPT_SUGGESTIONS = [
 
 export const TaskCopilotChat: React.FC<TaskCopilotChatProps> = ({
   task,
+  selectedSubtask,
+  onClearSelectedSubtask,
   onTaskUpdated,
   onSwitchToDetailsTab,
 }) => {
@@ -100,6 +105,7 @@ export const TaskCopilotChat: React.FC<TaskCopilotChatProps> = ({
     const userMsg: ChatMessage = {
       role: "user",
       content: text,
+      subtaskTitle: selectedSubtask?.title,
       timestamp: new Date().toISOString(),
     };
 
@@ -164,6 +170,7 @@ export const TaskCopilotChat: React.FC<TaskCopilotChatProps> = ({
           setSending(false);
         },
         ac.signal,
+        selectedSubtask?.title,
       );
     } catch (err: any) {
       message.error(err?.message || "Không thể kết nối tới AI Copilot");
@@ -222,13 +229,78 @@ export const TaskCopilotChat: React.FC<TaskCopilotChatProps> = ({
         </div>
       </div>
 
+      {/* Subtask Context Focus Banner */}
+      {selectedSubtask && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "8px 14px",
+            background: "#ecfdf5",
+            borderBottom: "1px solid #a7f3d0",
+            fontSize: 13,
+            color: "#065f46",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              overflow: "hidden",
+            }}
+          >
+            <AimOutlined style={{ color: "#10b981", fontSize: 16 }} />
+            <span
+              style={{
+                textOverflow: "ellipsis",
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Đang hỏi về bước con:{" "}
+              <strong style={{ color: "#047857" }}>
+                "{selectedSubtask.title}"
+              </strong>
+              <span
+                style={{
+                  color: "#64748b",
+                  fontSize: 12,
+                  marginLeft: 6,
+                }}
+              >
+                (thuộc: {task.title})
+              </span>
+            </span>
+          </div>
+          {onClearSelectedSubtask && (
+            <Button
+              size="small"
+              type="text"
+              onClick={onClearSelectedSubtask}
+              style={{
+                color: "#dc2626",
+                fontSize: 12,
+                height: 24,
+                padding: "0 6px",
+              }}
+            >
+              ✕ Bỏ chọn
+            </Button>
+          )}
+        </div>
+      )}
+
       {/* Messages Scroll Area */}
       <div className="copilot-messages">
         {messages.length === 0 ? (
           <div className="empty-chat">
             <ThunderboltOutlined className="empty-icon" />
             <p>
-              <strong>Chào bạn! Tôi là Trợ lý AI đồng hành với công việc này.</strong>
+              <strong>
+                Chào bạn! Tôi là Trợ lý AI đồng hành với công việc này.
+              </strong>
             </p>
             <p>
               Bạn có thể hỏi tôi bất cứ kiến thức gì, giải thích ngữ pháp, tóm tắt lý thuyết, hoặc nhờ tôi chia lộ trình học/làm theo mục tiêu ngày.
@@ -247,9 +319,38 @@ export const TaskCopilotChat: React.FC<TaskCopilotChatProps> = ({
               </div>
 
               <div className="chat-bubble">
+                {msg.subtaskTitle && (
+                  <div style={{ marginBottom: 6 }}>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        background: "#d1fae5",
+                        color: "#065f46",
+                        fontSize: 11,
+                        padding: "2px 8px",
+                        borderRadius: 10,
+                        fontWeight: 600,
+                      }}
+                    >
+                      <AimOutlined /> Về bước: {msg.subtaskTitle}
+                    </span>
+                  </div>
+                )}
+
                 <div className="markdown-body">
                   {!msg.content && sending && idx === messages.length - 1 ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#64748b", fontSize: 13, padding: "4px 0" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        color: "#64748b",
+                        fontSize: 13,
+                        padding: "4px 0",
+                      }}
+                    >
                       <Spin size="small" />
                       <span>AI đang suy nghĩ và chuẩn bị câu trả lời...</span>
                     </div>
@@ -259,7 +360,16 @@ export const TaskCopilotChat: React.FC<TaskCopilotChatProps> = ({
                         {msg.content.replace(/```json_breakdown[\s\S]*$/, "").trim()}
                       </ReactMarkdown>
                       {sending && idx === messages.length - 1 && (
-                        <span style={{ color: "#10b981", fontWeight: 700, animation: "blink 1s infinite" }}> ▍</span>
+                        <span
+                          style={{
+                            color: "#10b981",
+                            fontWeight: 700,
+                            animation: "blink 1s infinite",
+                          }}
+                        >
+                          {" "}
+                          ▍
+                        </span>
                       )}
                     </>
                   )}
@@ -310,7 +420,15 @@ export const TaskCopilotChat: React.FC<TaskCopilotChatProps> = ({
 
       {/* Prompt Suggestions */}
       <div className="copilot-prompt-chips">
-        {PROMPT_SUGGESTIONS.map((prompt, pIdx) => (
+        {(selectedSubtask
+          ? [
+              `💡 Hướng dẫn chi tiết cách làm bước này`,
+              `💻 Code mẫu / Cách cấu hình cho bước này`,
+              `⚠️ Những lỗi thường gặp khi làm bước này`,
+              `✅ Tiêu chuẩn hoàn thành bước này`,
+            ]
+          : PROMPT_SUGGESTIONS
+        ).map((prompt, pIdx) => (
           <button
             key={pIdx}
             className="chip-btn"
@@ -327,7 +445,11 @@ export const TaskCopilotChat: React.FC<TaskCopilotChatProps> = ({
         <Input.TextArea
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          placeholder="Nhập câu hỏi, thắc mắc hoặc yêu cầu lộ trình cho AI (Nhấn Enter để gửi)..."
+          placeholder={
+            selectedSubtask
+              ? `Hỏi AI về bước "${selectedSubtask.title}" (Nhấn Enter để gửi)...`
+              : "Nhập câu hỏi, thắc mắc hoặc yêu cầu lộ trình cho AI (Nhấn Enter để gửi)..."
+          }
           autoSize={{ minRows: 1, maxRows: 3 }}
           disabled={sending}
           onPressEnter={(e) => {

@@ -53,13 +53,23 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
   const [currentTask, setCurrentTask] = useState<TaskItem>(task);
   const [activeTab, setActiveTab] = useState<"details" | "copilot">("details");
+  const [selectedSubtask, setSelectedSubtask] = useState<{
+    title: string;
+    index: number;
+  } | null>(null);
 
   useEffect(() => {
     if (task) {
       setCurrentTask(task);
       setActiveTab("details");
+      setSelectedSubtask(null);
     }
   }, [task?.id]);
+
+  const handleAskAiSubtask = (subtaskTitle: string, index: number) => {
+    setSelectedSubtask({ title: subtaskTitle, index });
+    setActiveTab("copilot");
+  };
 
   const handleTaskUpdated = (updated: TaskItem) => {
     setCurrentTask(updated);
@@ -338,6 +348,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
           >
             {subtaskList.map((st: any, idx: number) => {
               const isDone = st.status === "completed" || st.status === "done";
+              const isSelected = selectedSubtask?.index === idx;
               return (
                 <div
                   key={idx}
@@ -345,14 +356,28 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    padding: "8px 12px",
-                    background: isDone ? "#f8fafc" : "#ffffff",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: 6,
+                    padding: "10px 14px",
+                    background: isSelected
+                      ? "#ecfdf5"
+                      : isDone
+                        ? "#f8fafc"
+                        : "#ffffff",
+                    border: isSelected
+                      ? "1.5px solid #10b981"
+                      : "1px solid #e2e8f0",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    boxShadow: isSelected
+                      ? "0 2px 8px rgba(16, 185, 129, 0.15)"
+                      : "none",
                   }}
+                  onClick={() => handleAskAiSubtask(st.title, idx)}
+                  title="Bấm để hỏi đáp AI về bước này"
                 >
                   <Checkbox
                     checked={isDone}
+                    onClick={(e) => e.stopPropagation()}
                     onChange={(e) => {
                       if (onSubtaskToggle) {
                         onSubtaskToggle(
@@ -368,11 +393,38 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                       style={{
                         color: isDone ? "#94a3b8" : "#1e293b",
                         fontSize: 13,
+                        fontWeight: isSelected ? 600 : 500,
                       }}
                     >
                       {st.title}
                     </Text>
                   </Checkbox>
+
+                  <Tooltip title="Hỏi trợ lý AI Copilot về riêng bước con này">
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={<RobotOutlined style={{ color: "#10b981" }} />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAskAiSubtask(st.title, idx);
+                      }}
+                      style={{
+                        color: "#059669",
+                        fontSize: 12,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                        padding: "0 8px",
+                        height: 26,
+                        background: isSelected ? "#d1fae5" : "#f0fdf4",
+                        border: "1px solid #a7f3d0",
+                        borderRadius: 4,
+                      }}
+                    >
+                      Hỏi AI
+                    </Button>
+                  </Tooltip>
                 </div>
               );
             })}
@@ -484,6 +536,8 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
             children: (
               <TaskCopilotChat
                 task={currentTask}
+                selectedSubtask={selectedSubtask}
+                onClearSelectedSubtask={() => setSelectedSubtask(null)}
                 onTaskUpdated={handleTaskUpdated}
                 onSwitchToDetailsTab={() => setActiveTab("details")}
               />

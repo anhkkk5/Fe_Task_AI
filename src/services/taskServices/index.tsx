@@ -175,10 +175,11 @@ export interface TaskCopilotChatResponse {
 export const taskCopilotChat = async (
   taskId: string,
   message: string,
+  subtaskTitle?: string,
 ): Promise<TaskCopilotChatResponse> => {
   return await post(
     `/tasks/${taskId}/copilot/chat`,
-    { message },
+    { message, subtaskTitle },
     { timeout: 60000 },
   );
 };
@@ -199,6 +200,7 @@ export const streamTaskCopilotChat = async (
   }) => void,
   onError: (err: any) => void,
   signal?: AbortSignal,
+  subtaskTitle?: string,
 ): Promise<void> => {
   try {
     const token = localStorage.getItem("token");
@@ -211,7 +213,7 @@ export const streamTaskCopilotChat = async (
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, subtaskTitle }),
       signal,
     });
 
