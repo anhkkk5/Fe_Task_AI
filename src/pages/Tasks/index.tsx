@@ -440,6 +440,10 @@ function Tasks() {
           onDeleteClick={onDeleteClick}
           onBreakdownClick={onBreakdownClick}
           onSubtaskToggle={onSubtaskToggle}
+          onTaskUpdated={(updated) => {
+            setSelectedTask(updated);
+            void fetchTasks();
+          }}
         />
       </main>
     </div>

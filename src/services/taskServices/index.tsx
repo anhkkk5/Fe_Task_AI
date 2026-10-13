@@ -32,6 +32,8 @@ export interface Task {
   dailyTargetDuration?: number;
   dailyTargetMin?: number;
   aiBreakdown?: Subtask[];
+  subtasks?: any[];
+  aiChatHistory?: any[];
   createdAt: string;
   updatedAt: string;
 }
@@ -157,4 +159,39 @@ export const updateSubtaskStatus = async (
   subtasks: Subtask[],
 ): Promise<{ task: Task }> => {
   return await patch(`/tasks/${taskId}`, { aiBreakdown: subtasks });
+};
+
+export interface TaskCopilotChatResponse {
+  reply: string;
+  suggestedBreakdown?: Array<{
+    title: string;
+    estimatedDuration?: number;
+    description?: string;
+    difficulty?: "easy" | "medium" | "hard";
+  }>;
+  task: Task;
+}
+
+export const taskCopilotChat = async (
+  taskId: string,
+  message: string,
+): Promise<TaskCopilotChatResponse> => {
+  return await post(
+    `/tasks/${taskId}/copilot/chat`,
+    { message },
+    { timeout: 60000 },
+  );
+};
+
+export const applyCopilotBreakdown = async (
+  taskId: string,
+  steps: Array<{
+    title: string;
+    estimatedDuration?: number;
+    description?: string;
+    difficulty?: string;
+  }>,
+  mode: "replace" | "append" = "replace",
+): Promise<{ task: Task; message: string }> => {
+  return await post(`/tasks/${taskId}/copilot/apply-breakdown`, { steps, mode });
 };

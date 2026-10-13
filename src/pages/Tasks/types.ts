@@ -49,4 +49,15 @@ export interface TaskItem {
   subtasks?: TaskItem[];
   isSubtask?: boolean;
   teamId?: string;
+  aiChatHistory?: Array<{
+    role: "user" | "assistant";
+    content: string;
+    suggestedBreakdown?: Array<{
+      title: string;
+      estimatedDuration?: number;
+      description?: string;
+      difficulty?: "easy" | "medium" | "hard";
+    }>;
+    timestamp?: string;
+  }>;
 }
