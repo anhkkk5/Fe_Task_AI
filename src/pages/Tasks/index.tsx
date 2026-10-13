@@ -19,6 +19,8 @@ import { TaskCreateModal } from "./components/TaskCreateModal";
 import { TaskEditModal } from "./components/TaskEditModal";
 import { TaskBreakdownModal } from "./components/TaskBreakdownModal";
 import { TaskDeleteModal } from "./components/TaskDeleteModal";
+import { TaskDetailModal } from "./components/TaskDetailModal";
+import { matchVietnameseSearch } from "../../utils/vietnameseUtils";
 import { normalizeApiStatus, type TaskItem } from "./types";
 import "./Tasks.scss";
 
@@ -56,6 +58,9 @@ function Tasks() {
   const [createModalVisible, setCreateModalVisible] = useState(false);
 
   // 4. Modal States
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
 
@@ -143,23 +148,28 @@ function Tasks() {
     return Array.from(taskMap.values());
   }, [tasks]);
 
-  // 8. Lọc dữ liệu theo Search và Trạng thái
+  // 8. Lọc dữ liệu theo Search (hỗ trợ cả có dấu và không dấu tiếng Việt) và Trạng thái
   const filteredTasks = useMemo(() => {
+    const trimmedSearch = searchText.trim();
+
     return groupedTasks.filter((task) => {
-      const searchLower = searchText.toLowerCase();
       const matchesSearch =
-        task.title.toLowerCase().includes(searchLower) ||
-        task.description.toLowerCase().includes(searchLower) ||
+        !trimmedSearch ||
+        matchVietnameseSearch(task.title, trimmedSearch) ||
+        matchVietnameseSearch(task.description || "", trimmedSearch) ||
+        task.tags?.some((t) => matchVietnameseSearch(t, trimmedSearch)) ||
         task.subtasks?.some(
           (st) =>
-            st.title.toLowerCase().includes(searchLower) ||
-            st.description.toLowerCase().includes(searchLower),
+            matchVietnameseSearch(st.title, trimmedSearch) ||
+            matchVietnameseSearch(st.description || "", trimmedSearch),
         );
+
       const matchesStatus =
         viewMode === "kanban" ||
         statusFilter === "all" ||
         task.status === statusFilter ||
         task.subtasks?.some((st) => st.status === statusFilter);
+
       return matchesSearch && matchesStatus;
     });
   }, [groupedTasks, searchText, statusFilter, viewMode]);
@@ -177,6 +187,37 @@ function Tasks() {
   };
 
   // 10. Event Handlers
+  const onTaskClick = (task: TaskItem) => {
+    setSelectedTask(task);
+    setIsDetailModalOpen(true);
+  };
+
+  const onSubtaskToggle = async (
+    task: TaskItem,
+    subtaskIndex: number,
+    newStatus: string,
+  ) => {
+    const curSubs = (task.aiBreakdown || task.subtasks || []) as Subtask[];
+    const updated = curSubs.map((s, idx) =>
+      idx === subtaskIndex
+        ? { ...s, status: newStatus as SubtaskStatus }
+        : s,
+    );
+    try {
+      await updateSubtaskStatus(task.id, updated);
+      fetchTasks();
+      if (selectedTask && selectedTask.id === task.id) {
+        setSelectedTask({
+          ...selectedTask,
+          aiBreakdown: updated as any,
+          subtasks: updated as any,
+        });
+      }
+    } catch {
+      message.error("Không thể cập nhật trạng thái việc con");
+    }
+  };
+
   const onEditClick = (task: TaskItem) => {
     if (redirectToTeamTask(task, "sửa")) return;
     setEditingTask(task);
@@ -318,6 +359,7 @@ function Tasks() {
             onDeleteClick={onDeleteClick}
             onBreakdownClick={onBreakdownClick}
             onStatusChange={fetchTasks}
+            onTaskClick={onTaskClick}
           />
         ) : (
           <TaskKanbanBoard
@@ -328,6 +370,7 @@ function Tasks() {
             onDeleteClick={onDeleteClick}
             onBreakdownClick={onBreakdownClick}
             onOpenCreateModal={() => setCreateModalVisible(true)}
+            onTaskClick={onTaskClick}
           />
         )}
 
@@ -383,6 +426,20 @@ function Tasks() {
             setDeletingTask(null);
           }}
           onConfirm={onDeleteConfirm}
+        />
+
+        {/* Modal Xem & Thao tác Chi Tiết Task */}
+        <TaskDetailModal
+          open={isDetailModalOpen}
+          task={selectedTask}
+          onCancel={() => {
+            setIsDetailModalOpen(false);
+            setSelectedTask(null);
+          }}
+          onEditClick={onEditClick}
+          onDeleteClick={onDeleteClick}
+          onBreakdownClick={onBreakdownClick}
+          onSubtaskToggle={onSubtaskToggle}
         />
       </main>
     </div>

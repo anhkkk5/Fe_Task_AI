@@ -111,4 +111,27 @@ describe("Tasks Logic & Data Transformations", () => {
       expect(completedTasks).toHaveLength(1);
     });
   });
+
+  describe("Vietnamese Accent-Insensitive Search", () => {
+    it("should match Vietnamese text without accents", async () => {
+      const { matchVietnameseSearch, removeVietnameseTones } = await import(
+        "../../../utils/vietnameseUtils"
+      );
+
+      expect(removeVietnameseTones("Báo cáo tài chính")).toBe("bao cao tai chinh");
+      expect(removeVietnameseTones("Đang thực hiện")).toBe("dang thuc hien");
+
+      // Test tìm không dấu
+      expect(matchVietnameseSearch("Hoàn thiện báo cáo tài chính Q3", "bao cao")).toBe(true);
+      expect(matchVietnameseSearch("Thiết kế giao diện Mobile", "thiet ke")).toBe(true);
+      expect(matchVietnameseSearch("Thiết kế giao diện Mobile", "giao dien")).toBe(true);
+      expect(matchVietnameseSearch("Tối ưu hóa Database", "toi uu")).toBe(true);
+
+      // Test tìm có dấu
+      expect(matchVietnameseSearch("Hoàn thiện báo cáo tài chính Q3", "báo cáo")).toBe(true);
+
+      // Test không khớp
+      expect(matchVietnameseSearch("Hoàn thiện báo cáo tài chính Q3", "khong tim thay")).toBe(false);
+    });
+  });
 });

@@ -19,6 +19,7 @@ interface TaskKanbanCardProps {
   onEditClick: (task: TaskItem) => void;
   onDeleteClick: (task: TaskItem) => void;
   onBreakdownClick: (task: TaskItem) => void;
+  onTaskClick?: (task: TaskItem) => void;
 }
 
 export const TaskKanbanCard: React.FC<TaskKanbanCardProps> = ({
@@ -26,6 +27,7 @@ export const TaskKanbanCard: React.FC<TaskKanbanCardProps> = ({
   onEditClick,
   onDeleteClick,
   onBreakdownClick,
+  onTaskClick,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
 
@@ -88,6 +90,21 @@ export const TaskKanbanCard: React.FC<TaskKanbanCardProps> = ({
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onClick={(e) => {
+        const target = e.target as HTMLElement;
+        if (
+          target.closest(".ant-dropdown-trigger") ||
+          target.closest(".ant-btn") ||
+          target.closest(".ant-dropdown")
+        ) {
+          return;
+        }
+        if (onTaskClick) {
+          onTaskClick(task);
+        } else {
+          onEditClick(task);
+        }
+      }}
       style={{
         background: "#ffffff",
         borderRadius: 10,
@@ -97,7 +114,7 @@ export const TaskKanbanCard: React.FC<TaskKanbanCardProps> = ({
           ? "0 8px 20px rgba(0, 0, 0, 0.15)"
           : "0 2px 6px rgba(0, 0, 0, 0.05)",
         border: "1px solid #e2e8f0",
-        cursor: "grab",
+        cursor: "pointer",
         transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
         opacity: isDragging ? 0.4 : 1,
       }}

@@ -30,6 +30,7 @@ interface TaskTableProps {
   onDeleteClick: (task: TaskItem) => void;
   onBreakdownClick: (task: TaskItem) => void;
   onStatusChange: () => void;
+  onTaskClick?: (task: TaskItem) => void;
 }
 
 export const TaskTable: React.FC<TaskTableProps> = ({
@@ -39,6 +40,7 @@ export const TaskTable: React.FC<TaskTableProps> = ({
   onDeleteClick,
   onBreakdownClick,
   onStatusChange,
+  onTaskClick,
 }) => {
   const columns = [
     {
@@ -53,7 +55,14 @@ export const TaskTable: React.FC<TaskTableProps> = ({
               title={record.description || "Không có mô tả"}
               placement="topLeft"
             >
-              <Text strong className="task-title-text">
+              <Text
+                strong
+                className="task-title-text"
+                style={{ cursor: "pointer" }}
+                onClick={() =>
+                  onTaskClick ? onTaskClick(record) : onEditClick(record)
+                }
+              >
                 {text}
               </Text>
             </Tooltip>
@@ -267,6 +276,25 @@ export const TaskTable: React.FC<TaskTableProps> = ({
         rowKey="id"
         tableLayout="fixed"
         scroll={{ x: 1380 }}
+        onRow={(record) => ({
+          onClick: (e) => {
+            const target = e.target as HTMLElement;
+            if (
+              target.closest(".ant-dropdown-trigger") ||
+              target.closest(".status-dropdown-wrapper") ||
+              target.closest(".ant-btn") ||
+              target.closest(".ant-select")
+            ) {
+              return;
+            }
+            if (onTaskClick) {
+              onTaskClick(record);
+            } else {
+              onEditClick(record);
+            }
+          },
+          style: { cursor: "pointer" },
+        })}
       />
     </Card>
   );
