@@ -93,7 +93,10 @@ export const getTasks = async (params?: {
   if (params?.priority) queryParams.append("priority", params.priority);
   if (params?.keyword) queryParams.append("keyword", params.keyword);
   if (params?.page) queryParams.append("page", params.page.toString());
-  if (params?.limit) queryParams.append("limit", params.limit.toString());
+
+  // Mặc định tải 100 công việc để đảm bảo hiển thị đầy đủ lịch trình tuần trên Calendar & Dashboard
+  const limit = params?.limit || 100;
+  queryParams.append("limit", limit.toString());
 
   const queryString = queryParams.toString();
   const url = queryString ? `/tasks?${queryString}` : "/tasks";
