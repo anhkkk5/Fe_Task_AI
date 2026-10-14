@@ -34,6 +34,26 @@ export interface Task {
   aiBreakdown?: Subtask[];
   subtasks?: any[];
   aiChatHistory?: any[];
+  isOverdue?: boolean;
+  teamAssignment?: {
+    teamId: string;
+    assigneeId: string;
+    assigneeEmail?: string;
+    assigneeName?: string;
+    assignedBy?: string;
+    assignedAt?: string;
+    startAt?: string;
+  };
+  extensionRequest?: {
+    requestedBy: string;
+    requestedByName: string;
+    requestedAt: string;
+    requestedDeadline: string;
+    reason?: string;
+    status: "pending" | "approved" | "rejected";
+    reviewedBy?: string;
+    reviewedAt?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -120,6 +140,19 @@ export const deleteTask = async (id: string): Promise<{ message: string }> => {
   return await del(`/tasks/${id}`);
 };
 
+export const deleteTasksBatch = async (
+  taskIds: string[],
+): Promise<{ deletedCount: number; message: string }> => {
+  return await post("/tasks/batch-delete", { taskIds });
+};
+
+export const deleteAllTasks = async (): Promise<{
+  deletedCount: number;
+  message: string;
+}> => {
+  return await del("/tasks/clear-all-tasks");
+};
+
 export const createTask = async (data: {
   title: string;
   description?: string;
@@ -203,12 +236,13 @@ export const streamTaskCopilotChat = async (
   subtaskTitle?: string,
 ): Promise<void> => {
   try {
-    const token = localStorage.getItem("token");
-    const { NORMALIZED_BASE_URL } = await import("../../utils/axios/request");
+    const { NORMALIZED_BASE_URL, getAccessToken } = await import("../../utils/axios/request");
+    const token = getAccessToken();
     const url = `${NORMALIZED_BASE_URL}tasks/${taskId}/copilot/stream`;
 
     const response = await fetch(url, {
       method: "POST",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -287,4 +321,20 @@ export const applyCopilotBreakdown = async (
   mode: "replace" | "append" = "replace",
 ): Promise<{ task: Task; message: string }> => {
   return await post(`/tasks/${taskId}/copilot/apply-breakdown`, { steps, mode });
+};
+
+export const extendTaskDeadline = async (
+  taskId: string,
+  newDeadline: string,
+  reason?: string,
+): Promise<{ task: Task; message: string; requiresReview?: boolean }> => {
+  return await post(`/tasks/${taskId}/extend`, { newDeadline, reason });
+};
+
+export const reviewTaskExtension = async (
+  taskId: string,
+  action: "approve" | "reject",
+  newDeadline?: string,
+): Promise<{ task: Task; message: string }> => {
+  return await post(`/tasks/${taskId}/extension-review`, { action, newDeadline });
 };

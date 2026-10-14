@@ -5,6 +5,7 @@ import {
   MessageOutlined,
   DragOutlined,
 } from "@ant-design/icons";
+import { useLocation } from "react-router-dom";
 import ChatMessageComponent from "./ChatMessage";
 import ChatForm from "./ChatForm";
 import type { ChatFormHandle } from "./ChatForm";
@@ -14,6 +15,7 @@ import { sendChatMessage } from "../../services/chatServices";
 import "./Chatbot.css";
 
 const Chatbot: React.FC = () => {
+  const location = useLocation();
   const {
     isOpen,
     subtaskContext,
@@ -27,9 +29,8 @@ const Chatbot: React.FC = () => {
 
   const chatFormRef = useRef<ChatFormHandle | null>(null);
 
-  // Drag state for chatbot button position
-  const [btnPos, setBtnPos] = useState({ x: 0, y: 0 });
-  const [popupPos, setPopupPos] = useState({ x: 0, y: 0 });
+  // Unified drag state for both chatbot button and popup
+  const [pos, setPos] = useState({ x: 0, y: 0 });
   const isDragging = useRef(false);
   const dragStart = useRef({ mouseX: 0, mouseY: 0, elemX: 0, elemY: 0 });
   const hasDragged = useRef(false);
@@ -42,8 +43,8 @@ const Chatbot: React.FC = () => {
     dragStart.current = {
       mouseX: e.clientX,
       mouseY: e.clientY,
-      elemX: btnPos.x,
-      elemY: btnPos.y,
+      elemX: pos.x,
+      elemY: pos.y,
     };
     e.preventDefault();
   };
@@ -57,8 +58,8 @@ const Chatbot: React.FC = () => {
     dragStart.current = {
       mouseX: e.clientX,
       mouseY: e.clientY,
-      elemX: popupPos.x,
-      elemY: popupPos.y,
+      elemX: pos.x,
+      elemY: pos.y,
     };
     e.preventDefault();
   };
@@ -71,11 +72,7 @@ const Chatbot: React.FC = () => {
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) hasDragged.current = true;
       const newX = dragStart.current.elemX + dx;
       const newY = dragStart.current.elemY + dy;
-      if (isOpen) {
-        setPopupPos({ x: newX, y: newY });
-      } else {
-        setBtnPos({ x: newX, y: newY });
-      }
+      setPos({ x: newX, y: newY });
     };
 
     const handleMouseUp = () => {
@@ -88,7 +85,7 @@ const Chatbot: React.FC = () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isOpen]);
+  }, []);
 
   const handleBtnClick = () => {
     if (!hasDragged.current) openGeneral();
@@ -188,13 +185,16 @@ const Chatbot: React.FC = () => {
     <span>Task Management</span>
   );
 
+  // Không hiển thị widget nổi khi đang ở trang Chat AI toàn màn hình
+  if (location.pathname === "/chat") {
+    return null;
+  }
+
   return (
     <div
       className="chatbot-container"
       style={{
-        transform: isOpen
-          ? `translate(${popupPos.x}px, ${popupPos.y}px)`
-          : `translate(${btnPos.x}px, ${btnPos.y}px)`,
+        transform: `translate(${pos.x}px, ${pos.y}px)`,
       }}
     >
       {!isOpen && (

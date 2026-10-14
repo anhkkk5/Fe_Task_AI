@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import { Button, Input, Spin, Dropdown, Modal, message } from "antd";
 import type { MenuProps } from "antd";
 import { useSelector } from "react-redux";
@@ -16,6 +17,7 @@ import {
   CalendarOutlined,
   BarChartOutlined,
   BulbOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -106,6 +108,7 @@ const SCHEDULING_GUIDE_ACTIONS: ScheduleGuideAction[] = [
 ];
 
 function Chat() {
+  const location = useLocation();
   const { user } = useSelector((state: any) => state.auth);
   const firstName = (user?.name || "bạn").split(" ").slice(-1)[0];
   const [conversations, setConversations] = useState<AiConversation[]>([]);
@@ -113,6 +116,12 @@ function Chat() {
   const [messages, setMessages] = useState<AiMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (location.state?.initialPrompt) {
+      setInput(location.state.initialPrompt);
+    }
+  }, [location.state]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [renameModal, setRenameModal] = useState<{
     id: string;
@@ -127,6 +136,15 @@ function Chat() {
     y: number;
     text: string;
   }>({ show: false, x: 0, y: 0, text: "" });
+
+  const [showSchedulingGuide, setShowSchedulingGuide] = useState<boolean>(() => {
+    return localStorage.getItem("taskmind_hide_scheduling_guide") !== "true";
+  });
+
+  const handleCloseSchedulingGuide = () => {
+    setShowSchedulingGuide(false);
+    localStorage.setItem("taskmind_hide_scheduling_guide", "true");
+  };
 
   // Listen for text selection in assistant messages
   useEffect(() => {
@@ -469,12 +487,44 @@ function Chat() {
               </div>
               <h1 className="welcome-title">Chúng ta bắt đầu từ đâu nhỉ?</h1>
 
-              <SchedulingGuideBlock
-                actions={SCHEDULING_GUIDE_ACTIONS}
-                onActionClick={handleSchedulingGuideAction}
-                compact={false}
-                disabled={sending}
-              />
+              {showSchedulingGuide ? (
+                <SchedulingGuideBlock
+                  actions={SCHEDULING_GUIDE_ACTIONS}
+                  onActionClick={handleSchedulingGuideAction}
+                  compact={false}
+                  disabled={sending}
+                  onClose={handleCloseSchedulingGuide}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: "100%",
+                    maxWidth: 760,
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    marginBottom: -8,
+                  }}
+                >
+                  <Button
+                    type="link"
+                    size="small"
+                    onClick={() => {
+                      setShowSchedulingGuide(true);
+                      localStorage.removeItem("taskmind_hide_scheduling_guide");
+                    }}
+                    style={{
+                      fontSize: 12.5,
+                      color: "#0f7985",
+                      padding: "0 6px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    Hiện hướng dẫn lên lịch
+                  </Button>
+                </div>
+              )}
 
               <ChatComposer
                 input={input}
@@ -650,11 +700,29 @@ function SchedulingGuideBlock(props: {
   onActionClick: (action: ScheduleGuideAction) => void;
   compact?: boolean;
   disabled?: boolean;
+  onClose?: () => void;
 }) {
-  const { actions, onActionClick, compact = false, disabled = false } = props;
+  const {
+    actions,
+    onActionClick,
+    compact = false,
+    disabled = false,
+    onClose,
+  } = props;
 
   return (
     <section className={`schedule-guide ${compact ? "compact" : ""}`}>
+      {onClose && (
+        <button
+          type="button"
+          className="guide-close-btn"
+          onClick={onClose}
+          title="Đóng hướng dẫn để mở rộng giao diện chat"
+          aria-label="Đóng hướng dẫn"
+        >
+          <CloseOutlined />
+        </button>
+      )}
       <div className="schedule-guide-header">
         <CalendarOutlined className="guide-icon" />
         <div>

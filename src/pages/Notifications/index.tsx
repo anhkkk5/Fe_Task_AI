@@ -90,6 +90,11 @@ const PRIORITY_META: Record<
   },
 };
 
+function cleanNotificationTitle(title?: string): string {
+  if (!title) return "";
+  return title.replace(/^[\p{Emoji}\u200d\uFE0F\s⚠️🔥ℹ️⚡⏱⏰💡]+/u, "").trim();
+}
+
 function formatRelativeTime(iso: string): string {
   const d = new Date(iso);
   const diff = Date.now() - d.getTime();
@@ -355,9 +360,8 @@ function Notifications() {
 
         <div className="noti-body">
           <div className="noti-head">
-            <span className="noti-prio-icon">{meta.icon}</span>
             <span className="noti-title">
-              {item.title}
+              {cleanNotificationTitle(item.title)}
               {isGroup && (
                 <Tag color="blue" className="group-tag">
                   <GroupOutlined /> {item.groupCount || 0}
@@ -421,7 +425,9 @@ function Notifications() {
               ) : (
                 expandedGroups[id].items.map((child) => (
                   <div key={child._id || child.id} className="child-item">
-                    <span className="child-title">{child.title}</span>
+                    <span className="child-title">
+                      {cleanNotificationTitle(child.title)}
+                    </span>
                     <span className="child-time">
                       {formatRelativeTime(child.createdAt)}
                     </span>

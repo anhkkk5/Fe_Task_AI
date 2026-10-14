@@ -70,31 +70,27 @@ const roleColors: Record<TeamRole, string> = {
 };
 
 const roleLabels: Record<TeamRole, string> = {
-  owner: "Owner",
-  admin: "Admin",
-  student_leader: "Nhóm trưởng (SV)",
-  lecturer_leader: "Nhóm trưởng (GV)",
+  owner: "Trưởng nhóm (Owner)",
+  admin: "Trưởng nhóm",
+  student_leader: "Trưởng nhóm",
+  lecturer_leader: "Cố vấn / GV",
   member: "Thành viên",
-  viewer: "Xem",
+  viewer: "Người xem",
 };
 
-const STUDENT_MANAGER_ROLES: TeamRole[] = [
+const ALL_MANAGER_ROLES: TeamRole[] = [
   "owner",
   "admin",
   "student_leader",
   "lecturer_leader",
 ];
 
-const COMPANY_MANAGER_ROLES: TeamRole[] = ["owner", "admin"];
-
 function canManageByRole(
-  teamType: "student" | "company" | undefined,
+  _teamType: "student" | "company" | undefined,
   role: TeamRole | undefined,
 ): boolean {
-  if (!teamType || !role) return false;
-  const allowed =
-    teamType === "student" ? STUDENT_MANAGER_ROLES : COMPANY_MANAGER_ROLES;
-  return allowed.includes(role);
+  if (!role) return false;
+  return ALL_MANAGER_ROLES.includes(role);
 }
 
 export default function TeamDetail() {
@@ -948,26 +944,6 @@ export default function TeamDetail() {
             {myRole && (
               <Tag color={roleColors[myRole]}>{roleLabels[myRole]}</Tag>
             )}
-            <Button
-              icon={<MessageOutlined />}
-              type="primary"
-              onClick={async () => {
-                try {
-                  const { getOrCreateTeamConversation } =
-                    await import("../../services/messengerServices");
-                  const res = await getOrCreateTeamConversation(team.id);
-                  window.dispatchEvent(
-                    new CustomEvent("messenger:openChat", {
-                      detail: { conversationId: res.conversation.id },
-                    }),
-                  );
-                } catch {
-                  message.error("Không thể mở chat nhóm");
-                }
-              }}
-            >
-              Chat nhóm
-            </Button>
             {isOwner && (
               <Popconfirm
                 title="Xóa nhóm này?"
@@ -1547,25 +1523,17 @@ export default function TeamDetail() {
             </div>
           )}
 
-          <Form.Item name="role" label="Vai trò" initialValue="member">
+          <Form.Item name="role" label="Vai trò trong nhóm" initialValue="member">
             <Select>
               <Select.Option value="admin">
-                Admin — Có thể quản lý nhóm
+                👑 Trưởng nhóm (Leader / Admin) — Quản lý nhóm, phân chia công việc
               </Select.Option>
-              {team.teamType === "student" && (
-                <Select.Option value="student_leader">
-                  Nhóm trưởng (sinh viên)
-                </Select.Option>
-              )}
-              {team.teamType === "student" && (
-                <Select.Option value="lecturer_leader">
-                  Nhóm trưởng (giảng viên)
-                </Select.Option>
-              )}
               <Select.Option value="member">
-                Thành viên — Có thể xem và làm việc
+                👤 Thành viên (Member) — Nhận việc và làm việc
               </Select.Option>
-              <Select.Option value="viewer">Xem — Chỉ xem</Select.Option>
+              <Select.Option value="viewer">
+                👁️ Người xem (Viewer) — Chỉ xem tiến độ công việc
+              </Select.Option>
             </Select>
           </Form.Item>
 

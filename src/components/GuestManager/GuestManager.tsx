@@ -79,18 +79,22 @@ function GuestManager({
       setError(null);
       setIsLoading(true);
 
-      // Search for contact first
-      const response = await get<SearchContactsResponse>(
-        `/guests/search?q=${encodeURIComponent(emailInput.trim())}&limit=1&offset=0`,
-      );
-
+      // Search for contact optionally (ignore if fails or 401)
       let contact: Contact | null = null;
-      if (
-        response.success &&
-        response.data?.contacts &&
-        response.data.contacts.length > 0
-      ) {
-        contact = response.data.contacts[0];
+      try {
+        const response = await get<SearchContactsResponse>(
+          `/guests/search?q=${encodeURIComponent(emailInput.trim())}&limit=1&offset=0`,
+        );
+        if (
+          response.success &&
+          response.data?.contacts &&
+          response.data.contacts.length > 0
+        ) {
+          contact = response.data.contacts[0];
+        }
+      } catch {
+        // Ignore Google Contact search error (401 or offline)
+        contact = null;
       }
 
       // If no contact found, create placeholder

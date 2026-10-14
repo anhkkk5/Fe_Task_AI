@@ -2,8 +2,8 @@
 .chatbot-container {
   position: fixed;
   bottom: 24px;
-  left: 24px;
-  right: auto;
+  right: 24px;
+  left: auto;
   z-index: 1001;
   user-select: none;
 }
@@ -37,8 +37,8 @@
 .chatbot-popup {
   position: absolute;
   bottom: 72px;
-  left: 0;
-  right: auto;
+  right: 0;
+  left: auto;
   width: 380px;
   height: 500px;
   border-radius: 16px;

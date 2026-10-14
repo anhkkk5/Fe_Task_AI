@@ -10,6 +10,7 @@ export interface DailyRoutineItem {
   daysOfWeek: number[]; // 1=T2, ..., 7=CN
   category?: string;
   color?: string;
+  allowTaskOverlap?: boolean;
   isActive: boolean;
   excludedDates?: string[];
   createdAt?: string;
@@ -24,6 +25,7 @@ export interface CreateRoutinePayload {
   daysOfWeek: number[];
   category?: string;
   color?: string;
+  allowTaskOverlap?: boolean;
 }
 
 export interface UpdateRoutinePayload {
@@ -34,6 +36,7 @@ export interface UpdateRoutinePayload {
   daysOfWeek?: number[];
   category?: string;
   color?: string;
+  allowTaskOverlap?: boolean;
   isActive?: boolean;
 }
 
@@ -65,4 +68,11 @@ export const seedDefaultRoutines = async (): Promise<{
   message: string;
 }> => {
   return post("/routines/seed", {});
+};
+
+export const clearAllRoutines = async (): Promise<{
+  success: boolean;
+  message: string;
+}> => {
+  return del("/routines/clear-all");
 };

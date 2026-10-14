@@ -8,6 +8,7 @@ import {
   Space,
   Button,
   Select,
+  Tag,
   TimePicker,
   DatePicker,
   Checkbox,
@@ -23,7 +24,6 @@ import {
   CalendarOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import GuestManager from "../../../components/GuestManager/GuestManager";
 import { createGoogleMeetLink } from "../../../services/backendGoogleServices";
 import type { GoogleUserInfo } from "../../../services/backendGoogleServices";
 
@@ -60,9 +60,6 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   const [createStart, setCreateStart] = useState<dayjs.Dayjs | null>(null);
   const [createEnd, setCreateEnd] = useState<dayjs.Dayjs | null>(null);
   const [todoDeadline, setTodoDeadline] = useState<dayjs.Dayjs | null>(null);
-
-  const [showGuestManager, setShowGuestManager] = useState(false);
-  const [guestManagerEventId, setGuestManagerEventId] = useState<string>("");
 
   const isEvent = createType === "event";
 
@@ -127,13 +124,19 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
     }
 
     if (isEvent) {
-      if (!createStart || !createEnd) {
-        message.error("Vui lòng chọn thời gian bắt đầu và kết thúc");
+      if (!createStart) {
+        message.error("Vui lòng chọn ngày sự kiện");
         return;
       }
-      if (!createEnd.isAfter(createStart)) {
-        message.error("Giờ kết thúc phải sau giờ bắt đầu");
-        return;
+      if (!createAllDay) {
+        if (!createEnd) {
+          message.error("Vui lòng chọn giờ kết thúc");
+          return;
+        }
+        if (!createEnd.isAfter(createStart)) {
+          message.error("Giờ kết thúc phải sau giờ bắt đầu");
+          return;
+        }
       }
     }
 
@@ -148,14 +151,21 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
       };
 
       if (isEvent) {
+        const finalStart = createAllDay
+          ? createStart!.startOf("day")
+          : createStart!;
+        const finalEnd = createAllDay
+          ? createStart!.endOf("day")
+          : createEnd!;
+
         payload.allDay = createAllDay;
         payload.guests = createGuests.length > 0 ? createGuests : undefined;
         payload.location = createLocation.trim() || undefined;
         payload.reminderMinutes = createReminder ?? undefined;
         payload.meetingLink = createMeetingLink.trim() || undefined;
         payload.scheduledTime = {
-          start: createStart!.toISOString(),
-          end: createEnd!.toISOString(),
+          start: finalStart.toISOString(),
+          end: finalEnd.toISOString(),
           aiPlanned: false,
           reason: "Người dùng tạo từ lịch",
         };
@@ -237,7 +247,88 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                   />
                 </Col>
                 <Col flex="auto">
-                  <Row gutter={8} align="middle">
+                  <Row gutter={[8, 8]} align="middle">
+                    {/* Chọn ngày sự kiện */}
+                    <Col>
+                      <DatePicker
+                        value={createStart}
+                        onChange={(date) => {
+                          if (!date) return;
+                          const base = createStart || dayjs();
+                          const nextStart = base
+                            .clone()
+                            .year(date.year())
+                            .month(date.month())
+                            .date(date.date());
+                          setCreateStart(nextStart);
+
+                          if (createEnd) {
+                            const diff = createEnd.diff(base);
+                            const nextEnd = nextStart.add(
+                              diff > 0 ? diff : 3600000,
+                              "millisecond",
+                            );
+                            setCreateEnd(nextEnd);
+                          } else {
+                            setCreateEnd(nextStart.add(1, "hour"));
+                          }
+                        }}
+                        format="DD/MM/YYYY"
+                        allowClear={false}
+                        style={{ width: 130 }}
+                        placeholder="Chọn ngày"
+                      />
+                    </Col>
+
+                    {/* Khung giờ bắt đầu - kết thúc */}
+                    {!createAllDay && (
+                      <>
+                        <Col>
+                          <TimePicker
+                            value={createStart}
+                            onChange={(v: dayjs.Dayjs | null) => {
+                              if (!createStart || !v) return;
+                              const next = createStart
+                                .clone()
+                                .hour(v.hour())
+                                .minute(v.minute());
+                              setCreateStart(next);
+                              if (
+                                createEnd &&
+                                (createEnd.isBefore(next) ||
+                                  createEnd.isSame(next))
+                              ) {
+                                setCreateEnd(next.add(30, "minute"));
+                              }
+                            }}
+                            format="HH:mm"
+                            minuteStep={5}
+                            allowClear={false}
+                            style={{ width: 90 }}
+                          />
+                        </Col>
+                        <Col style={{ color: "#5f6368" }}>-</Col>
+                        <Col>
+                          <TimePicker
+                            value={createEnd}
+                            onChange={(v: dayjs.Dayjs | null) => {
+                              if (!createEnd || !v) return;
+                              setCreateEnd(
+                                createEnd
+                                  .clone()
+                                  .hour(v.hour())
+                                  .minute(v.minute()),
+                              );
+                            }}
+                            format="HH:mm"
+                            minuteStep={5}
+                            allowClear={false}
+                            style={{ width: 90 }}
+                          />
+                        </Col>
+                      </>
+                    )}
+
                     <Col>
                       <Checkbox
                         checked={createAllDay}
@@ -246,49 +337,12 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                         Cả ngày
                       </Checkbox>
                     </Col>
-                    <Col>
-                      <TimePicker
-                        value={createStart}
-                        onChange={(v: dayjs.Dayjs | null) => {
-                          if (!createStart || !v) return;
-                          const next = createStart
-                            .clone()
-                            .hour(v.hour())
-                            .minute(v.minute());
-                          setCreateStart(next);
-                          if (createEnd && createEnd.isBefore(next)) {
-                            setCreateEnd(next.add(30, "minute"));
-                          }
-                        }}
-                        format="HH:mm"
-                        minuteStep={5}
-                        allowClear={false}
-                        disabled={createAllDay}
-                        style={{ width: 100 }}
-                      />
-                    </Col>
-                    <Col style={{ color: "#5f6368" }}>-</Col>
-                    <Col>
-                      <TimePicker
-                        value={createEnd}
-                        onChange={(v: dayjs.Dayjs | null) => {
-                          if (!createEnd || !v) return;
-                          setCreateEnd(
-                            createEnd.clone().hour(v.hour()).minute(v.minute()),
-                          );
-                        }}
-                        format="HH:mm"
-                        minuteStep={5}
-                        allowClear={false}
-                        disabled={createAllDay}
-                        style={{ width: 100 }}
-                      />
-                    </Col>
+
                     <Col>
                       <Select
                         value={createReminder}
                         onChange={setCreateReminder}
-                        style={{ width: 140 }}
+                        style={{ width: 130 }}
                         variant="borderless"
                         options={[
                           { value: null, label: "Không nhắc" },
@@ -310,25 +364,68 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                   <UserOutlined style={{ fontSize: 18, color: "#5f6368" }} />
                 </Col>
                 <Col flex="auto">
-                  <Button
-                    type="default"
-                    block
-                    onClick={() => {
-                      setGuestManagerEventId(`temp_${Date.now()}`);
-                      setShowGuestManager(true);
+                  <Select
+                    mode="tags"
+                    style={{ width: "100%" }}
+                    placeholder="Thêm email khách mời (gõ email rồi nhấn Enter)"
+                    value={createGuests}
+                    onChange={(values) => {
+                      const validEmails: string[] = [];
+                      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                      for (const val of values) {
+                        const trimmed = val.trim().toLowerCase();
+                        if (emailRegex.test(trimmed)) {
+                          if (!validEmails.includes(trimmed)) {
+                            validEmails.push(trimmed);
+                          }
+                        } else {
+                          message.warning(`"${val}" không phải định dạng email hợp lệ`);
+                        }
+                      }
+                      setCreateGuests(validEmails);
                     }}
+                    tokenSeparators={[",", " "]}
+                    open={false}
+                    tagRender={(props) => {
+                      const { label, closable, onClose } = props;
+                      return (
+                        <Tag
+                          closable={closable}
+                          onClose={onClose}
+                          style={{
+                            borderRadius: 16,
+                            padding: "2px 10px",
+                            background: "#e8f0fe",
+                            border: "1px solid #c2e7ff",
+                            color: "#0b57d0",
+                            fontWeight: 500,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                            margin: "2px 4px",
+                          }}
+                        >
+                          <span>✉️</span>
+                          <span>{label}</span>
+                        </Tag>
+                      );
+                    }}
+                  />
+                  <div
                     style={{
-                      background: "#e8eaed",
-                      border: "none",
-                      color: "#3c4043",
-                      fontWeight: 500,
+                      fontSize: 12,
+                      color: "#70757a",
+                      marginTop: 4,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
                     }}
                   >
-                    <span style={{ marginRight: 8 }}>👥</span>
-                    {createGuests.length > 0
-                      ? `${createGuests.length} khách mời`
-                      : "Thêm khách mời"}
-                  </Button>
+                    <span>ℹ️</span>
+                    <span>
+                      Khách mời sẽ nhận được email lời mời kèm thời gian và link họp tự động từ hệ thống.
+                    </span>
+                  </div>
                 </Col>
               </Row>
 
@@ -520,29 +617,6 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
         </div>
       </Modal>
 
-      <Modal
-        open={showGuestManager}
-        onCancel={() => setShowGuestManager(false)}
-        title="Quản lý khách mời"
-        width={700}
-        footer={[
-          <Button key="close" onClick={() => setShowGuestManager(false)}>
-            Đóng
-          </Button>,
-        ]}
-      >
-        {guestManagerEventId && (
-          <GuestManager
-            eventId={guestManagerEventId}
-            onGuestAdded={(guest) => {
-              if (!createGuests.includes(guest.email)) {
-                setCreateGuests([...createGuests, guest.email]);
-              }
-            }}
-            onGuestRemoved={(_guestId) => {}}
-          />
-        )}
-      </Modal>
     </>
   );
 };

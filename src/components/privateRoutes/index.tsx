@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Navigate, Outlet } from "react-router-dom";
-import { getAccessToken, setAccessToken } from "../../utils/axios/request";
+import { setAccessToken } from "../../utils/axios/request";
 import { refreshToken, getMe } from "../../services/authServices";
 import { checkLogin } from "../../store/slices/authSlice";
 
@@ -13,28 +13,41 @@ const PrivateRoutes = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const token = getAccessToken();
-
-      if (token && isLogin && user) {
+      if (isLogin && user) {
         setIsAuth(true);
         setIsLoading(false);
         return;
       }
 
       try {
-        if (!token) {
-          await refreshToken();
+        let userData: any = null;
+        try {
+          // 1. Verify session directly via HttpOnly cookie
+          const userResponse = await getMe();
+          userData = userResponse.user || userResponse;
+          if (userResponse.accessToken) {
+            setAccessToken(userResponse.accessToken);
+          }
+        } catch {
+          // 2. If token cookie is expired, attempt silent refresh via refreshToken cookie
+          try {
+            const refreshRes = await refreshToken();
+            if (refreshRes?.accessToken) {
+              setAccessToken(refreshRes.accessToken);
+            }
+            const userResponse = await getMe();
+            userData = userResponse.user || userResponse;
+          } catch {
+            userData = null;
+          }
         }
 
-        const userResponse = await getMe();
-        const userData = userResponse.user || userResponse;
-
-        if (userResponse.accessToken) {
-          setAccessToken(userResponse.accessToken);
+        if (userData && (userData.id || userData._id || userData.email)) {
+          dispatch(checkLogin({ status: true, user: userData }));
+          setIsAuth(true);
+        } else {
+          setIsAuth(false);
         }
-
-        dispatch(checkLogin({ status: true, user: userData }));
-        setIsAuth(true);
       } catch {
         setIsAuth(false);
       } finally {

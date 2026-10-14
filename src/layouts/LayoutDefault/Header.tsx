@@ -21,8 +21,7 @@ function Header() {
   };
 
   const userMenuItems = [
-    { key: "profile", label: "Hồ sơ" },
-    { key: "settings", label: "Cài đặt" },
+    { key: "profile", label: "Hồ sơ cá nhân" },
     { type: "divider" as const },
     { key: "logout", label: "Đăng xuất", danger: true },
   ];
@@ -47,6 +46,12 @@ function Header() {
           <span className="logo-text">TaskMind AI</span>
         </div>
         <nav className="main-nav">
+          <Link
+            to="/guide"
+            className={`nav-link ${isActive("/guide") ? "active" : ""}`}
+          >
+            Hướng dẫn
+          </Link>
           <Link
             to="/tasks"
             className={`nav-link ${isActive("/tasks") ? "active" : ""}`}

@@ -10,8 +10,14 @@ export const NORMALIZED_BASE_URL = API_BASE_URL.endsWith("/")
   ? API_BASE_URL
   : `${API_BASE_URL}/`;
 
-// Store access token in memory with localStorage fallback for mobile browsers
-let accessToken: string | null = localStorage.getItem("token");
+// Access token kept in memory only; primary auth uses secure HttpOnly cookies
+let accessToken: string | null = null;
+// Clean up any legacy token in localStorage to enforce cookie security
+try {
+  localStorage.removeItem("token");
+} catch {
+  // Ignore in case of restricted storage
+}
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
 
@@ -91,12 +97,20 @@ axiosInstance.interceptors.response.use(
 
 export const setAccessToken = (token: string) => {
   accessToken = token;
-  localStorage.setItem("token", token);
+  try {
+    localStorage.removeItem("token");
+  } catch {
+    // Ignore
+  }
 };
 
 export const clearAccessToken = () => {
   accessToken = null;
-  localStorage.removeItem("token");
+  try {
+    localStorage.removeItem("token");
+  } catch {
+    // Ignore
+  }
 };
 
 export const getAccessToken = () => accessToken;
@@ -121,9 +135,11 @@ export const post = async <T = any,>(
 export const postForm = async <T = any,>(
   path: string,
   formData: FormData,
+  config?: AxiosRequestConfig,
 ): Promise<T> => {
   const response = await axiosInstance.post<T>(path, formData, {
     headers: { "Content-Type": "multipart/form-data" },
+    ...config,
   });
   return response.data;
 };

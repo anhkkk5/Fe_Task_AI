@@ -49,6 +49,26 @@ export interface TaskItem {
   subtasks?: TaskItem[];
   isSubtask?: boolean;
   teamId?: string;
+  isOverdue?: boolean;
+  teamAssignment?: {
+    teamId: string;
+    assigneeId: string;
+    assigneeEmail?: string;
+    assigneeName?: string;
+    assignedBy?: string;
+    assignedAt?: string;
+    startAt?: string;
+  };
+  extensionRequest?: {
+    requestedBy: string;
+    requestedByName: string;
+    requestedAt: string;
+    requestedDeadline: string;
+    reason?: string;
+    status: "pending" | "approved" | "rejected";
+    reviewedBy?: string;
+    reviewedAt?: string;
+  };
   aiChatHistory?: Array<{
     role: "user" | "assistant";
     content: string;

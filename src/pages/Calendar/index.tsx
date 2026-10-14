@@ -62,6 +62,10 @@ function Calendar() {
   const [viewMode, setViewMode] = useState<"week" | "day" | "month">("week");
   const [miniCalendarMonth, setMiniCalendarMonth] = useState(dayjs());
 
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("taskmind-mission-calendar-visited"));
+  }, []);
+
   // Google Integration State
   const [googleUser, setGoogleUser] = useState<GoogleUserInfo | null>(null);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -412,7 +416,14 @@ function Calendar() {
             setCurrentWeek={setCurrentWeek}
             events={events}
             onCreateClick={() => {
-              const start = dayjs().add(1, "hour").minute(0).second(0);
+              const now = dayjs();
+              const isThisWeek = currentWeek.isSame(now, "week");
+              const baseDate = isThisWeek ? now : currentWeek;
+              const start = baseDate
+                .clone()
+                .hour(isThisWeek ? now.hour() + 1 : 9)
+                .minute(0)
+                .second(0);
               const end = start.add(1, "hour");
               setCreateStart(start);
               setCreateEnd(end);

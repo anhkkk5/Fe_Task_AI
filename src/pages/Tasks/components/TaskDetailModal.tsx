@@ -10,6 +10,7 @@ import {
   Checkbox,
   Tooltip,
   Tabs,
+  Alert,
 } from "antd";
 import {
   CalendarOutlined,
@@ -37,6 +38,7 @@ interface TaskDetailModalProps {
   onBreakdownClick?: (task: TaskItem) => void;
   onSubtaskToggle?: (task: TaskItem, subtaskIndex: number, newStatus: string) => void;
   onTaskUpdated?: (updatedTask: TaskItem) => void;
+  onExtendClick?: (task: TaskItem) => void;
 }
 
 export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
@@ -48,6 +50,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   onBreakdownClick: _onBreakdownClick,
   onSubtaskToggle,
   onTaskUpdated,
+  onExtendClick,
 }) => {
   if (!task) return null;
 
@@ -124,8 +127,63 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     dailyTargetText = `${minutesToHourString(minMins)} - ${minutesToHourString(currentTask.dailyTargetDuration)} / ngày`;
   }
 
+  const isOverdue = Boolean(
+    currentTask.isOverdue ||
+    (currentTask.dueDate &&
+      new Date(currentTask.dueDate).getTime() < Date.now() &&
+      currentTask.status !== "completed" &&
+      currentTask.status !== "cancelled")
+  );
+
   const renderDetailsTab = () => (
     <div style={{ marginTop: 8 }}>
+      {isOverdue && (
+        <Alert
+          type="error"
+          showIcon
+          message="Công việc đã quá hạn chót"
+          description="Công việc này đã quá deadline quy định. Bạn có thể gia hạn thêm thời gian hoặc gửi yêu cầu gia hạn."
+          action={
+            onExtendClick && (
+              <Button
+                size="small"
+                danger
+                onClick={() => {
+                  onCancel();
+                  onExtendClick(currentTask);
+                }}
+              >
+                {currentTask.teamId ? "Gia hạn / Yêu cầu" : "Gia hạn ngay"}
+              </Button>
+            )
+          }
+          style={{ marginBottom: 16 }}
+        />
+      )}
+      {currentTask.extensionRequest?.status === "pending" && (
+        <Alert
+          type="warning"
+          showIcon
+          message="Yêu cầu gia hạn hạn chót đang chờ duyệt"
+          description={`Thành viên ${currentTask.extensionRequest.requestedByName || ""} đề xuất lùi hạn chót đến ${new Date(currentTask.extensionRequest.requestedDeadline).toLocaleString("vi-VN")}.${currentTask.extensionRequest.reason ? ` Lý do: "${currentTask.extensionRequest.reason}"` : ""}`}
+          action={
+            onExtendClick && (
+              <Button
+                size="small"
+                type="primary"
+                onClick={() => {
+                  onCancel();
+                  onExtendClick(currentTask);
+                }}
+              >
+                Xét duyệt
+              </Button>
+            )
+          }
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
       {/* Badges Status & Priority */}
       <div
         style={{
@@ -215,20 +273,26 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
           <Text type="secondary" style={{ fontSize: 12, display: "block" }}>
             <CalendarOutlined style={{ marginRight: 4 }} /> Hạn chót (Deadline):
           </Text>
-          <Text
-            strong
-            style={{ color: currentTask.dueDate ? "#e11d48" : "inherit" }}
-          >
-            {currentTask.dueDate
-              ? new Date(currentTask.dueDate).toLocaleString("vi-VN", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : "Không có hạn chót"}
-          </Text>
+          <Space>
+            <Text
+              strong
+              style={{ color: isOverdue ? "#dc2626" : currentTask.dueDate ? "#e11d48" : "inherit" }}
+            >
+              {currentTask.dueDate
+                ? new Date(currentTask.dueDate).toLocaleString("vi-VN", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : "Không có hạn chót"}
+            </Text>
+            {isOverdue && <Tag color="error">Quá hạn</Tag>}
+            {currentTask.extensionRequest?.status === "pending" && (
+              <Tag color="purple">Chờ duyệt gia hạn</Tag>
+            )}
+          </Space>
         </div>
 
         <div>
@@ -415,7 +479,6 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                     <Button
                       size="small"
                       type="text"
-                      icon={<RobotOutlined style={{ color: "#10b981" }} />}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleAskAiSubtask(st.title, idx);
@@ -492,13 +555,12 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
           <Space>
             <Button
-              icon={<RobotOutlined />}
               style={
                 activeTab === "copilot"
-                  ? { borderColor: "#2563eb", color: "#2563eb" }
+                  ? { borderColor: "#1aa0b0", color: "#1aa0b0" }
                   : {
-                      background: "#10b981",
-                      borderColor: "#10b981",
+                      background: "#1aa0b0",
+                      borderColor: "#1aa0b0",
                       color: "#fff",
                     }
               }
@@ -507,9 +569,24 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
               }
             >
               {activeTab === "copilot"
-                ? "📋 Xem chi tiết việc"
-                : "🤖 Hỏi đáp AI Copilot"}
+                ? "Xem chi tiết việc"
+                : "Hỏi đáp AI Copilot"}
             </Button>
+            {onExtendClick && (
+              <Button
+                icon={<ClockCircleOutlined />}
+                onClick={() => {
+                  onCancel();
+                  onExtendClick(currentTask);
+                }}
+              >
+                {currentTask.extensionRequest?.status === "pending"
+                  ? "Xem duyệt gia hạn"
+                  : currentTask.teamId
+                    ? "Gia hạn / Yêu cầu"
+                    : "Gia hạn hạn chót"}
+              </Button>
+            )}
             <Button
               type="primary"
               icon={<EditOutlined />}
@@ -541,7 +618,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
             key: "copilot",
             label: (
               <span>
-                <RobotOutlined style={{ color: "#10b981" }} /> Trợ lý AI Copilot (Hỏi đáp & Lộ trình)
+                Trợ lý AI Copilot (Hỏi đáp & Lộ trình)
               </span>
             ),
             children: (

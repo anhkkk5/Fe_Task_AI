@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Typography, App } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { Link, useNavigate } from "react-router-dom";
+import dayjs from "dayjs";
 import AITaskScheduler from "../../components/AITaskScheduler";
 import { useTasksQuery } from "../../hooks/useTasksQuery";
 import {
@@ -20,6 +21,7 @@ import { TaskEditModal } from "./components/TaskEditModal";
 import { TaskBreakdownModal } from "./components/TaskBreakdownModal";
 import { TaskDeleteModal } from "./components/TaskDeleteModal";
 import { TaskDetailModal } from "./components/TaskDetailModal";
+import { TaskExtendModal } from "./components/TaskExtendModal";
 import { matchVietnameseSearch } from "../../utils/vietnameseUtils";
 import { normalizeApiStatus, type TaskItem } from "./types";
 import "./Tasks.scss";
@@ -38,6 +40,8 @@ function Tasks() {
     handleCreate,
     handleUpdate,
     handleDelete,
+    handleDeleteMany,
+    handleDeleteAll,
     deleteMutation,
   } = useTasksQuery();
 
@@ -53,9 +57,22 @@ function Tasks() {
 
   // 3. Local View State & Filters
   const [searchText, setSearchText] = useState("");
+  const [dateFilter, setDateFilter] = useState<dayjs.Dayjs | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [schedulerVisible, setSchedulerVisible] = useState(false);
   const [createModalVisible, setCreateModalVisible] = useState(false);
+
+  // Listen for mission triggers & sync mission completion
+  useEffect(() => {
+    const handleOpenCreate = () => setCreateModalVisible(true);
+    const handleOpenScheduler = () => setSchedulerVisible(true);
+    window.addEventListener("taskmind-open-create-task", handleOpenCreate);
+    window.addEventListener("taskmind-open-scheduler", handleOpenScheduler);
+    return () => {
+      window.removeEventListener("taskmind-open-create-task", handleOpenCreate);
+      window.removeEventListener("taskmind-open-scheduler", handleOpenScheduler);
+    };
+  }, []);
 
   // 4. Modal States
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -75,6 +92,8 @@ function Tasks() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingTask, setDeletingTask] = useState<TaskItem | null>(null);
 
+  const [extendingTask, setExtendingTask] = useState<TaskItem | null>(null);
+
   // 5. Team Task Redirect Helper
   const redirectToTeamTask = (
     task: TaskItem,
@@ -93,33 +112,53 @@ function Tasks() {
     () =>
       apiTasks
         .filter((t: any) => !(t.parentTaskId && t.scheduledTime?.aiPlanned))
-        .map((t: any) => ({
-          id: t._id || t.id,
-          _id: t._id,
-          title: t.title,
-          description: t.description || "",
-          status: normalizeApiStatus(String(t.status ?? "todo")),
-          priority: (t.priority || "medium") as
-            | "low"
-            | "medium"
-            | "high"
-            | "urgent",
-          startAt: t.startAt || t.teamAssignment?.startAt,
-          dueDate: t.deadline || t.dueDate || "",
-          deadline: t.deadline,
-          scheduledTime: t.scheduledTime ?? null,
-          assignee: t.userId?.name || "Bạn",
-          userId: t.userId,
-          aiBreakdown: t.aiBreakdown,
-          aiAssisted: !!(t.aiBreakdown && t.aiBreakdown.length > 0),
-          tags: t.tags || [],
-          estimatedDuration: t.estimatedDuration,
-          dailyTargetDuration: t.dailyTargetDuration,
-          dailyTargetMin: t.dailyTargetMin,
-          parentTaskId: t.parentTaskId,
-          isSubtask: !!t.parentTaskId,
-          teamId: t.teamAssignment?.teamId,
-        })),
+        .map((t: any) => {
+          const rawStatus = String(t.status ?? "todo");
+          const effectiveStatus =
+            rawStatus === "todo" && t.scheduledTime?.start
+              ? "scheduled"
+              : rawStatus;
+
+          const deadlineDate = t.deadline || t.dueDate || t.scheduledTime?.end;
+          const isOverdue = Boolean(
+            t.isOverdue ||
+            (deadlineDate &&
+              dayjs(deadlineDate).isBefore(dayjs()) &&
+              effectiveStatus !== "completed" &&
+              effectiveStatus !== "cancelled")
+          );
+
+          return {
+            id: t._id || t.id,
+            _id: t._id,
+            title: t.title,
+            description: t.description || "",
+            status: normalizeApiStatus(effectiveStatus),
+            priority: (t.priority || "medium") as
+              | "low"
+              | "medium"
+              | "high"
+              | "urgent",
+            startAt: t.startAt || t.scheduledTime?.start || t.teamAssignment?.startAt,
+            dueDate: t.deadline || t.dueDate || t.scheduledTime?.end || "",
+            deadline: t.deadline || t.scheduledTime?.end,
+            scheduledTime: t.scheduledTime ?? null,
+            assignee: t.userId?.name || "Bạn",
+            userId: t.userId,
+            aiBreakdown: t.aiBreakdown,
+            aiAssisted: !!(t.aiBreakdown && t.aiBreakdown.length > 0),
+            tags: t.tags || [],
+            estimatedDuration: t.estimatedDuration,
+            dailyTargetDuration: t.dailyTargetDuration,
+            dailyTargetMin: t.dailyTargetMin,
+            parentTaskId: t.parentTaskId,
+            isSubtask: !!t.parentTaskId,
+            teamId: t.teamAssignment?.teamId,
+            isOverdue,
+            teamAssignment: t.teamAssignment,
+            extensionRequest: t.extensionRequest,
+          };
+        }),
     [apiTasks],
   );
 
@@ -148,9 +187,24 @@ function Tasks() {
     return Array.from(taskMap.values());
   }, [tasks]);
 
-  // 8. Lọc dữ liệu theo Search (hỗ trợ cả có dấu và không dấu tiếng Việt) và Trạng thái
+  useEffect(() => {
+    if (tasks.length > 0) {
+      window.dispatchEvent(new CustomEvent("taskmind-mission-task-created"));
+    }
+  }, [tasks.length]);
+
+  // 8. Lọc dữ liệu theo Search, Ngày chọn (dateFilter) và Trạng thái
   const filteredTasks = useMemo(() => {
     const trimmedSearch = searchText.trim();
+    const targetDateStr = dateFilter ? dateFilter.format("YYYY-MM-DD") : null;
+
+    const checkTaskMatchesDate = (item: TaskItem): boolean => {
+      if (!targetDateStr) return true;
+      const dueStr = item.dueDate ? dayjs(item.dueDate).format("YYYY-MM-DD") : null;
+      const startStr = item.startAt ? dayjs(item.startAt).format("YYYY-MM-DD") : null;
+      const schedStr = item.scheduledTime?.start ? dayjs(item.scheduledTime.start).format("YYYY-MM-DD") : null;
+      return dueStr === targetDateStr || startStr === targetDateStr || schedStr === targetDateStr;
+    };
 
     return groupedTasks.filter((task) => {
       const matchesSearch =
@@ -167,12 +221,22 @@ function Tasks() {
       const matchesStatus =
         viewMode === "kanban" ||
         statusFilter === "all" ||
-        task.status === statusFilter ||
-        task.subtasks?.some((st) => st.status === statusFilter);
+        (statusFilter === "overdue"
+          ? Boolean(task.isOverdue || task.subtasks?.some((st) => st.isOverdue))
+          : statusFilter === "done"
+            ? task.status === "completed" ||
+              task.subtasks?.some((st) => st.status === "completed")
+            : task.status === statusFilter ||
+              task.subtasks?.some((st) => st.status === statusFilter));
 
-      return matchesSearch && matchesStatus;
+      const matchesDate =
+        !targetDateStr ||
+        checkTaskMatchesDate(task) ||
+        (task.subtasks || []).some((st) => checkTaskMatchesDate(st));
+
+      return matchesSearch && matchesStatus && matchesDate;
     });
-  }, [groupedTasks, searchText, statusFilter, viewMode]);
+  }, [groupedTasks, searchText, statusFilter, dateFilter, viewMode]);
 
   // 9. Xử lý Drag & Drop trên Kanban (Cập nhật trạng thái tức thì với Optimistic UI)
   const handleDropTask = async (taskId: string, targetStatus: string) => {
@@ -342,6 +406,8 @@ function Tasks() {
         <TaskFilterBar
           searchText={searchText}
           onSearchChange={setSearchText}
+          dateFilter={dateFilter}
+          onDateFilterChange={setDateFilter}
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
           viewMode={viewMode}
@@ -360,6 +426,9 @@ function Tasks() {
             onBreakdownClick={onBreakdownClick}
             onStatusChange={fetchTasks}
             onTaskClick={onTaskClick}
+            onExtendClick={(task) => setExtendingTask(task)}
+            onDeleteMany={handleDeleteMany}
+            onDeleteAll={handleDeleteAll}
           />
         ) : (
           <TaskKanbanBoard
@@ -371,6 +440,7 @@ function Tasks() {
             onBreakdownClick={onBreakdownClick}
             onOpenCreateModal={() => setCreateModalVisible(true)}
             onTaskClick={onTaskClick}
+            onExtendClick={(task) => setExtendingTask(task)}
           />
         )}
 
@@ -440,9 +510,21 @@ function Tasks() {
           onDeleteClick={onDeleteClick}
           onBreakdownClick={onBreakdownClick}
           onSubtaskToggle={onSubtaskToggle}
+          onExtendClick={(task) => setExtendingTask(task)}
           onTaskUpdated={(updated) => {
             setSelectedTask(updated);
             void fetchTasks();
+          }}
+        />
+
+        {/* Modal Gia hạn & Duyệt gia hạn Deadline */}
+        <TaskExtendModal
+          open={!!extendingTask}
+          task={extendingTask}
+          onCancel={() => setExtendingTask(null)}
+          onSuccess={() => {
+            setExtendingTask(null);
+            fetchTasks();
           }}
         />
       </main>

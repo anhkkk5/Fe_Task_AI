@@ -2,10 +2,7 @@ import "./App.css";
 import "./styles/global.scss";
 import AllRoute from "./routes";
 import { ConfigProvider, App as AntdApp } from "antd";
-import Chatbot from "./components/Chatbot";
-import { ChatbotProvider } from "./contexts/ChatbotContext";
 import { MessengerProvider } from "./contexts/MessengerContext";
-import MessengerRoot from "./components/Messenger/MessengerRoot";
 
 // Smile AI-Inspired Theme - Clean Teal Palette
 // 60%: #FFFFFF / #F6F7F9 (White / Off-White - Background)
@@ -127,13 +124,9 @@ function App() {
   return (
     <ConfigProvider theme={appTheme}>
       <AntdApp>
-        <ChatbotProvider>
-          <MessengerProvider>
-            <AllRoute />
-            <Chatbot />
-            <MessengerRoot />
-          </MessengerProvider>
-        </ChatbotProvider>
+        <MessengerProvider>
+          <AllRoute />
+        </MessengerProvider>
       </AntdApp>
     </ConfigProvider>
   );

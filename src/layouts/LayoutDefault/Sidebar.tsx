@@ -10,18 +10,24 @@ import {
   RobotOutlined,
   LogoutOutlined,
   UserOutlined,
-  SettingOutlined,
   MenuFoldOutlined,
   MenuOutlined,
   CloseOutlined,
   StarFilled,
   BookOutlined,
+  SafetyCertificateOutlined,
 } from "@ant-design/icons";
 import { clearAccessToken } from "../../utils/axios/request";
 import { logout } from "../../store/slices/authSlice";
 import "./Sidebar.scss";
 
 const menuItems = [
+  {
+    key: "/guide",
+    icon: <BookOutlined />,
+    label: "Hướng dẫn",
+    badge: null,
+  },
   {
     key: "/tasks",
     icon: <CheckSquareOutlined />,
@@ -52,12 +58,6 @@ const menuItems = [
     label: "Chat AI",
     badge: null,
     ai: true,
-  },
-  {
-    key: "/guide",
-    icon: <BookOutlined />,
-    label: "Hướng dẫn",
-    badge: null,
   },
 ];
 
@@ -101,6 +101,22 @@ function Sidebar({ onCollapse }: SidebarProps) {
     };
   }, [mobileOpen]);
 
+  const isAdmin = user?.role === "admin";
+
+  const effectiveMenuItems = [
+    ...menuItems,
+    ...(isAdmin
+      ? [
+          {
+            key: "/admin",
+            icon: <SafetyCertificateOutlined />,
+            label: "Quản trị",
+            badge: null,
+          },
+        ]
+      : []),
+  ];
+
   const handleMenuClick = (key: string) => {
     if (key === "logout") {
       clearAccessToken();
@@ -108,8 +124,8 @@ function Sidebar({ onCollapse }: SidebarProps) {
       navigate("/login");
     } else if (key === "profile") {
       navigate("/profile");
-    } else if (key === "settings") {
-      navigate("/settings");
+    } else if (key === "admin") {
+      navigate("/admin");
     }
   };
 
@@ -117,13 +133,17 @@ function Sidebar({ onCollapse }: SidebarProps) {
     {
       key: "profile",
       icon: <UserOutlined />,
-      label: "Hồ sơ",
+      label: "Hồ sơ cá nhân",
     },
-    {
-      key: "settings",
-      icon: <SettingOutlined />,
-      label: "Cài đặt",
-    },
+    ...(isAdmin
+      ? [
+          {
+            key: "admin",
+            icon: <SafetyCertificateOutlined style={{ color: "#7c3aed" }} />,
+            label: "Trang Quản trị",
+          },
+        ]
+      : []),
     { type: "divider" as const },
     {
       key: "logout",
@@ -183,7 +203,7 @@ function Sidebar({ onCollapse }: SidebarProps) {
               style={collapsed ? { cursor: "pointer" } : undefined}
               title={collapsed ? "Mở rộng sidebar" : undefined}
             >
-              <StarFilled className="logo-sparkle" />
+              <img src="/logo.svg" alt="TaskMind AI Logo" className="brand-logo-img" />
             </div>
             {!collapsed && (
               <div className="logo-text">
@@ -201,7 +221,7 @@ function Sidebar({ onCollapse }: SidebarProps) {
 
         {/* Main Navigation */}
         <nav className="sidebar-nav">
-          {menuItems.map((item) => (
+          {effectiveMenuItems.map((item) => (
             <Tooltip
               key={item.key}
               title={collapsed ? item.label : null}
@@ -209,6 +229,7 @@ function Sidebar({ onCollapse }: SidebarProps) {
             >
               <Link
                 to={item.key}
+                id={`tour-nav-${item.key.replace("/", "")}`}
                 className={`nav-item ${isActive(item.key) ? "active" : ""}`}
               >
                 <div className="nav-icon">
@@ -264,7 +285,9 @@ function Sidebar({ onCollapse }: SidebarProps) {
                   <span className="user-name">
                     {user?.name || "Người dùng"}
                   </span>
-                  <span className="user-role">Premium</span>
+                  <span className="user-role">
+                    {user?.role === "admin" ? "Quản trị viên" : "Thành viên"}
+                  </span>
                 </div>
               )}
             </div>

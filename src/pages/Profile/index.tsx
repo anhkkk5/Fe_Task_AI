@@ -1,25 +1,11 @@
 import { useState, useEffect } from "react";
-import {
-  Form,
-  Input,
-  Button,
-  Avatar,
-  Switch,
-  message,
-  Select,
-  Spin,
-} from "antd";
+import { Form, Input, Button, message, Spin, Space, Typography } from "antd";
 import {
   UserOutlined,
-  BellOutlined,
   LockOutlined,
-  CreditCardOutlined,
   LogoutOutlined,
-  GlobalOutlined,
-  StarOutlined,
   MailOutlined,
-  PhoneOutlined,
-  ProjectOutlined,
+  SaveOutlined,
 } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -36,7 +22,7 @@ import { ChangePasswordModal } from "../../components/ChangePasswordModal";
 import UserHabitsSettings from "../../components/UserHabitsSettings";
 import "./Profile.scss";
 
-const { Option } = Select;
+const { Title, Text } = Typography;
 
 function Profile() {
   const dispatch = useDispatch();
@@ -45,9 +31,6 @@ function Profile() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [aiSuggestions, setAiSuggestions] = useState(true);
-  const [autoSchedule, setAutoSchedule] = useState(false);
-  const [activeMenu, setActiveMenu] = useState("profile");
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -78,16 +61,12 @@ function Profile() {
     fetchUserData();
   }, [dispatch]);
 
-  // Set form values when user data changes
+  // Gán giá trị form khi dữ liệu người dùng thay đổi
   useEffect(() => {
     if (user) {
       form.setFieldsValue({
         name: user.name || "",
         email: user.email || "",
-        phone: user.phone || "",
-        position: user.position || "",
-        language: "vi",
-        timezone: "GMT+07:00",
       });
     }
   }, [user, form]);
@@ -96,11 +75,11 @@ function Profile() {
     setLoading(true);
     try {
       const updatedUser = await updateProfile({
-        name: values.name,
+        name: values.name.trim(),
         avatar: user?.avatar,
       });
       dispatch(updateUser(updatedUser.user || updatedUser));
-      message.success("Cập nhật hồ sơ thành công!");
+      message.success("Cập nhật thông tin thành công!");
     } catch (error: any) {
       message.error(error.response?.data?.message || "Cập nhật thất bại!");
     } finally {
@@ -108,99 +87,53 @@ function Profile() {
     }
   };
 
-  const menuItems = [
-    { key: "profile", icon: <UserOutlined />, label: "Hồ sơ" },
-    { key: "notifications", icon: <BellOutlined />, label: "Thông báo" },
-    { key: "security", icon: <LockOutlined />, label: "Bảo mật" },
-    { key: "subscription", icon: <CreditCardOutlined />, label: "Đăng ký" },
-  ];
-
   if (initialLoading) {
     return (
       <div className="profile-page loading">
-        <Spin size="large" tip="Đang tải..." />
+        <Spin size="large" tip="Đang tải thông tin..." />
       </div>
     );
   }
 
   return (
     <div className="profile-page">
-      {/* Sidebar */}
-      <div className="profile-sidebar">
-        <div className="sidebar-header">
-          <div className="logo-section">
-            <div className="logo-icon">▲</div>
-            <span className="logo-text">TaskMind AI</span>
-          </div>
-        </div>
-
-        <div className="user-info">
-          <Avatar size={48} src={user?.avatar} icon={<UserOutlined />} />
-          <div className="user-details">
-            <div className="user-name">{user?.name || "Người dùng"}</div>
-            <div className="user-email">{user?.email || ""}</div>
-          </div>
-        </div>
-
-        <div className="sidebar-menu">
-          {menuItems.map((item) => (
-            <div
-              key={item.key}
-              className={`menu-item ${activeMenu === item.key ? "active" : ""}`}
-              onClick={() => setActiveMenu(item.key)}
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </div>
-          ))}
-        </div>
-
-        <div className="sidebar-footer">
-          <div className="menu-item logout" onClick={handleLogout}>
-            <LogoutOutlined />
-            <span>Đăng xuất</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="profile-content">
+      <div className="profile-container">
         {/* Header */}
         <div className="profile-header">
           <div className="header-title">
-            <h1>Hồ sơ cá nhân</h1>
-            <p>Quản lý thông tin cá nhân và tùy chọn AI của bạn.</p>
+            <Title level={2} style={{ margin: 0, color: "#1e293b" }}>
+              Hồ sơ cá nhân
+            </Title>
+            <Text type="secondary">
+              Quản lý thông tin tài khoản và cấu hình thói quen làm việc AI
+            </Text>
           </div>
-          <div className="header-actions">
-            <Button onClick={() => setChangePasswordOpen(true)}>
+          <Space className="header-actions">
+            <Button
+              icon={<LockOutlined />}
+              onClick={() => setChangePasswordOpen(true)}
+            >
               Đổi mật khẩu
             </Button>
-            <Button onClick={() => form.resetFields()}>Hủy</Button>
-            <Button
-              type="primary"
-              loading={loading}
-              onClick={() => form.submit()}
-            >
-              Lưu thay đổi
+            <Button danger icon={<LogoutOutlined />} onClick={handleLogout}>
+              Đăng xuất
             </Button>
-          </div>
+          </Space>
         </div>
 
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSave}
-          initialValues={{
-            name: user?.name || "",
-            email: user?.email || "",
-            phone: user?.phone || "",
-            position: user?.position || "",
-            language: "vi",
-            timezone: "GMT+07:00",
-          }}
-        >
-          {/* Avatar Card */}
-          <div className="profile-card avatar-card">
+        {/* Card 1: Thông tin tài khoản & Avatar */}
+        <div className="profile-card account-card">
+          <div className="card-header">
+            <div className="card-icon">
+              <UserOutlined />
+            </div>
+            <div>
+              <h3>Thông tin tài khoản</h3>
+              <p>Ảnh đại diện và họ tên của bạn trên TaskMind</p>
+            </div>
+          </div>
+
+          <div className="avatar-section">
             <ImageUpload
               value={user?.avatar}
               onChange={(url) => {
@@ -210,121 +143,59 @@ function Profile() {
                 });
               }}
               onUpload={uploadAvatar}
-              size={80}
+              size={88}
               shape="circle"
               placeholder="Tải ảnh lên"
             />
             <div className="avatar-info">
-              <h3>{user?.name || "Người dùng"}</h3>
-              <p>{user?.email || ""}</p>
+              <div className="user-display-name">{user?.name || "Người dùng"}</div>
+              <div className="user-display-email">{user?.email || ""}</div>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Định dạng hỗ trợ: JPG, PNG hoặc GIF. Tối đa 5MB.
+              </Text>
             </div>
           </div>
 
-          {/* Basic Info Card */}
-          <div className="profile-card">
-            <div className="card-header">
-              <UserOutlined className="card-icon" />
-              <h3>Thông tin cơ bản</h3>
-            </div>
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleSave}
+            initialValues={{
+              name: user?.name || "",
+              email: user?.email || "",
+            }}
+            style={{ marginTop: 20 }}
+          >
             <div className="form-grid">
               <Form.Item
                 label="Họ và tên"
                 name="name"
-                rules={[{ required: true, message: "Vui lòng nhập họ tên" }]}
+                rules={[{ required: true, message: "Vui lòng nhập họ và tên" }]}
               >
-                <Input placeholder="Nhập họ và tên" />
+                <Input placeholder="Nhập họ và tên" size="large" />
               </Form.Item>
 
-              <Form.Item label="Email" name="email">
-                <Input prefix={<MailOutlined />} disabled />
-              </Form.Item>
-
-              <Form.Item label="Số điện thoại" name="phone">
-                <Input prefix={<PhoneOutlined />} placeholder="+84 ..." />
-              </Form.Item>
-
-              <Form.Item label="Chức vụ" name="position">
-                <Input
-                  prefix={<ProjectOutlined />}
-                  placeholder="Product Manager"
-                />
+              <Form.Item label="Email tài khoản" name="email">
+                <Input prefix={<MailOutlined />} disabled size="large" />
               </Form.Item>
             </div>
-          </div>
 
-          {/* Language & Region Card */}
-          <div className="profile-card">
-            <div className="card-header">
-              <GlobalOutlined className="card-icon" />
-              <h3>Khu vực & Ngôn ngữ</h3>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+              <Button
+                type="primary"
+                icon={<SaveOutlined />}
+                loading={loading}
+                htmlType="submit"
+                size="large"
+              >
+                Lưu thông tin
+              </Button>
             </div>
-            <div className="form-grid">
-              <Form.Item label="Ngôn ngữ" name="language">
-                <Select>
-                  <Option value="vi">Tiếng Việt</Option>
-                  <Option value="en">English</Option>
-                </Select>
-              </Form.Item>
+          </Form>
+        </div>
 
-              <Form.Item label="Múi giờ" name="timezone">
-                <Select>
-                  <Option value="GMT+07:00">
-                    (GMT+07:00) Bangkok, Hanoi, Jakarta
-                  </Option>
-                  <Option value="GMT+08:00">
-                    (GMT+08:00) Singapore, Kuala Lumpur
-                  </Option>
-                </Select>
-              </Form.Item>
-            </div>
-          </div>
-
-          {/* AI Configuration Card */}
-          <div className="profile-card ai-card">
-            <div className="card-header">
-              <StarOutlined className="card-icon ai-icon" />
-              <div>
-                <h3>Cấu hình AI</h3>
-                <p>Tùy chỉnh cách TaskMind AI hỗ trợ bạn.</p>
-              </div>
-            </div>
-
-            <div className="ai-settings">
-              <div className="ai-setting-item">
-                <div className="setting-info">
-                  <h4>Đề xuất AI thông minh</h4>
-                  <p>
-                    Nhận gợi ý công việc dựa trên thói quen và lịch trình của
-                    bạn.
-                  </p>
-                </div>
-                <Switch
-                  checked={aiSuggestions}
-                  onChange={setAiSuggestions}
-                  className="custom-switch"
-                />
-              </div>
-
-              <div className="ai-setting-item">
-                <div className="setting-info">
-                  <h4>Tự động lên lịch</h4>
-                  <p>
-                    Cho phép AI tự động sắp xếp lại các nhiệm vụ chưa hoàn thành
-                    vào ngày hôm sau.
-                  </p>
-                </div>
-                <Switch
-                  checked={autoSchedule}
-                  onChange={setAutoSchedule}
-                  className="custom-switch"
-                />
-              </div>
-            </div>
-          </div>
-        </Form>
-
-        {/* User Habits Settings - Outside of Form */}
-        <div className="profile-card">
+        {/* Card 2: Thói quen làm việc & Cấu hình AI thực tế */}
+        <div className="profile-card habits-card">
           <UserHabitsSettings userId={user?._id} />
         </div>
       </div>

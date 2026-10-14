@@ -5,6 +5,8 @@ import {
   createTask,
   updateTask,
   deleteTask,
+  deleteTasksBatch,
+  deleteAllTasks,
   type Task,
   type TaskListResponse,
 } from "../services/taskServices";
@@ -117,6 +119,71 @@ export function useTasksQuery() {
     },
   });
 
+  // 5. Delete Tasks Batch Mutation
+  const deleteBatchMutation = useMutation({
+    mutationFn: (taskIds: string[]) => deleteTasksBatch(taskIds),
+    onMutate: async (taskIds: string[]) => {
+      await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
+      const previousData = queryClient.getQueryData<TaskListResponse>(TASKS_QUERY_KEY);
+      const idSet = new Set(taskIds);
+
+      if (previousData) {
+        queryClient.setQueryData<TaskListResponse>(TASKS_QUERY_KEY, {
+          ...previousData,
+          total: Math.max(0, previousData.total - taskIds.length),
+          items: previousData.items.filter(
+            (item) => !idSet.has(String(item._id || item.id || "")),
+          ),
+        });
+      }
+
+      return { previousData };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(TASKS_QUERY_KEY, context.previousData);
+      }
+      message.error("Xóa nhiều công việc thất bại, đã khôi phục lại!");
+    },
+    onSuccess: (data) => {
+      message.success(data?.message || "Đã xóa các công việc đã chọn!");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
+    },
+  });
+
+  // 6. Delete All Tasks Mutation
+  const deleteAllMutation = useMutation({
+    mutationFn: () => deleteAllTasks(),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
+      const previousData = queryClient.getQueryData<TaskListResponse>(TASKS_QUERY_KEY);
+
+      if (previousData) {
+        queryClient.setQueryData<TaskListResponse>(TASKS_QUERY_KEY, {
+          ...previousData,
+          items: previousData.items.filter((item: any) => Boolean(item.teamAssignment?.teamId || item.teamId)),
+          total: 0,
+        });
+      }
+
+      return { previousData };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(TASKS_QUERY_KEY, context.previousData);
+      }
+      message.error("Xóa tất cả công việc thất bại, đã khôi phục lại!");
+    },
+    onSuccess: (data) => {
+      message.success(data?.message || "Đã xóa sạch công việc!");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
+    },
+  });
+
   // Helper wrappers giữ nguyên interface quen thuộc
   const handleCreate = async (values: any): Promise<boolean> => {
     try {
@@ -145,6 +212,24 @@ export function useTasksQuery() {
     }
   };
 
+  const handleDeleteMany = async (taskIds: string[]): Promise<boolean> => {
+    try {
+      await deleteBatchMutation.mutateAsync(taskIds);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleDeleteAll = async (): Promise<boolean> => {
+    try {
+      await deleteAllMutation.mutateAsync();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   return {
     tasks,
     loading,
@@ -154,8 +239,12 @@ export function useTasksQuery() {
     handleCreate,
     handleUpdate,
     handleDelete,
+    handleDeleteMany,
+    handleDeleteAll,
     createMutation,
     updateMutation,
     deleteMutation,
+    deleteBatchMutation,
+    deleteAllMutation,
   };
 }

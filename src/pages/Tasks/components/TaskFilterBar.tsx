@@ -1,5 +1,5 @@
 import React from "react";
-import { Input, Select, Button, Segmented } from "antd";
+import { Input, Select, Button, Segmented, DatePicker } from "antd";
 import {
   SearchOutlined,
   FilterOutlined,
@@ -8,12 +8,15 @@ import {
   BarsOutlined,
   AppstoreOutlined,
 } from "@ant-design/icons";
+import type dayjs from "dayjs";
 
 const { Option } = Select;
 
 interface TaskFilterBarProps {
   searchText: string;
   onSearchChange: (value: string) => void;
+  dateFilter: dayjs.Dayjs | null;
+  onDateFilterChange: (date: dayjs.Dayjs | null) => void;
   statusFilter: string;
   onStatusFilterChange: (value: string) => void;
   viewMode: "table" | "kanban";
@@ -25,6 +28,8 @@ interface TaskFilterBarProps {
 export const TaskFilterBar: React.FC<TaskFilterBarProps> = ({
   searchText,
   onSearchChange,
+  dateFilter,
+  onDateFilterChange,
   statusFilter,
   onStatusFilterChange,
   viewMode,
@@ -41,6 +46,15 @@ export const TaskFilterBar: React.FC<TaskFilterBarProps> = ({
           value={searchText}
           onChange={(e) => onSearchChange(e.target.value)}
           allowClear
+          style={{ minWidth: 200 }}
+        />
+        <DatePicker
+          placeholder="Lọc theo ngày"
+          value={dateFilter}
+          onChange={onDateFilterChange}
+          format="DD/MM/YYYY"
+          allowClear
+          style={{ minWidth: 145 }}
         />
         {viewMode === "table" && (
           <Select
@@ -60,25 +74,28 @@ export const TaskFilterBar: React.FC<TaskFilterBarProps> = ({
 
       <div className="tasks-toolbar-actions">
         {/* Nút chuyển đổi View: Bảng vs Kanban */}
-        <Segmented
-          value={viewMode}
-          onChange={(val) => onViewModeChange(val as "table" | "kanban")}
-          options={[
-            {
-              value: "table",
-              icon: <BarsOutlined />,
-              label: "Danh sách",
-            },
-            {
-              value: "kanban",
-              icon: <AppstoreOutlined />,
-              label: "Kanban",
-            },
-          ]}
-          style={{ background: "#f1f5f9" }}
-        />
+        <div id="tour-view-mode">
+          <Segmented
+            value={viewMode}
+            onChange={(val) => onViewModeChange(val as "table" | "kanban")}
+            options={[
+              {
+                value: "table",
+                icon: <BarsOutlined />,
+                label: "Danh sách",
+              },
+              {
+                value: "kanban",
+                icon: <AppstoreOutlined />,
+                label: "Kanban",
+              },
+            ]}
+            style={{ background: "#f1f5f9" }}
+          />
+        </div>
 
         <Button
+          id="tour-ai-scheduler"
           className="ai-gradient-btn tasks-toolbar-ai-btn"
           icon={<ScheduleOutlined />}
           onClick={onOpenScheduler}
@@ -87,6 +104,7 @@ export const TaskFilterBar: React.FC<TaskFilterBarProps> = ({
           <span className="btn-label-short">AI Lịch</span>
         </Button>
         <Button
+          id="tour-add-task"
           type="primary"
           icon={<PlusOutlined />}
           onClick={onOpenCreateModal}

@@ -7,9 +7,6 @@ import {
   Input,
   Spin,
   message,
-  Radio,
-  Select,
-  Input as AntInput,
 } from "antd";
 import {
   PlusOutlined,
@@ -23,12 +20,7 @@ import {
   createTeam,
   type Team,
   type TeamMember,
-  type TeamType,
 } from "../../services/teamServices";
-import {
-  getCatalog,
-  type CatalogResponse,
-} from "../../services/catalogServices";
 import "./Teams.scss";
 
 // Generate consistent color from string
@@ -95,15 +87,9 @@ export default function TeamsPage() {
   const [creating, setCreating] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>("for-you");
   const [search, setSearch] = useState("");
-  const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
 
   useEffect(() => {
     loadTeams();
-    getCatalog()
-      .then(setCatalog)
-      .catch(() => {
-        /* silent: catalog chỉ cần khi mở modal */
-      });
   }, []);
 
   const loadTeams = async () => {
@@ -121,16 +107,13 @@ export default function TeamsPage() {
   const handleCreate = async (values: {
     name: string;
     description?: string;
-    teamType?: TeamType;
-    industry?: string;
   }) => {
     try {
       setCreating(true);
       const team = await createTeam({
-        name: values.name,
-        description: values.description,
-        teamType: values.teamType || "company",
-        industry: values.industry || undefined,
+        name: values.name.trim(),
+        description: values.description?.trim(),
+        teamType: "company",
       });
       message.success("Tạo nhóm thành công!");
       setModalOpen(false);
@@ -190,13 +173,15 @@ export default function TeamsPage() {
       <div className="jira-teams-content">
         {/* Top bar */}
         <div className="jira-teams-topbar">
-          <AntInput
+          <Input
             prefix={
               <SearchOutlined style={{ color: "var(--color-text-tertiary)" }} />
             }
             placeholder="Tìm kiếm"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setSearch(e.target.value)
+            }
             className="jira-search-input"
           />
           <Button
@@ -395,7 +380,6 @@ export default function TeamsPage() {
           layout="vertical"
           onFinish={handleCreate}
           style={{ marginTop: 16 }}
-          initialValues={{ teamType: "company" }}
         >
           <Form.Item
             name="name"
@@ -405,36 +389,10 @@ export default function TeamsPage() {
               { min: 2, message: "Tên nhóm tối thiểu 2 ký tự" },
             ]}
           >
-            <Input placeholder="VD: Frontend Team, Marketing..." />
+            <Input placeholder="VD: Frontend Team, Nhóm Đồ Án, Marketing..." />
           </Form.Item>
           <Form.Item name="description" label="Mô tả (tuỳ chọn)">
-            <Input.TextArea rows={3} placeholder="Mô tả ngắn về nhóm..." />
-          </Form.Item>
-          <Form.Item
-            name="teamType"
-            label="Loại nhóm"
-            rules={[{ required: true, message: "Chọn loại nhóm" }]}
-          >
-            <Radio.Group>
-              <Radio.Button value="company">Nhóm công ty</Radio.Button>
-              <Radio.Button value="student">Nhóm sinh viên</Radio.Button>
-            </Radio.Group>
-          </Form.Item>
-          <Form.Item
-            name="industry"
-            label="Ngành nghề (giúp AI xếp lịch chính xác hơn)"
-          >
-            <Select
-              showSearch
-              allowClear
-              optionFilterProp="label"
-              placeholder="Chọn ngành nghề chính của nhóm"
-              loading={!catalog}
-              options={(catalog?.industries || []).map((i) => ({
-                label: i.label,
-                value: i.code,
-              }))}
-            />
+            <Input.TextArea rows={3} placeholder="Mô tả ngắn về mục tiêu hoặc công việc của nhóm..." />
           </Form.Item>
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
             <Button

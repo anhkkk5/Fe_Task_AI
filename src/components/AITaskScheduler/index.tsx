@@ -44,6 +44,8 @@ interface Task {
   status: string;
   priority: "low" | "medium" | "high" | "urgent";
   dueDate: string;
+  startAt?: string;
+  deadline?: string;
   aiAssisted?: boolean;
   scheduledTime?: {
     start: string;
@@ -140,12 +142,7 @@ export default function AITaskScheduler({
   };
 
   const handleSelectAll = () => {
-    const canPickTasks = tasks
-      .filter((t) => t.status !== "done")
-      .filter((t) => t.status !== "scheduled")
-      .filter((t) => !t.scheduledTime || t.status === "todo")
-      .slice(0, 10)
-      .map((t) => t.id);
+    const canPickTasks = incompleteTasks.slice(0, 10).map((t) => t.id);
     setSelectedTasks(canPickTasks);
   };
 
@@ -266,9 +263,9 @@ export default function AITaskScheduler({
   };
 
   const incompleteTasks = tasks
-    .filter((t) => t.status !== "done")
+    .filter((t) => t.status !== "done" && (t.status as string) !== "completed")
     .filter((t) => t.status !== "scheduled")
-    .filter((t) => !t.scheduledTime || t.status === "todo");
+    .filter((t) => !(t.scheduledTime?.start && !t.scheduledTime?.aiPlanned));
 
   return (
     <Modal
@@ -346,10 +343,20 @@ export default function AITaskScheduler({
                           <Tag color={getPriorityColor(task.priority)}>
                             {getPriorityLabel(task.priority)}
                           </Tag>
-                          <Text type="secondary" className="due-date">
-                            <ClockCircleOutlined />
-                            {dayjs(task.dueDate).format("DD/MM/YYYY")}
-                          </Text>
+                          {(() => {
+                            const dateVal =
+                              task.dueDate ||
+                              (task as any).deadline ||
+                              task.scheduledTime?.start ||
+                              task.startAt;
+                            if (!dateVal || !dayjs(dateVal).isValid()) return null;
+                            return (
+                              <Text type="secondary" className="due-date">
+                                <ClockCircleOutlined />
+                                {dayjs(dateVal).format("DD/MM/YYYY")}
+                              </Text>
+                            );
+                          })()}
                         </Space>
                       </Space>
                     </Checkbox>

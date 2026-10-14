@@ -28,7 +28,6 @@ function GoogleCallback() {
 
       if (tokenFromHash) {
         setAccessToken(tokenFromHash);
-        localStorage.setItem("token", tokenFromHash);
         window.history.replaceState(
           {},
           document.title,

@@ -17,6 +17,7 @@ interface TaskKanbanColumnProps {
   onBreakdownClick: (task: TaskItem) => void;
   onAddNewTask?: () => void;
   onTaskClick?: (task: TaskItem) => void;
+  onExtendClick?: (task: TaskItem) => void;
 }
 
 export const TaskKanbanColumn: React.FC<TaskKanbanColumnProps> = ({
@@ -32,6 +33,7 @@ export const TaskKanbanColumn: React.FC<TaskKanbanColumnProps> = ({
   onBreakdownClick,
   onAddNewTask,
   onTaskClick,
+  onExtendClick,
 }) => {
   const [isOver, setIsOver] = useState(false);
 
@@ -154,6 +156,7 @@ export const TaskKanbanColumn: React.FC<TaskKanbanColumnProps> = ({
               onDeleteClick={onDeleteClick}
               onBreakdownClick={onBreakdownClick}
               onTaskClick={onTaskClick}
+              onExtendClick={onExtendClick}
             />
           ))
         )}

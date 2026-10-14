@@ -165,16 +165,21 @@
       width: 36px;
       height: 36px;
       min-width: 36px;
-      background: var(--color-primary-blue);
-      border-radius: var(--radius-md);
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 2px 8px rgba(26, 160, 176, 0.25);
+      background: transparent;
 
-      .logo-sparkle {
-        color: white;
-        font-size: 16px;
+      .brand-logo-img {
+        width: 36px;
+        height: 36px;
+        border-radius: 9px;
+        object-fit: contain;
+        transition: transform 0.25s ease;
+      }
+
+      &:hover .brand-logo-img {
+        transform: scale(1.08);
       }
     }
 

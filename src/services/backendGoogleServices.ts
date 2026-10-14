@@ -1,5 +1,5 @@
 import axios from "axios";
-import { clearAccessToken } from "../utils/axios/request";
+import { clearAccessToken, getAccessToken, setAccessToken } from "../utils/axios/request";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:3002";
@@ -33,7 +33,7 @@ export interface GoogleStatus {
 }
 
 const getAuthToken = (): string | null => {
-  return localStorage.getItem("token");
+  return getAccessToken();
 };
 
 const apiClient = axios.create({
@@ -79,9 +79,11 @@ export const handleGoogleCallback = (): string | null => {
   }
 
   if (token) {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.setItem("token", token);
+    clearAccessToken();
+    setAccessToken(token);
+    try {
+      localStorage.removeItem("user");
+    } catch {}
     window.history.replaceState({}, document.title, window.location.pathname);
     return token;
   }

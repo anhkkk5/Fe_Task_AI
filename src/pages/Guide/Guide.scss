@@ -24,13 +24,9 @@
   gap: 8px;
   font-size: 12px;
   font-weight: 700;
-  color: var(--color-text-tertiary);
+  color: #0f7985;
   letter-spacing: 1.4px;
   margin-bottom: 14px;
-
-  .anticon {
-    color: #1aa0b0;
-  }
 }
 
 .guide-intro-title {
@@ -177,12 +173,12 @@
     padding: 0 22px !important;
     border-radius: 999px !important;
     font-weight: 600 !important;
-    background: linear-gradient(135deg, #15a884 0%, #10b981 100%) !important;
+    background: linear-gradient(135deg, #1aa0b0 0%, #148f9f 100%) !important;
     border: none !important;
-    box-shadow: 0 8px 18px -4px rgba(16, 185, 129, 0.45) !important;
+    box-shadow: 0 8px 18px -4px rgba(26, 160, 176, 0.35) !important;
 
-    .anticon {
-      margin-left: 4px;
+    &:hover {
+      background: linear-gradient(135deg, #148f9f 0%, #0f7985 100%) !important;
     }
   }
 }
@@ -211,11 +207,14 @@
       }
     }
 
-    .note-dot {
-      color: #f59e0b;
-      font-size: 10px;
+    .note-bullet {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #1aa0b0;
       margin-top: 8px;
       flex-shrink: 0;
+      display: inline-block;
     }
   }
 }
@@ -347,3 +346,85 @@
     }
   }
 }
+
+/* ============================================
+   Video Guide Section (1 ô video duy nhất)
+   ============================================ */
+.guide-videos-section {
+  .guide-video-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .admin-video-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .admin-embed-video-btn {
+    height: 40px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 13.5px;
+    background: linear-gradient(135deg, #1aa0b0 0%, #148f9f 100%) !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(26, 160, 176, 0.3) !important;
+
+    &:hover {
+      background: linear-gradient(135deg, #148f9f 0%, #0f7985 100%) !important;
+    }
+  }
+
+  .admin-upload-video-btn {
+    height: 40px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 13.5px;
+    background: #fff;
+    border: 1px solid #cce7ea;
+    color: #0f7985;
+
+    &:hover {
+      border-color: #1aa0b0 !important;
+      color: #1aa0b0 !important;
+      background: #f4fbfb !important;
+    }
+  }
+
+  .single-video-container {
+    width: 100%;
+    background: #090d16;
+    border-radius: 18px;
+    padding: 12px;
+    border: 1px solid #1e293b;
+    box-shadow: 0 16px 36px -8px rgba(15, 23, 42, 0.16);
+  }
+
+  .single-video-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .single-video-player {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000000;
+    border-radius: 12px;
+    outline: none;
+  }
+}
+
+

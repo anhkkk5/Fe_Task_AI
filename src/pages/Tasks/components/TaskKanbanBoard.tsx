@@ -18,6 +18,7 @@ interface TaskKanbanBoardProps {
   onBreakdownClick: (task: TaskItem) => void;
   onOpenCreateModal: () => void;
   onTaskClick?: (task: TaskItem) => void;
+  onExtendClick?: (task: TaskItem) => void;
 }
 
 export const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({
@@ -29,6 +30,7 @@ export const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({
   onBreakdownClick,
   onOpenCreateModal,
   onTaskClick,
+  onExtendClick,
 }) => {
   // Phân chia danh sách task theo 4 trạng thái nghiệp vụ
   const todoTasks = useMemo(
@@ -125,6 +127,7 @@ export const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({
           onBreakdownClick={onBreakdownClick}
           onAddNewTask={col.onAddNewTask}
           onTaskClick={onTaskClick}
+          onExtendClick={onExtendClick}
         />
       ))}
     </div>

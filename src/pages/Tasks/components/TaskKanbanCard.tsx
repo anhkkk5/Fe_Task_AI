@@ -20,6 +20,7 @@ interface TaskKanbanCardProps {
   onDeleteClick: (task: TaskItem) => void;
   onBreakdownClick: (task: TaskItem) => void;
   onTaskClick?: (task: TaskItem) => void;
+  onExtendClick?: (task: TaskItem) => void;
 }
 
 export const TaskKanbanCard: React.FC<TaskKanbanCardProps> = ({
@@ -28,6 +29,7 @@ export const TaskKanbanCard: React.FC<TaskKanbanCardProps> = ({
   onDeleteClick,
   onBreakdownClick,
   onTaskClick,
+  onExtendClick,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
 
@@ -47,12 +49,25 @@ export const TaskKanbanCard: React.FC<TaskKanbanCardProps> = ({
   ).length;
 
   // Kiểm tra quá hạn
-  const isOverdue =
-    task.dueDate &&
-    task.status !== "completed" &&
-    new Date(task.dueDate).getTime() < Date.now();
+  const isOverdue = Boolean(
+    task.isOverdue ||
+    (task.dueDate &&
+      task.status !== "completed" &&
+      task.status !== "cancelled" &&
+      new Date(task.dueDate).getTime() < Date.now())
+  );
 
   const menuItems: MenuProps["items"] = [
+    {
+      key: "extend",
+      icon: <ClockCircleOutlined />,
+      label: task.extensionRequest?.status === "pending"
+        ? "Xem / Duyệt gia hạn"
+        : task.teamId
+          ? "Gia hạn / Yêu cầu gia hạn"
+          : "Gia hạn hạn chót",
+      onClick: () => onExtendClick?.(task),
+    },
     {
       key: "edit",
       icon: <EditOutlined />,
@@ -128,18 +143,30 @@ export const TaskKanbanCard: React.FC<TaskKanbanCardProps> = ({
           marginBottom: 8,
         }}
       >
-        <span
-          style={{
-            fontSize: 11,
-            fontWeight: 600,
-            padding: "2px 8px",
-            borderRadius: 6,
-            background: priorityInfo.bg,
-            color: priorityInfo.color,
-          }}
-        >
-          {priorityInfo.text}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              padding: "2px 8px",
+              borderRadius: 6,
+              background: priorityInfo.bg,
+              color: priorityInfo.color,
+            }}
+          >
+            {priorityInfo.text}
+          </span>
+          {isOverdue && (
+            <Tag color="error" style={{ fontSize: 10, margin: 0, padding: "0 4px" }}>
+              Quá hạn
+            </Tag>
+          )}
+          {task.extensionRequest?.status === "pending" && (
+            <Tag color="purple" style={{ fontSize: 10, margin: 0, padding: "0 4px" }}>
+              Chờ gia hạn
+            </Tag>
+          )}
+        </div>
         <Dropdown menu={{ items: menuItems }} placement="bottomRight" trigger={["click"]}>
           <Button
             type="text"

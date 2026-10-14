@@ -15,6 +15,7 @@ import {
   Tag,
   Popconfirm,
   Spin,
+  Radio,
 } from "antd";
 import {
   DeleteOutlined,
@@ -36,6 +37,7 @@ import {
   createRoutine,
   updateRoutine,
   deleteRoutine,
+  clearAllRoutines,
   type DailyRoutineItem,
 } from "../../../services/routineServices";
 
@@ -291,6 +293,7 @@ export const AvailabilitySettingsModal: React.FC<
       timeRange: [dayjs("06:30", "HH:mm"), dayjs("07:00", "HH:mm")],
       daysOfWeek: [1, 2, 3, 4, 5, 6, 7],
       color: "#10b981",
+      allowTaskOverlap: false,
     });
     setRoutineModalOpen(true);
   };
@@ -303,6 +306,7 @@ export const AvailabilitySettingsModal: React.FC<
       timeRange: [dayjs(r.startTime, "HH:mm"), dayjs(r.endTime, "HH:mm")],
       daysOfWeek: r.daysOfWeek || [1, 2, 3, 4, 5, 6, 7],
       color: r.color || "#10b981",
+      allowTaskOverlap: Boolean(r.allowTaskOverlap),
     });
     setRoutineModalOpen(true);
   };
@@ -313,6 +317,7 @@ export const AvailabilitySettingsModal: React.FC<
       setRoutineSubmitting(true);
       const startTime = values.timeRange[0].format("HH:mm");
       const endTime = values.timeRange[1].format("HH:mm");
+      const allowTaskOverlap = Boolean(values.allowTaskOverlap);
 
       if (editingRoutine) {
         await updateRoutine(editingRoutine._id, {
@@ -322,6 +327,7 @@ export const AvailabilitySettingsModal: React.FC<
           endTime,
           daysOfWeek: values.daysOfWeek,
           color: values.color,
+          allowTaskOverlap,
         });
         message.success("Đã cập nhật lịch lặp lại");
       } else {
@@ -332,6 +338,7 @@ export const AvailabilitySettingsModal: React.FC<
           endTime,
           daysOfWeek: values.daysOfWeek,
           color: values.color,
+          allowTaskOverlap,
         });
         message.success("Đã tạo lịch lặp lại mới");
       }
@@ -350,6 +357,17 @@ export const AvailabilitySettingsModal: React.FC<
     try {
       await deleteRoutine(id);
       message.success("Đã xóa lịch lặp lại");
+      await loadRoutinesList();
+      onRoutinesChanged?.();
+    } catch (err: any) {
+      message.error(err?.message || "Không thể xóa lịch lặp lại");
+    }
+  };
+
+  const handleClearAllRoutines = async () => {
+    try {
+      await clearAllRoutines();
+      message.success("Đã xóa sạch toàn bộ lịch lặp lại");
       await loadRoutinesList();
       onRoutinesChanged?.();
     } catch (err: any) {
@@ -435,14 +453,30 @@ export const AvailabilitySettingsModal: React.FC<
                       Mỗi thói quen chỉ lưu đúng 1 dòng trong CSDL, tự động hiển thị trên Lịch cả tuần mà KHÔNG làm phình danh sách công việc!
                     </Text>
                   </div>
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={handleOpenCreateRoutine}
-                    style={{ background: "#10b981", borderColor: "#10b981" }}
-                  >
-                    Thêm lịch lặp lại
-                  </Button>
+                  <Space>
+                    {routinesList.length > 0 && (
+                      <Popconfirm
+                        title="Xác nhận xóa TẤT CẢ lịch lặp lại?"
+                        description="Toàn bộ các thói quen sinh hoạt và lịch cố định lặp lại sẽ bị xóa vĩnh viễn khỏi Calendar."
+                        onConfirm={handleClearAllRoutines}
+                        okText="Xóa tất cả"
+                        cancelText="Hủy"
+                        okButtonProps={{ danger: true }}
+                      >
+                        <Button danger icon={<DeleteOutlined />}>
+                          Xóa tất cả lịch lặp lại
+                        </Button>
+                      </Popconfirm>
+                    )}
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={handleOpenCreateRoutine}
+                      style={{ background: "#10b981", borderColor: "#10b981" }}
+                    >
+                      Thêm lịch lặp lại
+                    </Button>
+                  </Space>
                 </div>
                 <Divider style={{ margin: "8px 0 16px 0" }} />
 
@@ -496,6 +530,11 @@ export const AvailabilitySettingsModal: React.FC<
                                   <ClockCircleOutlined /> {r.startTime} - {r.endTime}
                                 </Tag>
                                 <Tag color="blue">{daysText}</Tag>
+                                {r.allowTaskOverlap ? (
+                                  <Tag color="green">Cho phép chèn việc</Tag>
+                                ) : (
+                                  <Tag color="default">Cố định</Tag>
+                                )}
                               </Space>
                               {r.description && (
                                 <div style={{ marginTop: 4, color: "#6b7280", fontSize: 12 }}>
@@ -679,6 +718,33 @@ export const AvailabilitySettingsModal: React.FC<
                 { label: "Chủ Nhật", value: 7 },
               ]}
             />
+          </Form.Item>
+
+          <Form.Item
+            name="allowTaskOverlap"
+            label="Thuộc tính chèn công việc khi AI tối ưu lịch"
+            rules={[{ required: true, message: "Vui lòng chọn thuộc tính" }]}
+          >
+            <Radio.Group style={{ width: "100%" }}>
+              <Space direction="vertical" style={{ width: "100%" }} size={12}>
+                <Radio value={false} style={{ alignItems: "flex-start" }}>
+                  <div>
+                    <Text strong>Không cho phép chèn công việc (Khóa cố định)</Text>
+                    <div style={{ color: "#6b7280", fontSize: 12 }}>
+                      AI tuyệt đối không xếp việc đè vào khung giờ này (VD: Đi ngủ, Đi làm công ty, Ăn uống, Tắm giặt, Việc riêng tư).
+                    </div>
+                  </div>
+                </Radio>
+                <Radio value={true} style={{ alignItems: "flex-start" }}>
+                  <div>
+                    <Text strong style={{ color: "#10b981" }}>Cho phép chèn công việc (AI được xếp việc vào đây)</Text>
+                    <div style={{ color: "#6b7280", fontSize: 12 }}>
+                      Khung giờ làm việc hoặc tự học (VD: Làm việc tại nhà, Tự học buổi tối) - Khi chọn "AI Tối ưu lịch", AI có thể linh hoạt xếp công việc đè vào khung giờ này.
+                    </div>
+                  </div>
+                </Radio>
+              </Space>
+            </Radio.Group>
           </Form.Item>
 
           <Form.Item name="color" label="Màu sắc hiển thị trên Lịch">

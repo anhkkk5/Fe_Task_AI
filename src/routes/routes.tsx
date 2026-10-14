@@ -18,8 +18,8 @@ const AcceptInvite = lazy(() => import("../pages/Teams/AcceptInvite"));
 const Calendar = lazy(() => import("../pages/Calendar"));
 const Notifications = lazy(() => import("../pages/Notifications"));
 const Chat = lazy(() => import("../pages/Chat"));
-const Messenger = lazy(() => import("../pages/Messenger"));
 const Guide = lazy(() => import("../pages/Guide"));
+const Admin = lazy(() => import("../pages/Admin"));
 const GoogleCallback = lazy(() => import("../pages/GoogleCallback"));
 
 // Minimal Suspense fallback. Full-screen spinner intentionally avoided —
@@ -73,10 +73,13 @@ export const routes = [
           { path: "calendar", element: withSuspense(<Calendar />) },
           { path: "notifications", element: withSuspense(<Notifications />) },
           { path: "chat", element: withSuspense(<Chat />) },
-          { path: "messenger", element: withSuspense(<Messenger />) },
           { path: "guide", element: withSuspense(<Guide />) },
+          { path: "admin", element: withSuspense(<Admin />) },
+          { path: "settings", element: <Navigate to="/profile" replace /> },
+          { path: "*", element: <Navigate to="/tasks" replace /> },
         ],
       },
     ],
   },
+  { path: "*", element: <Navigate to="/tasks" replace /> },
 ];

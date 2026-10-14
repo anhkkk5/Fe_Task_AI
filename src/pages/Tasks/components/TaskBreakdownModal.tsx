@@ -1,8 +1,8 @@
 import React from "react";
 import { Modal, Space, Button, Card, Typography } from "antd";
 import { RobotOutlined, ReloadOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 import { SubtaskList } from "../../../components/SubtaskList";
-import { useChatbot } from "../../../contexts/ChatbotContext";
 import type {
   Subtask,
   SubtaskStatus,
@@ -35,7 +35,7 @@ export const TaskBreakdownModal: React.FC<TaskBreakdownModalProps> = ({
   onRegenerate,
   onSubtaskStatusChange,
 }) => {
-  const { openWithSubtask } = useChatbot();
+  const navigate = useNavigate();
 
   return (
     <Modal
@@ -101,20 +101,14 @@ export const TaskBreakdownModal: React.FC<TaskBreakdownModalProps> = ({
         <SubtaskList
           subtasks={subtasks}
           parentTaskTitle={task?.title ?? ""}
-          onSubtaskClick={(subtask) =>
-            openWithSubtask(
-              subtask,
-              task?.title ?? "",
-              task?.id ?? "",
-              subtasks.indexOf(subtask),
-              {
-                description: task?.description,
-                estimatedDuration: task?.estimatedDuration,
-                dailyTargetDuration: task?.dailyTargetDuration,
-                dailyTargetMin: task?.dailyTargetMin,
+          onSubtaskClick={(subtask) => {
+            onCancel();
+            navigate("/chat", {
+              state: {
+                initialPrompt: `Hãy hướng dẫn tôi thực hiện bước: "${subtask.title}" thuộc công việc "${task?.title ?? ""}".`,
               },
-            )
-          }
+            });
+          }}
           onStatusChange={onSubtaskStatusChange}
         />
       ) : (

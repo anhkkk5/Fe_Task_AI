@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="tmBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e40af" />
+      <stop offset="50%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+
+    <!-- Glowing Accent Gradient -->
+    <linearGradient id="tmSparkleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#a5f3fc" />
+    </linearGradient>
+
+    <!-- Drop Shadow Filter -->
+    <filter id="tmGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#0284c7" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- Rounded App Icon Background -->
+  <rect x="8" y="8" width="104" height="104" rx="28" fill="url(#tmBgGrad)" filter="url(#tmGlow)" />
+
+  <!-- Inner Subtle Glass Border -->
+  <rect x="9.5" y="9.5" width="101" height="101" rx="26.5" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2" />
+
+  <!-- Abstract TaskMind AI Icon: Neural Node + Dynamic Checkmark & Sparkles -->
+  <g fill="none" stroke="url(#tmSparkleGrad)" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Fluid Checkmark & Arc -->
+    <path d="M35 63 L51 79 L85 43" stroke-width="9" stroke="url(#tmSparkleGrad)" />
+    
+    <!-- AI Neural Ring Orbit -->
+    <path d="M28 48 C32 32, 60 26, 78 33" stroke-width="4.5" stroke="rgba(255,255,255,0.85)" stroke-dasharray="3 6" />
+    <path d="M92 72 C88 88, 60 94, 42 87" stroke-width="4.5" stroke="rgba(255,255,255,0.85)" stroke-dasharray="3 6" />
+  </g>
+
+  <!-- AI Brain Sparkle Star Top-Right -->
+  <path d="M85 24 Q85 34 75 34 Q85 34 85 44 Q85 34 95 34 Q85 34 85 24 Z" fill="#ffffff" filter="drop-shadow(0 0 4px #38bdf8)" />
+
+  <!-- Small Ambient Sparkle Bottom-Left -->
+  <circle cx="28" cy="74" r="3.5" fill="#a5f3fc" />
+  <circle cx="94" cy="62" r="3" fill="#ffffff" />
+</svg>
