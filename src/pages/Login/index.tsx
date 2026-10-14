@@ -52,6 +52,14 @@ function Login() {
     }
   };
 
+  const handleFillDemo = () => {
+    form.setFieldsValue({
+      email: "baoawm1@gmail.com",
+      password: "123456",
+    });
+    messageApi.success("Đã tự động điền tài khoản test!");
+  };
+
   return (
     <div className="auth-wrapper">
       {contextHolder}
@@ -191,6 +199,31 @@ function Login() {
             <p className="auth-bottom-link">
               Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
             </p>
+
+            {/* Test account / Demo box */}
+            <div className="auth-demo-box">
+              <div className="auth-demo-header">
+                <span className="auth-demo-badge">Tài khoản trải nghiệm (Demo)</span>
+                <Button
+                  type="link"
+                  size="small"
+                  className="auth-demo-fill-btn"
+                  onClick={handleFillDemo}
+                >
+                  Tự động điền
+                </Button>
+              </div>
+              <div className="auth-demo-content">
+                <div className="auth-demo-row">
+                  <span className="auth-demo-label">Tài khoản:</span>
+                  <code className="auth-demo-value">baoawm1@gmail.com</code>
+                </div>
+                <div className="auth-demo-row">
+                  <span className="auth-demo-label">Mật khẩu:</span>
+                  <code className="auth-demo-value">123456</code>
+                </div>
+              </div>
+            </div>
           </section>
         </div>
       </div>

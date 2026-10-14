@@ -349,6 +349,82 @@
   }
 }
 
+.auth-demo-box {
+  margin-top: 20px;
+  padding: 14px 16px;
+  background: rgba(26, 160, 176, 0.05);
+  border: 1px dashed rgba(26, 160, 176, 0.35);
+  border-radius: 12px;
+  font-size: 13px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 4px 14px rgba(26, 160, 176, 0.1);
+  }
+
+  .auth-demo-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+
+    .auth-demo-badge {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--color-primary);
+      background: rgba(26, 160, 176, 0.12);
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .auth-demo-fill-btn {
+      padding: 0;
+      height: auto;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-primary);
+
+      &:hover {
+        color: var(--color-primary-hover, var(--color-secondary-blue));
+        text-decoration: underline;
+      }
+    }
+  }
+
+  .auth-demo-content {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .auth-demo-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+
+      .auth-demo-label {
+        color: var(--color-text-secondary);
+        font-weight: 500;
+      }
+
+      .auth-demo-value {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 12.5px;
+        background: #ffffff;
+        padding: 3px 8px;
+        border-radius: 6px;
+        border: 1px solid var(--border-light, #e2e8f0);
+        color: var(--color-text-primary, #0f172a);
+        font-weight: 600;
+        user-select: all;
+      }
+    }
+  }
+}
+
 /* Common Ant overrides for auth forms */
 :global {
   .auth-form {
