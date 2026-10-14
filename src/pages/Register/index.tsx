@@ -7,7 +7,6 @@ import {
   LockOutlined,
   EyeInvisibleOutlined,
   EyeTwoTone,
-  GoogleOutlined,
 } from "@ant-design/icons";
 import { registerUser } from "../../services/authServices";
 import "./Register.scss";
@@ -294,21 +293,6 @@ function Register() {
                 </Button>
               </Form.Item>
             </Form>
-
-            <div className="auth-divider-plain">
-              <span>hoặc đăng ký với</span>
-            </div>
-
-            <div className="auth-social">
-              <Button
-                block
-                size="large"
-                className="auth-social-btn"
-                icon={<GoogleOutlined />}
-              >
-                Đăng ký bằng Google
-              </Button>
-            </div>
 
             <p className="auth-bottom-link">
               Đã có tài khoản? <Link to="/login">Đăng nhập</Link>

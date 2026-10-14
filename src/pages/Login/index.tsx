@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Form, Input, Button, message, Divider } from "antd";
+import { Form, Input, Button, message } from "antd";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import {
@@ -7,12 +7,9 @@ import {
   EyeTwoTone,
   MailOutlined,
   LockOutlined,
-  GoogleOutlined,
-  AppleOutlined,
 } from "@ant-design/icons";
 import { loginUser, getMe } from "../../services/authServices";
 import { checkLogin } from "../../store/slices/authSlice";
-import { redirectToGoogleAuth } from "../../services/backendGoogleServices";
 import "./Login.scss";
 
 interface LoginFormData {
@@ -190,30 +187,6 @@ function Login() {
                 </Button>
               </Form.Item>
             </Form>
-
-            <Divider className="auth-divider">
-              <span>hoặc</span>
-            </Divider>
-
-            <div className="auth-social">
-              <Button
-                block
-                size="large"
-                className="auth-social-btn"
-                icon={<GoogleOutlined />}
-                onClick={() => redirectToGoogleAuth(redirectPath || undefined)}
-              >
-                Đăng nhập bằng Google
-              </Button>
-              <Button
-                block
-                size="large"
-                className="auth-social-btn"
-                icon={<AppleOutlined />}
-              >
-                Đăng nhập bằng Apple
-              </Button>
-            </div>
 
             <p className="auth-bottom-link">
               Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
